@@ -455,7 +455,27 @@ Rule: iframe mantém `sandbox="allow-scripts"` apenas; `window.parent.postMessag
 ### Teste de conexão com completion mínima
 
 [2026-05-29] Context: `POST /api/openrouter/test`.
-Rule: validar chave + modelo com `chat/completions` (`max_tokens: 1`), retornando `{ ok, model }`. `/api/v1/key` continua útil para checagem rápida de credencial, mas o botão de Configurações usa a rota nova para provar o modelo configurado.
+Rule: validar chave + modelo com `chat/completions` (`max_tokens: 1`), retornando `{ ok, model }`. `/api/v1/key` continua útil para checagem rápida de credencial, mas o botão de Configurações usa a rota nova para provar o modelo configurado. `pingChat` usa chamada **síncrona** (sem `stream: true`) — a maioria dos modelos aceita; Gemini Flash ocasionalmente retorna 400 em `max_tokens: 1`.
+
+### `parseSseChunk` e `data: [DONE]`
+
+[2026-05-29] Context: `ChatPanel.tsx` — parser SSE no cliente.
+Rule: o servidor atual encerra o gerador em `[DONE]` **sem** reenviar `data: [DONE]\n\n` ao browser; o loop do `ReadableStream` termina em `reader.done`. Edge case frágil: proxy ou servidor futuro que emitir `data: [DONE]` faz `JSON.parse('[DONE]')` falhar — o `catch` silencioso engole a linha. **Fix previsto (M6), antes do `JSON.parse`:**
+```typescript
+if (payload === '[DONE]') { done = true; continue; }
+```
+Não bloqueia Gate 5 → 6.
+
+### Corrida `postMessage` na primeira carga do iframe
+
+[2026-05-29] Context: `buildNavScript` chama `show(0)` → `postMessage`; listener em `LeituraPanel` registra no `useEffect` após montagem.
+Rule: se o iframe carregar muito rápido (cache), `show(0)` pode disparar **antes** do listener — `currentPageIndex` fica `null` até o usuário trocar de página. Impacto baixo: contexto de página ausente só no primeiro envio se o usuário digitar antes de navegar; o próximo `postMessage` normaliza. Solução futura: `ChatPanel` avisar quando `currentPageIndex === null` (“Troque de página para ativar o contexto”).
+
+### Gate 5 → 6 — pontos de atenção no teste manual
+
+- **Item 4** (`postMessage`): no DevTools do documento **pai** (não do iframe), Console deve mostrar eventos com `type: 'zetel:page-change'` ao trocar página.
+- **Item 6** (Testar conexão): confirmar modelo configurado aceita `chat/completions` síncrono com `max_tokens: 1`.
+- **Isolamento**: `HOME=/tmp/zetel-test-$$` + vault temporário — **não** usar `~/.zetel` real do usuário (lesson M3).
 
 ### Dívidas pendentes (não bloqueiam o Gate)
 
@@ -465,3 +485,5 @@ Rule: validar chave + modelo com `chat/completions` (`max_tokens: 1`), retornand
 | M5-2 | Sem saudação automática quando histórico vazio (I1) | Módulo 6 ou polimento |
 | M5-3 | Catálogo `/api/openrouter/models` com preços | PRD Módulo 5 original |
 | M5-4 | `GET /api/test-connection` legado | Remover ou redirecionar para `/api/openrouter/test` |
+| M5-5 | `parseSseChunk` ignora `data: [DONE]` | Tratar `payload === '[DONE]'` antes de `JSON.parse` (M6) |
+| M5-6 | Corrida listener vs `show(0)` no iframe | Aviso em `ChatPanel` ou re-sync ao abrir chat (M6) |
