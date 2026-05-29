@@ -3,11 +3,19 @@ import { logger } from './logger';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
+/** Contagens de tokens do turno, preenchidas por `streamChat` quando a API as envia. */
+export interface UsageSink {
+  tokensIn?: number;
+  tokensOut?: number;
+}
+
 export interface StreamChatParams {
   apiKey: string;
   model: string;
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[];
   maxTokens?: number;
+  /** Objeto mutável que recebe as contagens de tokens ao fim do stream (D8 / meta). */
+  usageSink?: UsageSink;
 }
 
 /** Env (dev/CI) → `~/.zetel/config` (canônico). */
@@ -21,36 +29,41 @@ export function readApiKey(): string {
   );
 }
 
-function logUsageSilently(usage: unknown): void {
+/** Extrai contagens de uso para o sink (e loga só se ZETEL_LOG_TOKENS=1). */
+function captureUsage(usage: unknown, sink: UsageSink | undefined, logTokens: boolean): void {
   try {
     if (!usage || typeof usage !== 'object') return;
     const u = usage as { prompt_tokens?: number; completion_tokens?: number };
-    const tokensIn = u.prompt_tokens;
-    const tokensOut = u.completion_tokens;
-    if (tokensIn === undefined && tokensOut === undefined) return;
-    logger.info('openrouter usage', {
-      tokensIn: tokensIn ?? 0,
-      tokensOut: tokensOut ?? 0,
-    });
+    if (u.prompt_tokens === undefined && u.completion_tokens === undefined) return;
+    if (sink) {
+      if (u.prompt_tokens !== undefined) sink.tokensIn = u.prompt_tokens;
+      if (u.completion_tokens !== undefined) sink.tokensOut = u.completion_tokens;
+    }
+    if (logTokens) {
+      logger.info('openrouter usage', {
+        tokensIn: u.prompt_tokens ?? 0,
+        tokensOut: u.completion_tokens ?? 0,
+      });
+    }
   } catch {
-    /* silencioso — usage é opt-in de debug */
+    /* contagens são best-effort — nunca quebram o stream */
   }
 }
 
 /** Stream de deltas de texto do OpenRouter (SSE). */
 export async function* streamChat(params: StreamChatParams): AsyncIterable<string> {
-  const { apiKey, model, messages, maxTokens = 1024 } = params;
+  const { apiKey, model, messages, maxTokens = 1024, usageSink } = params;
   const logTokens = process.env.ZETEL_LOG_TOKENS === '1';
 
+  // Sempre pedimos usage: as contagens vão para `chat_messages.meta` (são números,
+  // não conteúdo de usuário — regra #6 preservada). O log do arquivo continua opt-in.
   const body: Record<string, unknown> = {
     model,
     messages,
     stream: true,
     max_tokens: maxTokens,
+    stream_options: { include_usage: true },
   };
-  if (logTokens) {
-    body.stream_options = { include_usage: true };
-  }
 
   const res = await fetch(OPENROUTER_URL, {
     method: 'POST',
@@ -96,8 +109,8 @@ export async function* streamChat(params: StreamChatParams): AsyncIterable<strin
             choices?: { delta?: { content?: string } }[];
             usage?: unknown;
           };
-          if (logTokens && parsed.usage) {
-            logUsageSilently(parsed.usage);
+          if (parsed.usage) {
+            captureUsage(parsed.usage, usageSink, logTokens);
           }
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) yield content;

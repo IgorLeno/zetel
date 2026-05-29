@@ -487,3 +487,58 @@ Rule: se o iframe carregar muito rápido (cache), `show(0)` pode disparar **ante
 | M5-4 | `GET /api/test-connection` legado | Remover ou redirecionar para `/api/openrouter/test` |
 | M5-5 | `parseSseChunk` ignora `data: [DONE]` | Tratar `payload === '[DONE]'` antes de `JSON.parse` (M6) |
 | M5-6 | Corrida listener vs `show(0)` no iframe | Aviso em `ChatPanel` ou re-sync ao abrir chat (M6) |
+
+---
+
+## Módulo 6 — Notas cooperativas (2026-05-29)
+
+### Fechamento do Gate 5 → 6 (item 7 — `chat_messages.meta`)
+
+[2026-05-29] Context: o Módulo 5 entregou `chat_messages` **sem** coluna `meta`; o gate (item 7, PRD §13.1/§Módulo 6/D8) exige `meta` com `page_anchor`, `page_hash_match`, modelo e tokens. CLAUDE.md havia escopado isso para fora ("sem meta JSON neste módulo").
+Mistake: tratar a ausência de `meta` como aceitável só porque o resumo do módulo a dispensou — PRD vence, e o Módulo 6 precisa de `meta` para `suggested_note`/`note_rejected`.
+Rule: `migration 005_chat_meta.sql` faz `ALTER TABLE chat_messages ADD COLUMN meta TEXT` (idempotente via `schema_migrations`; sem down). `meta` é JSON serializado; leitura defensiva (`JSON.parse` em try/catch → `undefined`). Resolve dívida **M5-1**.
+
+### Tokens em `meta` vs. regra #6 / dívida M5-1 do OpenRouter
+
+[2026-05-29] Context: a lição M5 mandava enviar `stream_options.include_usage` **só** com `ZETEL_LOG_TOKENS=1` (alguns modelos dão 400). Mas gravar `tokens_in/out` em `meta` exige `usage` em todo turno.
+Rule: **contagens não são conteúdo** — gravá-las em `chat_messages.meta` (SQLite) é permitido (regra #6 = "IDs e contagens"). Agora `streamChat` envia `stream_options: { include_usage: true }` **sempre** e preenche um `usageSink` mutável passado pelo chamador; `ZETEL_LOG_TOKENS` controla apenas o **log em arquivo**. Se um modelo recusar `include_usage`, o erro já cai no tratamento de erro do stream (mesma exposição que antes). Se reaparecer 400 por causa disso, reverter para envio condicional e gravar tokens só quando presentes.
+
+### Sinalização de sugestão no stream — sentinela + buffer "held-back"
+
+[2026-05-29] Context: o parceiro emite narrativa + bloco JSON de sugestão no mesmo completion; a `justificativa` nunca pode chegar ao cliente (nem na rede).
+Rule: o prompt instrui o bloco `<<<NOTA_SUGERIDA>>> {json} <<<FIM_NOTA>>>` ao **final**. O backend acumula `fullContent` e só enfileira ao cliente o texto **antes** do marcador, **retendo um sufixo** de `len(NOTE_MARK_START)-1` caracteres a cada chunk (cobre marcador partido entre chunks). Ao detectar o marcador, para de emitir narrativa e só acumula. Pós-stream: `extractNoteSuggestion` separa narrativa (salva como `content`) da sugestão; emite `data: [SUGGESTION] <json>` (sem `justificativa`, com `messageId` p/ Rejeitar) — espelhando a convenção `[ERROR]`. JSON malformado → degrada para resposta normal (`suggestion: null`). Validado por teste de unidade puro (marcador partido não vaza; sugestão ainda extraível).
+
+### Notas: filesystem é a fonte de verdade (sem tabela SQLite)
+
+[2026-05-29] Context: §13.5 — Markdown no vault é canônico; SQLite é regenerável.
+Rule: `lib/notes-service.ts` grava `.md` em `notas-rapidas/`/`notas-literatura/` com frontmatter §13.3 (`zetel/tipo/origem:chat/modelo/pagina_origem/criada_em`) + `# titulo` (H1) + corpo. **Sem** tabela de notas no SQLite. `listNotes`/`listNoteTitles` parseiam frontmatter (parser de linha simples — schema é escalar plano, sem dep de YAML) + primeiro H1 como título. Colisão de slug → sufixo `-2..-99`. `GET /notes/titles` alimenta o prompt p/ evitar duplicatas.
+
+### Log de notas — não logar filename (regra #6)
+
+[2026-05-29] Context: `note saved` logava `file=<slug>.md`; o slug deriva do título do usuário.
+Mistake: o slug do arquivo é texto-adjacente ao conteúdo; `ingestao-service` já evita logar filenames de propósito ("sem filename na mensagem").
+Rule: logar só `slug` (do Zetel) + `tipo` ao salvar nota. Nada de título/corpo/filename/justificativa em `~/.zetel/logs/`. Verificado por `grep` no log do teste isolado.
+
+### "Discutir" bounded em 1 rodada (regra #10) — estado no cliente
+
+[2026-05-29] Context: regra #10 — "Discutir" não pode loopar.
+Rule: o `ChatPanel` usa `discussNextRef` (ref booleana): ao clicar Discutir, marca `true` e envia a sugestão como mensagem normal; quando a **próxima** sugestão chega, renderiza o `NoteCard` com `canDiscuss = !discussNextRef` (→ `false`) e reseta o ref. O segundo card tem só Guardar/Editar/Rejeitar.
+
+### Abertura externa em cascata (D14) e anti path-traversal
+
+[2026-05-29] Context: `NotasPanel` abre notas sem editor embutido (regra #14).
+Rule: cascata D14 = (1) `obsidian://open?vault=<basename(vault)>&file=<relPath>`; (2) `navigator.clipboard.writeText(absPath)` + toast; (3) `POST /notes/reveal` que roda `xdg-open`/`open`/`explorer` na **pasta**. A rota `reveal` valida que `resolve(vault, relPath)` começa em `resolve(vault/zetels/<slug>) + sep` — bloqueia `../` (testado: `../../../etc/passwd` → 400).
+
+### Rubrica `sugestao-nota.md` — self-heal sem clobber
+
+[2026-05-29] Context: prompts vivem no vault e são editáveis pelo usuário (D10).
+Rule: `SUGESTAO_NOTA_PROMPT` (rubrica §10.1) é a fonte. `ensureSugestaoNotaPrompt` escreve o arquivo **só se ausente ou ainda com o placeholder** (`<!-- Conteúdo a definir`) — nunca sobrescreve edição do usuário. `lib/vault.ts` usa a mesma constante no `initVaultStructure`, então vaults novos já nascem com a rubrica real.
+
+### Dívidas pendentes após Módulo 6
+
+| # | Dívida | Correção futura |
+|---|--------|-----------------|
+| M6-1 | System prompt do parceiro **hardcoded** em `chat-prompt.ts` (PRD pede ler de `config/prompts/parceiro.md`) | Ler `parceiro.md` no início do turno (Módulo 7/8 ou polimento) |
+| M6-2 | Saudação contextual quando histórico vazio (I1) ainda ausente | Módulo 9 (estados vazios) — herda dívida M5-2 |
+| M6-3 | `ChatPanel` desmonta ao recolher o painel; stream em curso é perdido (histórico persiste) | Manter montado/`display:none` se incomodar (polimento) |
+| M6-4 | `pagina_origem` da sugestão vem do LLM, não é validado contra `zetel_pages` | Resolver anchor server-side a partir do `pageIndex` do turno, se necessário |

@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '@/types/chat-message';
+import { NoteCard, type Suggestion } from './NoteCard';
 
 function parseSseChunk(text: string): {
   chunks: string[];
+  suggestion: Suggestion | null;
   error: string | null;
   done: boolean;
 } {
   const chunks: string[] = [];
+  let suggestion: Suggestion | null = null;
   let error: string | null = null;
   let done = false;
 
@@ -22,6 +25,14 @@ function parseSseChunk(text: string): {
       done = true;
       continue;
     }
+    if (payload.startsWith('[SUGGESTION]')) {
+      try {
+        suggestion = JSON.parse(payload.slice('[SUGGESTION]'.length).trim()) as Suggestion;
+      } catch {
+        /* sugestão malformada — ignora, segue como resposta normal */
+      }
+      continue;
+    }
     try {
       const parsed = JSON.parse(payload) as string;
       if (typeof parsed === 'string') chunks.push(parsed);
@@ -30,7 +41,7 @@ function parseSseChunk(text: string): {
     }
   }
 
-  return { chunks, error, done };
+  return { chunks, suggestion, error, done };
 }
 
 export function ChatPanel({
@@ -46,7 +57,12 @@ export function ChatPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [suggestion, setSuggestion] = useState<{ data: Suggestion; canDiscuss: boolean } | null>(null);
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
+  // Quando true, a PRÓXIMA sugestão recebida vem sem "Discutir" (bounded — regra #10).
+  const discussNextRef = useRef(false);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -77,7 +93,12 @@ export function ChatPanel({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streaming, scrollToBottom]);
+  }, [messages, streaming, suggestion, scrollToBottom]);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 2500);
+  }
 
   async function clearHistory() {
     if (!confirm('Apagar todo o histórico deste Zetel?')) return;
@@ -87,20 +108,24 @@ export function ChatPanel({
       if (res.ok) {
         setMessages([]);
         setStreaming('');
+        setSuggestion(null);
       }
     } catch {
       setError('Falha ao limpar o histórico.');
     }
   }
 
-  async function sendMessage() {
-    const text = input.trim();
+  async function sendMessage(rawText?: string) {
+    const text = (rawText ?? input).trim();
     if (!text || isLoading) return;
 
-    setInput('');
+    if (rawText === undefined) setInput('');
     setError(null);
     setIsLoading(true);
     setStreaming('');
+    setSuggestion(null);
+
+    let received: Suggestion | null = null;
 
     try {
       const res = await fetch(`/api/zetels/${zetelId}/chat`, {
@@ -135,6 +160,7 @@ export function ChatPanel({
         if (done) break;
         const parsed = parseSseChunk(decoder.decode(value, { stream: true }));
         if (parsed.error) streamError = parsed.error;
+        if (parsed.suggestion) received = parsed.suggestion;
         for (const c of parsed.chunks) {
           accumulated += c;
           setStreaming(accumulated);
@@ -149,14 +175,72 @@ export function ChatPanel({
         const histRes = await fetch(`/api/zetels/${zetelId}/chat`);
         const histData = await histRes.json();
         if (histRes.ok) setMessages(histData.messages ?? []);
+        if (received) {
+          setSuggestion({ data: received, canDiscuss: !discussNextRef.current });
+        }
       }
     } catch {
       setError('Erro de rede ao conversar com o parceiro.');
       setStreaming('');
     } finally {
+      discussNextRef.current = false;
       setIsLoading(false);
       inputRef.current?.focus();
     }
+  }
+
+  async function saveNote(corpoFinal: string) {
+    if (!suggestion) return;
+    setNoteBusy(true);
+    try {
+      const res = await fetch(`/api/zetels/${zetelId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: suggestion.data.tipo,
+          titulo: suggestion.data.titulo,
+          corpo: corpoFinal,
+          paginaOrigem: suggestion.data.paginaOrigem,
+          modelo: suggestion.data.model,
+        }),
+      });
+      if (res.ok) {
+        setSuggestion(null);
+        showToast('Nota guardada.');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? 'Falha ao guardar a nota.');
+      }
+    } catch {
+      setError('Erro de rede ao guardar a nota.');
+    } finally {
+      setNoteBusy(false);
+    }
+  }
+
+  async function rejectNote() {
+    if (!suggestion) return;
+    const messageId = suggestion.data.messageId;
+    setSuggestion(null);
+    try {
+      await fetch(`/api/zetels/${zetelId}/chat`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, rejected: true }),
+      });
+    } catch {
+      /* a flag é só para auditoria; falha não bloqueia o usuário */
+    }
+    showToast('Sugestão descartada.');
+  }
+
+  function discussNote() {
+    if (!suggestion) return;
+    const { titulo, corpo } = suggestion.data;
+    discussNextRef.current = true; // a próxima sugestão volta sem "Discutir"
+    void sendMessage(
+      `Sobre esta sugestão de nota ("${titulo}"): o que você acha de refiná-la? Rascunho atual:\n\n${corpo}`,
+    );
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -193,8 +277,20 @@ export function ChatPanel({
             </div>
           </div>
         )}
+        {suggestion && (
+          <NoteCard
+            suggestion={suggestion.data}
+            canDiscuss={suggestion.canDiscuss}
+            busy={noteBusy || isLoading}
+            onSave={(corpo) => void saveNote(corpo)}
+            onDiscuss={discussNote}
+            onReject={() => void rejectNote()}
+          />
+        )}
         {error && <p className="feedback err chat-inline-error">{error}</p>}
       </div>
+
+      {toast && <div className="chat-toast">{toast}</div>}
 
       <div className="chat-input-row">
         <textarea

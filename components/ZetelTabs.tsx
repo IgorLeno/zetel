@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ArquivosPanel } from './ArquivosPanel';
 import { LeituraPanel } from './LeituraPanel';
 import { ArtefatosPanel } from './ArtefatosPanel';
+import { NotasPanel } from './NotasPanel';
 
 const TABS = [
   'Leitura ativa',
@@ -47,16 +48,8 @@ export function ZetelTabs({
           />
         )}
         {active === 1 && <ArquivosPanel zetelId={zetelId} />}
-        {active === 2 && (
-          <div className="empty-state">
-            <div>{TABS[2]} — disponível em breve.</div>
-          </div>
-        )}
-        {active === 3 && (
-          <div className="empty-state">
-            <div>{TABS[3]} — disponível em breve.</div>
-          </div>
-        )}
+        {active === 2 && <NotasPanel zetelId={zetelId} tipo="rapida" />}
+        {active === 3 && <NotasPanel zetelId={zetelId} tipo="literatura" />}
         {active === 4 && <ArtefatosPanel zetelId={zetelId} />}
       </div>
     </div>
