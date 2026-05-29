@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: pré-Módulo 0.** Nenhum código existe. Próximo passo: iniciar os spikes A/B/C/D + mock visual (Módulo 0). PRD v2 final aprovado e consolidado em 2026-05-28.
+**Estado atual: Módulo 0 em andamento.** Spikes A e C concluídos e validados. Spike B (mock visual) produzido — aguarda aprovação manual de Igor. Spike D com script pronto — aguarda execução com chave OpenRouter real. PRD v2 final aprovado e consolidado em 2026-05-28.
 
 ---
 
@@ -11,6 +11,7 @@ Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsid
 | Arquivo | Papel |
 |---------|-------|
 | `piped-pondering-dahl2.md` | PRD v2 completo (Partes A–D, D1–D15, DT1–DT5) — fonte autoritativa |
+| `spikes/lessons.md` | Calibrações e dívidas técnicas do Módulo 0 — leitura obrigatória antes do Módulo 1 |
 | `estamos-construindo-um-projeto-humble-harbor.md` | Histórico: 5 ajustes de consistência aplicados ao PRD em 2026-05-28 |
 | `zetel-prd-v1.md` (fora deste diretório) | Histórico; não consultar para decisões |
 
@@ -127,7 +128,7 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 
 | # | Módulo | Objetivo | Depende de |
 |---|--------|----------|-----------|
-| **0** | **Spikes + mock visual** ← próximo | Eliminar incertezas técnicas; mock aprovado | — |
+| **0** | **Spikes + mock visual** ← em andamento | A ✅ C ✅ · B aguarda aprovação · D aguarda chave | — |
 | 1 | Fundação | Next.js + vault + SQLite + settings mínimas | 0 |
 | 2 | Zetel CRUD + lixeira | Entidade Zetel funcional sem conteúdo | 1 |
 | 3 | Ingestão Markdown + aba Arquivos | Anexar `.md`, ordenar, processar, detectar drift | 2 |
