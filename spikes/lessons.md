@@ -204,3 +204,64 @@ o Módulo 5 (seleção de modelo: listar via `/models`, mas validar a chave via 
 - **Fontes via `next/font/google`** (Inter + Newsreader) são baixadas no build e self-hosted —
   bom para local-first. Expostas como `--font-inter`/`--font-newsreader`, consumidas pelos tokens
   `--font-ui`/`--font-read` do mock no `globals.css`.
+
+---
+
+## Lessons — Módulo 2 (Zetel CRUD + Lixeira)
+
+**Status: concluído e validado em 2026-05-29. Gate 2 → 3 OK.**
+
+Entregue: `migrations/002_zetel_crud.sql`, `types/zetel.ts`, `lib/zetel-service.ts`,
+`lib/relative-time.ts`, rotas `app/api/zetels/**`, UI (`ZetelList`, `Modal`, `ZetelTabs`,
+`ConfiguracoesTabs`, `LixeiraPanel`), rota `/zetel/[slug]`. Build com type-check estrito
+limpo; lógica do serviço validada por teste de fumaça isolado (20/20 checks).
+
+### Calibração: rotas dinâmicas no Next 15 recebem `params` como Promise
+
+[2026-05-29] Context: implementação de `app/api/zetels/[id]/route.ts` e `[slug]/page.tsx`.
+Mistake: assinar `{ params }: { params: { id: string } }` (padrão Next ≤14) faz o type-check
+do `next build` falhar — no Next 15 `params` é `Promise`.
+Rule: em rotas e páginas dinâmicas do App Router (Next 15+), tipar `params: Promise<{...}>`
+e `const { id } = await params;`. Vale para todos os módulos seguintes (3/4/6 têm `[id]`/`[slug]`).
+
+### Calibração: slug único é GLOBAL (inclui lixeira), não só entre ativos
+
+[2026-05-29] Context: `generateUniqueSlug`.
+Mistake: tentação de checar colisão só entre Zetels ativos (`trashed_at IS NULL`).
+Rule: checar contra TODA a tabela `zetels`. Um Zetel na lixeira mantém o registro (e o slug)
+reservado; permitir reuso criaria conflito ao restaurar (pasta `zetels/<slug>/` já ocupada).
+A verificação `existsSync(to)` em `restoreZetel` é rede de segurança para pastas órfãs, não a
+defesa primária.
+
+### Calibração: consistência DB↔filesystem tem ordens opostas por operação
+
+[2026-05-29] Context: trash/restore/purge/create.
+Rule registrada como invariante do serviço:
+- **create**: pasta ANTES, INSERT depois (pasta órfã é inofensiva; registro sem pasta seria pior).
+- **trash/restore**: transação no DB ANTES, `fs.renameSync` depois (rename atômico, sem cp+rm).
+- **purge**: `fs.rmSync` ANTES, DELETE depois (pasta ausente não é fatal — pode ter sido removida à mão).
+Se o `renameSync` falhar após o commit, o estado fica divergente — reportado ao usuário com
+mensagem clara e recuperável (regra #4 do prompt do módulo). Aceito no MVP.
+
+### Observações técnicas
+
+- **Sem ESLint configurado no repo**: `next lint` está deprecado e cai em setup interativo.
+  O gate de qualidade efetivo é `pnpm build` (compila + type-check estrito). Configurar ESLint
+  fica como dívida fora do escopo do Módulo 2.
+- **Teste isolado sem tsx/esbuild**: Node 22.22 roda TS via `--experimental-strip-types`, mas não
+  resolve imports relativos sem extensão (convenção bundler do projeto). Um resolve-hook `.mjs` de
+  ~15 linhas (`nextResolve(specifier + '.ts')` no catch) destrava isso. Importar `.ts` com extensão
+  no código exigiria `allowImportingTsExtensions` no tsconfig — por isso os scripts de teste foram
+  descartados após uso, para não quebrar o `next build`. `import type` (ex.: `@/types/zetel`) é
+  apagado pelo strip-types e nunca precisa resolver em runtime.
+- **`router.refresh()` revalida o server component**: a lista (`/zetel`) é `force-dynamic`; após
+  criar/renomear/lixeira o client chama `router.refresh()` e o `useEffect([initial])` ressincroniza
+  o estado local — sem reload de página, sem refetch manual.
+
+### Dívidas pendentes (não bloqueiam o Gate)
+
+| # | Dívida | Correção futura |
+|---|--------|-----------------|
+| M2-1 | Sem ESLint configurado | Adicionar config flat ESLint + script `lint` real (Módulo 9 / polimento) |
+| M2-2 | Sem teste automatizado versionado | Avaliar vitest + `allowImportingTsExtensions` ou runner para regressão do serviço |
+| M2-3 | Status `400` para "não encontrado" | Mapear erros do serviço para `404`/`409` adequados se a UI precisar distinguir |

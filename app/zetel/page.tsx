@@ -1,18 +1,30 @@
+import Link from 'next/link';
+import { getDb } from '@/lib/db';
+import { getSetting } from '@/lib/settings';
+import { listZetels } from '@/lib/zetel-service';
+import { ZetelList } from '@/components/ZetelList';
+
+export const dynamic = 'force-dynamic'; // lê estado vivo do SQLite a cada visita
+
 export default function ZetelPage() {
+  const vaultPath = getSetting('vault_path');
+
   return (
     <>
       <header className="page-header">
         <span className="page-title">Zetels</span>
       </header>
       <div className="page-body">
-        <div className="empty-state">
-          <svg viewBox="0 0 40 40" width="40" height="40">
-            <rect x="8" y="6" width="24" height="28" rx="3" />
-            <path d="M14 14h12M14 19h12M14 24h8" />
-          </svg>
-          <div>Nenhum Zetel ainda.</div>
-          <div className="field-hint">A criação de Zetels chega no Módulo 2.</div>
-        </div>
+        {!vaultPath ? (
+          <div className="empty-state">
+            <div>Configure o caminho do vault antes de criar Zetels.</div>
+            <Link className="btn primary" href="/configuracoes">
+              Ir para Configurações
+            </Link>
+          </div>
+        ) : (
+          <ZetelList initial={listZetels(getDb())} />
+        )}
       </div>
     </>
   );

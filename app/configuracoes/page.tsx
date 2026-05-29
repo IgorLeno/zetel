@@ -1,6 +1,6 @@
 import { getSetting } from '@/lib/settings';
 import { getOpenRouterKey, getOpenRouterModel } from '@/lib/config';
-import { ConfiguracoesForm } from '@/components/ConfiguracoesForm';
+import { ConfiguracoesTabs } from '@/components/ConfiguracoesTabs';
 
 export const dynamic = 'force-dynamic'; // lê estado vivo (SQLite + config) a cada visita
 
@@ -16,7 +16,7 @@ export default function ConfiguracoesPage() {
       </header>
       <div className="page-body">
         <div className="content-narrow">
-          <ConfiguracoesForm initialVaultPath={vaultPath} hasKey={hasKey} initialModel={model} />
+          <ConfiguracoesTabs initialVaultPath={vaultPath} hasKey={hasKey} initialModel={model} />
         </div>
       </div>
     </>
