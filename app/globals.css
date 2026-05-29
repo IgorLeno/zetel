@@ -183,6 +183,78 @@ body {
   padding: 28px 24px 40px;
 }
 
+.page-body--zetel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  padding: 20px 24px 24px;
+}
+
+.zetel-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.zetel-tab-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.leitura-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 12px;
+}
+
+.leitura-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.leitura-iframe {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+
+.leitura-empty {
+  flex: 1;
+  min-height: 12rem;
+}
+
+.artefatos-panel { width: 100%; }
+
+.artefato-card {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+}
+
+.artefato-name {
+  font-size: 14px;
+  font-weight: 550;
+  margin-bottom: 6px;
+}
+
+.artefato-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
 .content-narrow { max-width: 640px; margin: 0 auto; }
 
 /* ── Estado vazio ── */

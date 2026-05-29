@@ -43,8 +43,12 @@ export default async function ZetelDetailPage({
           <span className="badge ok">Leitura atualizada</span>
         ) : null}
       </header>
-      <div className="page-body">
-        <ZetelTabs zetelId={zetel.id} />
+      <div className="page-body page-body--zetel">
+        <ZetelTabs
+          zetelId={zetel.id}
+          readingStale={zetel.readingStale}
+          lastBuiltAt={zetel.lastBuiltAt}
+        />
       </div>
     </>
   );

@@ -4,16 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ZetelFile } from '@/types/zetel-file';
 import { formatRelative } from '@/lib/relative-time';
-
-/** "12 KB", "1,2 MB" — PT-BR, sem dependências de Node (client). */
-function formatBytes(bytes: number | null): string {
-  if (bytes === null) return '—';
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${Math.round(kb)} KB`;
-  const mb = kb / 1024;
-  return `${mb.toFixed(1).replace('.', ',')} MB`;
-}
+import { formatBytes } from '@/lib/format-utils';
 
 export function ArquivosPanel({ zetelId }: { zetelId: string }) {
   const router = useRouter();

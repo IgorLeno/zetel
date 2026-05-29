@@ -283,16 +283,14 @@ Entregue: `migrations/003_ingestao.sql`, `types/zetel-file.ts`, `types/zetel-pag
 isolado (`HOME=/tmp/...`, vault em `/tmp/...`) — **nunca tocar o `~/.zetel` real do usuário
 em teste**: rode com `HOME` próprio e configure `vault_path` para um diretório temporário.
 
-### Invariante de `reading_stale` (correção obrigatória do plano)
+### Invariante de `reading_stale` (atualizado no Módulo 4)
 
-[2026-05-29] Context: `processZetel`.
-Rule: `processZetel` bem-sucedido seta `reading_stale = 0` **e** `last_built_at = now` — não
-`= 1`. `reading_stale = 1` é marcado **só nas mutações** (`addFile`/`removeFile`/`reorderFiles`)
-e na detecção de drift em `listFiles`. O badge verde "Leitura atualizada" depende de
-`reading_stale = 0 AND last_built_at IS NOT NULL`; o âmbar "Leitura desatualizada" de
-`reading_stale = 1`. (O texto do prompt original do Módulo 3 dizia marcar `=1` ao final do
-processo e o gate falava em badge âmbar após Processar — ambos foram **corrigidos** por Igor:
-após Processar o estado correto é "atualizada".)
+[2026-05-29] Context: Gate 3 — comportamento transitório.
+[2026-05-29] Context: Módulo 4 — separação Processar vs Preparar leitura.
+Rule: `reading_stale = 1` em mutações de arquivo, drift e **`processZetel` bem-sucedido**
+(estrutura em `zetel_pages` mudou; `artefatos/leitura.html` fica desatualizado). Só
+`renderZetel` (POST `/build`) seta `reading_stale = 0` e `last_built_at`. Badge verde:
+`reading_stale = 0 AND last_built_at IS NOT NULL`; âmbar: `reading_stale = 1`.
 
 ### Regra #6: erro de filesystem vaza filename — nunca logar `error.message` de fs
 
@@ -358,4 +356,61 @@ Módulo 4 (PRD §Módulo 4).
 | M3-2 | `image_map` vive em `settings` (`image_map_<zetelId>`) | Provisório; avaliar coluna/tabela própria quando o Módulo 4 consumir o mapa |
 | M3-3 | `<img>` HTML inline não tratado | Tratar nós `html` com imagem no Módulo 4 (ou bloquear explicitamente) |
 | M3-4 | Páginas "heading-only" finas (H1 seguido de H2) | O Módulo 4 pode re-granularizar a paginação (PRD linha 556) |
-| M3-5 | Dívida #5 do Módulo 0 (`MAX_WORDS_PER_PAGE` configurável) | Lido de `settings.max_words_per_page` no serviço; falta UI nas Configurações (Módulo 4/5) |
+| M3-5 | Dívida #5 do Módulo 0 (`MAX_WORDS_PER_PAGE` configurável) | Lido de `settings.max_words_per_page` no serviço; falta UI nas Configurações (Módulo 5) |
+
+---
+
+## Lessons — Módulo 4 (Leitura paginada determinística)
+
+**Status: implementado em 2026-05-29. Gate 4 → 5 pendente (validação manual).**
+
+Entregue: `lib/render-service.ts`, `lib/sanitize.ts`, `lib/format-utils.ts`; rotas
+`build` / `leitura` / `artifacts`; `LeituraPanel` + `ArtefatosPanel`; exports em
+`ingestao-service` (`segmentFile`, `listPages`, `assertZetelAtivo`, `makeAnchorFactory`).
+Deps novas: `rehype-slug`, `rehype-sanitize`, `remark-rehype`, `hast-util-to-html`,
+`hast-util-sanitize` (+ `@types/hast` dev). **Não** instalados: `rehype-parse`,
+`rehype-autolink-headings`, `deepmerge` (schema via spread manual em `sanitize.ts`).
+
+### `builtAt` único em `renderZetel`
+
+[2026-05-29] Context: idempotência do HTML.
+Rule: `const builtAt = new Date().toISOString()` **uma vez** no início de `renderZetel`;
+a mesma string vai para `zetels.last_built_at`, `updated_at` e
+`<meta name="zetel-built">`. Dois `Date.now()` no mesmo build quebrariam idempotência byte a byte.
+
+### Mini-índice por página (não por heading interno)
+
+[2026-05-29] Context: template `leitura.html`.
+Decisão: TOC lateral lista entradas de `zetel_pages` (`heading` + `anchor`); cada
+`<article id="{anchor}" class="page">` é uma página lógica. O JS navega por índice de
+artigo (`show(i)`), não por `#slug` de `rehype-slug` dentro do artigo. Headings internos
+mantêm ids do `rehype-slug` para links no conteúdo, mas o índice lateral é D11 ao nível
+de página persistida.
+
+### Paridade re-segmentação ↔ DB
+
+[2026-05-29] Context: `renderZetel` passo 2.
+Rule: antes de gerar HTML, re-parsear arquivos com o **mesmo** `segmentFile` + `max_words_per_page`
+e validar `anchor` + `sha256(contentText) === content_hash` por índice. Divergência → erro
+orientando a Processar de novo (evita HTML desalinhado do que o chat usará em `zetel_pages`).
+
+### Placeholders de imagem
+
+[2026-05-29] Context: `image_map_<zetelId>`.
+Rule: `__blocked__` / `__notfound__` / ausente no mapa → `div.img-placeholder` (não SVG data URI
+como no Spike A — texto visível conforme prompt M4). Caminhos `images/...` → `../images/...`
+relativo a `artefatos/`.
+
+### Iframe (D13)
+
+[2026-05-29] Context: `LeituraPanel`.
+Rule: `sandbox="allow-scripts"` apenas — **sem** `allow-same-origin`. O HTML autocontido
+não precisa do DOM pai; isolamento máximo.
+
+### Dívidas pendentes
+
+| # | Dívida | Correção futura |
+|---|--------|-----------------|
+| M4-1 | Tema do `leitura.html` não segue cookie do app | Propagar tema via query param ou `postMessage` pós-MVP |
+| M4-2 | `hast-util-sanitize` direto + `rehype-sanitize` instalado mas não usado no pipeline | Unificar em um só caminho se simplificar manutenção |
+| M4-3 | M3-3 (`<img>` HTML inline) ainda sem placeholder | Estender visita a nós `html` com imagem |

@@ -18,6 +18,7 @@ import { logger } from './logger';
 import { getSetting, setSetting } from './settings';
 import { getZetelById, slugify } from './zetel-service';
 import type { ZetelFile } from '@/types/zetel-file';
+import type { ZetelPage } from '@/types/zetel-page';
 
 /**
  * Camada de serviço da ingestão (Módulo 3): toda a lógica de arquivos e do
@@ -28,8 +29,8 @@ import type { ZetelFile } from '@/types/zetel-file';
  *  - Regra #6/DT4: logs com id/zetelId/contagens — NUNCA filename ou conteúdo;
  *  - Regra #8: unicidade de anchor é composta (zetel_id, anchor);
  *  - Regra #9/DT2: imagens externas (http[s]) não são copiadas — sentinela no mapa;
- *  - reading_stale=1 nas MUTAÇÕES (add/remove/reorder); processZetel bem-sucedido
- *    seta reading_stale=0 + last_built_at (badge "Leitura atualizada").
+ *  - reading_stale=1 nas MUTAÇÕES (add/remove/reorder) e após processZetel;
+ *    renderZetel (Módulo 4) seta reading_stale=0 + last_built_at (badge "Leitura atualizada").
  */
 
 /** Default do Spike A; configurável via settings `max_words_per_page`. */
@@ -95,7 +96,7 @@ function markStale(db: Database.Database, zetelId: string): void {
 }
 
 /** Verifica que o Zetel existe e não está na lixeira; retorna o slug. */
-function assertZetelAtivo(db: Database.Database, zetelId: string): string {
+export function assertZetelAtivo(db: Database.Database, zetelId: string): string {
   const zetel = getZetelById(db, zetelId);
   if (!zetel) {
     throw new Error('Zetel não encontrado.');
@@ -309,6 +310,39 @@ export function removeFile(
   logger.info('zetel file removed', { fileId, zetelId });
 }
 
+interface ZetelPageRow {
+  id: number;
+  zetel_id: string;
+  page_index: number;
+  heading: string;
+  anchor: string;
+  content_text: string;
+  content_hash: string;
+  created_at: string;
+}
+
+function rowToPage(row: ZetelPageRow): ZetelPage {
+  return {
+    id: row.id,
+    zetelId: row.zetel_id,
+    pageIndex: row.page_index,
+    heading: row.heading,
+    anchor: row.anchor,
+    contentText: row.content_text,
+    contentHash: row.content_hash,
+    createdAt: row.created_at,
+  };
+}
+
+/** Lista páginas persistidas do Zetel, ordenadas por `page_index`. */
+export function listPages(db: Database.Database, zetelId: string): ZetelPage[] {
+  assertZetelAtivo(db, zetelId);
+  const rows = db
+    .prepare('SELECT * FROM zetel_pages WHERE zetel_id = ? ORDER BY page_index ASC')
+    .all(zetelId) as ZetelPageRow[];
+  return rows.map(rowToPage);
+}
+
 // ---------------------------------------------------------------------------
 // Processamento (pipeline determinístico — Regra #1: sem LLM)
 // ---------------------------------------------------------------------------
@@ -338,17 +372,18 @@ interface DraftPage {
   words: number;
 }
 
-interface SegmentedPage {
+export interface SegmentedPage {
   heading: string;
   anchor: string;
   contentText: string;
+  nodes: RootContent[];
 }
 
 /**
  * Gera anchors únicos dentro do Zetel. Headings recebem prefixo do stem do
  * arquivo (`stem--slug-do-heading`); colisões ganham sufixo `-2`, `-3`…
  */
-function makeAnchorFactory(used: Set<string>) {
+export function makeAnchorFactory(used: Set<string>) {
   return (base: string): string => {
     let candidate = base || 'secao';
     if (!used.has(candidate)) {
@@ -371,7 +406,7 @@ function makeAnchorFactory(used: Set<string>) {
  * global (contínuo entre arquivos) usado para nomear páginas sem heading.
  * Decisão do usuário: nenhuma página mistura dois arquivos.
  */
-function segmentFile(
+export function segmentFile(
   tree: Root,
   stem: string,
   maxWords: number,
@@ -388,7 +423,7 @@ function segmentFile(
     const heading = d.heading ?? '[sem título]';
     const anchor = d.anchor ?? anchorOf(`pagina-${pageIndex}`);
     const contentText = d.nodes.map(toPlainText).join('\n\n').trim();
-    pages.push({ heading, anchor, contentText });
+    pages.push({ heading, anchor, contentText, nodes: d.nodes });
   };
 
   const emptyDraft = (): DraftPage => ({ heading: null, anchor: null, nodes: [], words: 0 });
@@ -555,10 +590,8 @@ export function processZetel(
       insertPage.run(zetelId, index, p.heading, p.anchor, p.contentText, sha256(p.contentText), now);
     });
 
-    // Processo bem-sucedido: leitura passa a "atualizada".
-    db.prepare(
-      'UPDATE zetels SET reading_stale = 0, last_built_at = ?, updated_at = ? WHERE id = ?',
-    ).run(now, now, zetelId);
+    // Estrutura atualizada: HTML em artefatos/ fica desatualizado até renderZetel (Módulo 4).
+    db.prepare('UPDATE zetels SET reading_stale = 1, updated_at = ? WHERE id = ?').run(now, zetelId);
 
     setSetting(`image_map_${zetelId}`, JSON.stringify(imageMap));
   })();

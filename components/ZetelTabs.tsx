@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { ArquivosPanel } from './ArquivosPanel';
+import { LeituraPanel } from './LeituraPanel';
+import { ArtefatosPanel } from './ArtefatosPanel';
 
 const TABS = [
   'Leitura ativa',
@@ -11,15 +13,19 @@ const TABS = [
   'Artefatos',
 ] as const;
 
-/**
- * Shell das 5 abas internas do Zetel. A aba "Arquivos" ganha conteúdo no
- * Módulo 3; as demais chegam nos Módulos 4 (Leitura) e 7 (Notas).
- */
-export function ZetelTabs({ zetelId }: { zetelId: string }) {
+export function ZetelTabs({
+  zetelId,
+  readingStale,
+  lastBuiltAt,
+}: {
+  zetelId: string;
+  readingStale: boolean;
+  lastBuiltAt: string | null;
+}) {
   const [active, setActive] = useState(0);
 
   return (
-    <div>
+    <div className="zetel-tabs">
       <div className="tabs">
         {TABS.map((label, i) => (
           <button
@@ -32,13 +38,27 @@ export function ZetelTabs({ zetelId }: { zetelId: string }) {
           </button>
         ))}
       </div>
-      {active === 1 ? (
-        <ArquivosPanel zetelId={zetelId} />
-      ) : (
-        <div className="empty-state">
-          <div>{TABS[active]} — disponível em breve.</div>
-        </div>
-      )}
+      <div className="zetel-tab-panel">
+        {active === 0 && (
+          <LeituraPanel
+            zetelId={zetelId}
+            readingStale={readingStale}
+            lastBuiltAt={lastBuiltAt}
+          />
+        )}
+        {active === 1 && <ArquivosPanel zetelId={zetelId} />}
+        {active === 2 && (
+          <div className="empty-state">
+            <div>{TABS[2]} — disponível em breve.</div>
+          </div>
+        )}
+        {active === 3 && (
+          <div className="empty-state">
+            <div>{TABS[3]} — disponível em breve.</div>
+          </div>
+        )}
+        {active === 4 && <ArtefatosPanel zetelId={zetelId} />}
+      </div>
     </div>
   );
 }
