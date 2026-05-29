@@ -20,6 +20,10 @@ function parseSseChunk(text: string): {
     if (!trimmed.startsWith('data:')) continue;
     const payload = trimmed.slice(5).trim();
     if (!payload) continue;
+    if (payload === '[DONE]') {
+      done = true;
+      continue;
+    }
     if (payload.startsWith('[ERROR]')) {
       error = payload.slice('[ERROR]'.length).trim();
       done = true;
@@ -154,18 +158,33 @@ export function ChatPanel({
       const decoder = new TextDecoder();
       let accumulated = '';
       let streamError: string | null = null;
+      // Buffer acumulador: uma linha `data:` pode chegar partida entre dois
+      // chunks do ReadableStream. Só processamos linhas completas (até o último
+      // `\n`); o resto fica retido para o próximo chunk.
+      let sseBuffer = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const parsed = parseSseChunk(decoder.decode(value, { stream: true }));
+      const flush = (text: string) => {
+        const parsed = parseSseChunk(text);
         if (parsed.error) streamError = parsed.error;
         if (parsed.suggestion) received = parsed.suggestion;
+        if (parsed.done) return; // stream encerrado via [DONE] — não processar mais chunks
         for (const c of parsed.chunks) {
           accumulated += c;
           setStreaming(accumulated);
         }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        sseBuffer += decoder.decode(value, { stream: true });
+        const boundary = sseBuffer.lastIndexOf('\n');
+        if (boundary === -1) continue;
+        flush(sseBuffer.slice(0, boundary + 1));
+        sseBuffer = sseBuffer.slice(boundary + 1);
       }
+      // Processa qualquer resto sem `\n` final ao terminar o stream.
+      if (sseBuffer.trim()) flush(sseBuffer);
 
       setStreaming('');
 
@@ -259,19 +278,21 @@ export function ChatPanel({
         </button>
       </header>
 
-      <div className="chat-messages" ref={messagesRef}>
+      <div className="chat-messages" ref={messagesRef} data-testid="chat-messages">
         {!loaded && <p className="chat-placeholder">Carregando histórico…</p>}
         {loaded && messages.length === 0 && !streaming && (
           <p className="chat-placeholder">Pergunte sobre a página atual.</p>
         )}
         {messages.map((m) => (
           <div key={m.id} className={`msg ${m.role === 'user' ? 'msg-user' : 'msg-assistant'}`}>
-            <div className="msg-bubble">{m.content}</div>
+            <div className="msg-bubble" data-testid="msg-bubble" data-role={m.role}>
+              {m.content}
+            </div>
           </div>
         ))}
         {streaming && (
           <div className="msg msg-assistant">
-            <div className="msg-bubble streaming">
+            <div className="msg-bubble streaming" data-testid="msg-bubble" data-role="streaming">
               {streaming}
               <span className="streaming-cursor" aria-hidden />
             </div>

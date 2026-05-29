@@ -48,8 +48,16 @@ export function ZetelTabs({
           />
         )}
         {active === 1 && <ArquivosPanel zetelId={zetelId} />}
-        {active === 2 && <NotasPanel zetelId={zetelId} tipo="rapida" />}
-        {active === 3 && <NotasPanel zetelId={zetelId} tipo="literatura" />}
+        {active === 2 && (
+          <div data-testid="notas-rapidas-panel">
+            <NotasPanel zetelId={zetelId} tipo="rapida" />
+          </div>
+        )}
+        {active === 3 && (
+          <div data-testid="notas-literatura-panel">
+            <NotasPanel zetelId={zetelId} tipo="literatura" />
+          </div>
+        )}
         {active === 4 && <ArtefatosPanel zetelId={zetelId} />}
       </div>
     </div>

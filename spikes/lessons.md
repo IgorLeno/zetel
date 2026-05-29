@@ -464,7 +464,7 @@ Rule: o servidor atual encerra o gerador em `[DONE]` **sem** reenviar `data: [DO
 ```typescript
 if (payload === '[DONE]') { done = true; continue; }
 ```
-Não bloqueia Gate 5 → 6.
+Não bloqueia Gate 5 → 6. **✅ Aplicado no M6** — ver "SSE: buffer de linhas + `[DONE]`".
 
 ### Corrida `postMessage` na primeira carga do iframe
 
@@ -485,7 +485,7 @@ Rule: se o iframe carregar muito rápido (cache), `show(0)` pode disparar **ante
 | M5-2 | Sem saudação automática quando histórico vazio (I1) | Módulo 6 ou polimento |
 | M5-3 | Catálogo `/api/openrouter/models` com preços | PRD Módulo 5 original |
 | M5-4 | `GET /api/test-connection` legado | Remover ou redirecionar para `/api/openrouter/test` |
-| M5-5 | `parseSseChunk` ignora `data: [DONE]` | Tratar `payload === '[DONE]'` antes de `JSON.parse` (M6) |
+| M5-5 | `parseSseChunk` ignora `data: [DONE]` | ✅ Resolvida (M6): guard `payload === '[DONE]'` antes do `JSON.parse` + buffer SSE — ver "SSE: buffer de linhas + `[DONE]`" |
 | M5-6 | Corrida listener vs `show(0)` no iframe | Aviso em `ChatPanel` ou re-sync ao abrir chat (M6) |
 
 ---
@@ -542,3 +542,20 @@ Rule: `SUGESTAO_NOTA_PROMPT` (rubrica §10.1) é a fonte. `ensureSugestaoNotaPro
 | M6-2 | Saudação contextual quando histórico vazio (I1) ainda ausente | Módulo 9 (estados vazios) — herda dívida M5-2 |
 | M6-3 | `ChatPanel` desmonta ao recolher o painel; stream em curso é perdido (histórico persiste) | Manter montado/`display:none` se incomodar (polimento) |
 | M6-4 | `pagina_origem` da sugestão vem do LLM, não é validado contra `zetel_pages` | Resolver anchor server-side a partir do `pageIndex` do turno, se necessário |
+
+### SSE: buffer de linhas + `[DONE]` (resolve M5-5)
+
+[2026-05-29] Context: `ChatPanel.tsx` chamava `parseSseChunk` em cada chunk bruto do `ReadableStream`.
+Mistake: uma linha `data: "..."` pode chegar **partida** entre dois chunks; a metade sem `\n` falha no `JSON.parse` (descartada) e a outra metade não tem prefixo `data:` (ignorada) → texto sumido/palavras coladas. Confirmado na prática: chunks como `"nal d"`, `"a Densidad"`, `"e (DFT)"`.
+Rule: acumular em `sseBuffer`; processar só até o último `\n` (`lastIndexOf('\n')`), retendo o resto; dar `flush(sseBuffer)` final ao terminar o stream. O `flush` respeita `parsed.done` (guard `payload === '[DONE]'`) e `parsed.error` (não perder `[ERROR]` no flush final). O held-back de `<<<NOTA_SUGERIDA>>>` é server-side, então o buffer do cliente não o reparte.
+
+### `pnpm build` corrompe um `next dev` em execução
+
+[2026-05-29] Context: rodei `pnpm build` com o `next dev` do usuário ativo na :3000.
+Mistake: o build de produção reescreve `.next/` no layout de produção; o dev server passa a servir 500 com `ENOENT … .next/server/pages/_document.js`.
+Rule: não rodar `pnpm build` com `next dev` vivo no mesmo `.next`. Para verificar build com o dev rodando: parar o dev → `rm -rf .next` → `pnpm build` → `rm -rf .next` → reiniciar o dev. (Alternativa futura: `distDir` separado para build de verificação.)
+
+### E2E com Playwright (Módulo 6)
+
+[2026-05-29] Context: suíte E2E em `e2e/` (Playwright) validando o chat real.
+Rule: testes são **local-only** — dependem de OpenRouter real + um Zetel com leitura preparada (DB/vault fora do git). `E2E_ZETEL_SLUG` (via `.env.e2e`, dotenv no `playwright.config.ts`) aponta o Zetel; sem ele, helper clica no 1º card (frágil). `reuseExistingServer: true`. Specs de nota são **LLM-dependentes**: o modelo só emite `<<<NOTA_SUGERIDA>>>` com mensagem fortemente indutora ("quero MUITO guardar… inclua o bloco de sugestão") — mensagens brandas não disparam (claude-3.5-haiku é parcimonioso, fiel à rubrica). `note-save` cria nota real no vault e acumula duplicatas (sem API de exclusão, regra #14) → asserir com `.first()` e timeout generoso (troca de aba + fetch). `workers: 1` (specs compartilham o Zetel de teste).
