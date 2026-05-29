@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 0 em andamento.** Spikes A e C concluídos e validados. Spike B (mock visual) produzido — aguarda aprovação manual de Igor. Spike D com script pronto — aguarda execução com chave OpenRouter real. PRD v2 final aprovado e consolidado em 2026-05-28.
+**Estado atual: Módulo 0 concluído.** Spikes A, B, C e D concluídos e validados. Spike B aprovado por Igor em 2026-05-29. Spike D executado em 2026-05-29: TTFT 1 006 ms, PT-BR ✅, SSE ✅. PRD v2 final aprovado e consolidado em 2026-05-28.
 
 ---
 

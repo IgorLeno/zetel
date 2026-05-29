@@ -99,26 +99,38 @@ Singleton funcionou conforme esperado:
 
 ## Spike D — OpenRouter SSE + listagem de modelos
 
-**Status: aguardando execução com chave real do usuário.**
+**Status: concluído e validado em 2026-05-29.**
 
-O script `spike-d/run.mjs` está pronto. Para validar, o usuário deve executar:
+Executado com modelo `anthropic/claude-3.5-haiku` via chave em `spikes/spike-d/.env`.
 
-```bash
-cd spikes/spike-d
+### Resultados
 
-# Chat com streaming SSE
-OPENROUTER_API_KEY=sk-or-... node run.mjs chat
+| Critério | Resultado |
+|----------|-----------|
+| PT-BR sem instrução no user message | ✅ Resposta inteiramente em PT-BR (instrução apenas no `system`) |
+| TTFT < 5 000 ms | ✅ **1 006 ms** |
+| Tokens reportados | ✅ `in=54 out=140` |
+| Catálogo de modelos | ✅ 357 modelos; 249 com input < $1/1M tokens; preços coerentes |
+| Streaming SSE | ✅ Sem erros; chunks chegando de forma incremental; `include_usage` funciona |
 
-# Listagem de modelos (top 10 mais baratos)
-OPENROUTER_API_KEY=sk-or-... node run.mjs models
-```
+Tempo total do request: **3 739 ms**.
 
-### O que validar
+### Observações técnicas
 
-- [ ] Resposta em PT-BR sem instrução explícita no user message (sistema instrui via `system`).
-- [ ] Primeiro token em < 5 000 ms (TTFT impresso ao final como `[TTFT] Xms`).
-- [ ] Uso impresso como `[usage] in=N out=M`.
-- [ ] `models` lista ≥ 5 modelos com preços coerentes (prompt $/M e completion $/M).
+- `stream_options: { include_usage: true }` funcionou: o último chunk trouxe `usage`
+  com `prompt_tokens` e `completion_tokens` corretamente.
+- Aviso `[DEP0040] punycode module is deprecated` emitido pelo Node.js — vem de uma
+  dependência transitiva do SDK OpenAI. Não afeta o funcionamento; ignorar no produto
+  (warning de runtime do Node, não do nosso código).
+- Modelo default `anthropic/claude-3.5-haiku`: custo ≈ $0.80/1M input, $4.00/1M output
+  (valores do catálogo OpenRouter na data da execução). Adequado para o MVP.
+
+### O que foi validado
+
+- [x] Resposta em PT-BR sem instrução explícita no user message (sistema instrui via `system`).
+- [x] Primeiro token em < 5 000 ms (TTFT impresso ao final como `[TTFT] Xms`).
+- [x] Uso impresso como `[usage] in=N out=M`.
+- [x] `models` lista ≥ 5 modelos com preços coerentes (prompt $/M e completion $/M).
 
 ### Observações de design
 
