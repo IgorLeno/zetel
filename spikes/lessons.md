@@ -238,10 +238,14 @@ defesa primária.
 [2026-05-29] Context: trash/restore/purge/create.
 Rule registrada como invariante do serviço:
 - **create**: pasta ANTES, INSERT depois (pasta órfã é inofensiva; registro sem pasta seria pior).
-- **trash/restore**: transação no DB ANTES, `fs.renameSync` depois (rename atômico, sem cp+rm).
+- **trash**: DB ANTES (`trashed_at`), `fs.renameSync` depois. Se o rename falhar, o registro fica
+  trashed mas a pasta segue ativa — recuperável restaurando.
+- **restore**: `fs.renameSync` ANTES, limpar `trashed_at` depois. Se o rename falhar, o registro
+  PERMANECE trashed — nada a desfazer. (Corrigido em patch pós-implementação: a versão inicial
+  limpava o DB antes do rename, o que deixava o Zetel ativo com a pasta presa em `.lixeira/`.)
 - **purge**: `fs.rmSync` ANTES, DELETE depois (pasta ausente não é fatal — pode ter sido removida à mão).
-Se o `renameSync` falhar após o commit, o estado fica divergente — reportado ao usuário com
-mensagem clara e recuperável (regra #4 do prompt do módulo). Aceito no MVP.
+Princípio unificador: **o DB só passa a refletir o novo estado depois que o filesystem o confirma**
+na direção que evita o pior estado de cada operação. `renameSync` é atômico no mesmo FS (sem cp+rm).
 
 ### Observações técnicas
 

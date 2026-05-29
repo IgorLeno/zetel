@@ -89,7 +89,9 @@ export function generateUniqueSlug(db: Database.Database, baseName: string): str
     const candidate = `${base}-${n}`;
     if (!exists.get(candidate)) return candidate;
   }
-  throw new Error(`Não foi possível gerar um slug único para "${base}" (99 tentativas esgotadas).`);
+  throw new Error(
+    `Não foi possível gerar um slug único para "${base}" — esgotadas as variações de sufixo até -99.`,
+  );
 }
 
 export function getZetelById(db: Database.Database, id: string): Zetel | null {
@@ -230,7 +232,10 @@ function findTrashEntry(vaultPath: string, slug: string): string | null {
 
 /**
  * Restaura da lixeira: valida que a pasta de destino está livre, acha a entrada
- * na lixeira, limpa `trashed_at` (transação) e move a pasta de volta.
+ * na lixeira, move a pasta de volta e SÓ ENTÃO limpa `trashed_at`. Filesystem
+ * primeiro garante que, se o rename falhar, o registro permaneça trashed e o
+ * estado siga consistente (recuperável). Ordem oposta à de `trashZetel`, de
+ * propósito: em ambas, o DB só reflete o estado depois que a pasta o confirma.
  */
 export function restoreZetel(db: Database.Database, vaultPath: string, id: string): void {
   const zetel = getZetelById(db, id);
@@ -253,20 +258,23 @@ export function restoreZetel(db: Database.Database, vaultPath: string, id: strin
     throw new Error('A pasta deste Zetel não foi encontrada na lixeira.');
   }
 
-  const now = new Date().toISOString();
-  db.transaction(() => {
-    db.prepare('UPDATE zetels SET trashed_at = NULL, updated_at = ? WHERE id = ?').run(now, id);
-  })();
-
+  // Filesystem primeiro: o Zetel só vira "ativo" no DB depois que a pasta volta
+  // fisicamente para zetels/<slug>/. Se o rename falhar, o registro continua
+  // trashed — nada a desfazer, estado consistente.
   try {
     renameSync(from, to);
   } catch (err) {
     logger.error('zetel restore rename failed', { id, error: (err as Error).message });
     throw new Error(
-      'O Zetel foi marcado como ativo, mas a pasta não pôde ser movida de volta. ' +
+      'A pasta do Zetel não pôde ser movida de volta da lixeira. ' +
         'Verifique a pasta zetels/.lixeira/ manualmente.',
     );
   }
+
+  db.prepare('UPDATE zetels SET trashed_at = NULL, updated_at = ? WHERE id = ?').run(
+    new Date().toISOString(),
+    id,
+  );
 
   logger.info('zetel restored', { id, slug: zetel.slug });
 }
