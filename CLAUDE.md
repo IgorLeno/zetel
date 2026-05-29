@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 0 concluído.** Spikes A, B, C e D concluídos e validados. Spike B aprovado por Igor em 2026-05-29. Spike D executado em 2026-05-29: TTFT 1 006 ms, PT-BR ✅, SSE ✅. PRD v2 final aprovado e consolidado em 2026-05-28.
+**Estado atual: Módulo 1 (Fundação) concluído e validado em 2026-05-29 — Gate 1 → 2 OK.** Módulo 0: spikes A, B, C, D concluídos; Spike B aprovado por Igor em 2026-05-29; Spike D: TTFT 1 006 ms, PT-BR ✅, SSE ✅. Módulo 1 entregou: scaffold Next.js 15 + TS strict + better-sqlite3 + Tailwind v4; `lib/{paths,logger,config,db,migrate,settings,vault}.ts`; migrations versionadas (`001_init.sql`); rotas API Node (`vault`, `config`, `test-connection`, `theme`); shell de UI fiel ao mock + tela de Configurações. Quitou dívidas #1/#2/#3/#7/#8 do Módulo 0 (ver `spikes/lessons.md`). PRD v2 final aprovado e consolidado em 2026-05-28.
 
 ---
 
@@ -128,9 +128,9 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 
 | # | Módulo | Objetivo | Depende de |
 |---|--------|----------|-----------|
-| **0** | **Spikes + mock visual** ← em andamento | A ✅ C ✅ · B aguarda aprovação · D aguarda chave | — |
-| 1 | Fundação | Next.js + vault + SQLite + settings mínimas | 0 |
-| 2 | Zetel CRUD + lixeira | Entidade Zetel funcional sem conteúdo | 1 |
+| 0 | Spikes + mock visual | A ✅ B ✅ C ✅ D ✅ | — |
+| **1** | **Fundação** ✅ | Next.js + vault + SQLite + settings mínimas | 0 |
+| 2 | Zetel CRUD + lixeira ← próximo | Entidade Zetel funcional sem conteúdo | 1 |
 | 3 | Ingestão Markdown + aba Arquivos | Anexar `.md`, ordenar, processar, detectar drift | 2 |
 | 4 | Leitura paginada determinística | HTML autocontido, mini-índice, navegação | 3 + mock aprovado |
 | 5 | Configurações OpenRouter + modelo de chat | Modelo selecionado, persistido, testado | 1 + Spike D |

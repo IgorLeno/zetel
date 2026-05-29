@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Next.js
+.next/
+out/
+build/
+next-env.d.ts
+
+# Estado operacional e segredos do Zetel — nunca versionar
+**/.zetel/
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+
+# Env
+.env
+.env.local
+.env*.local
+
+# OS / editor
+.DS_Store
+*.pem
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo

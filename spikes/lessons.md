@@ -168,3 +168,39 @@ Atalhos tomados nos spikes que precisam ser corrigidos antes de qualquer código
 | D11 — mini-índice derivado dos headings | Coleta antes do sanitize é o ponto correto; slug do `rehype-slug` é estável e serve como âncora de navegação. |
 | D13 — HTML autocontido + `<iframe sandbox>` | Spike B confirma que o layout do produto não precisa de `allow-same-origin`: o iframe é read-only, sem JS no conteúdo. Decisão mantida: `<iframe sandbox>` puro. |
 | Regra #7 — singleton `better-sqlite3` | Padrão `globalThis` funciona perfeitamente com hot-reload do Next.js. Sem alternativa necessária. |
+
+---
+
+## Lessons — Módulo 1 (Fundação)
+
+**Status: concluído e validado em 2026-05-29. Gate 1 → 2 OK.**
+
+Dívidas do Módulo 0 quitadas: **#1** (chave em `~/.zetel/config` 600 via `lib/config.ts`),
+**#2** (migrations em `migrations/` aplicadas via `schema_migrations` em `lib/migrate.ts`),
+**#3** (`foreign_keys = ON` no `lib/db.ts`), **#7** (`globalThis.__zetelDb` tipado em `types/global.d.ts`),
+**#8** (`lib/logger.ts` em `~/.zetel/logs/zetel.log`, rotação 5MB×3, só IDs/contagens).
+Dívidas #4, #5, #6 permanecem para os Módulos 3/4.
+
+### Calibração: "Testar conexão" usa /api/v1/key, não /models
+
+[2026-05-29] Context: implementação do botão "Testar conexão" nas Configurações.
+Mistake: o prompt do Módulo 1 e o spike D especificavam `GET /api/v1/models`, mas esse endpoint
+é um **catálogo público** — responde `200` com qualquer chave (até `sk-or-test-FAKE-123`), logo
+NÃO valida a chave. O teste passava com chave inválida.
+Rule: para validar a chave OpenRouter, usar `GET /api/v1/key` (exige auth, retorna `401` com chave
+inválida). `/models` só serve para listar modelos, nunca como prova de credencial válida. Vale para
+o Módulo 5 (seleção de modelo: listar via `/models`, mas validar a chave via `/key`).
+
+### Observações técnicas
+
+- **`cookies()` no `app/layout.tsx` torna todo o app dinâmico** (render server-side por request).
+  É o esperado e necessário para o tema sem `localStorage` (app roda em iframe no dev — regra #3).
+  Trade-off aceito: sem páginas estáticas, mas o app é local-first single-user.
+- **`PRAGMA foreign_keys` é por conexão, não persistido no arquivo.** Verificar via uma conexão
+  externa (ex.: `sqlite3` CLI) sempre mostra `0`; o que importa é que `lib/db.ts` seta `ON` na
+  conexão singleton do app. Não confundir auditoria externa com o estado da conexão de runtime.
+- **`pnpm install` com `onlyBuiltDependencies: ['better-sqlite3','sharp']`** compila os binários
+  nativos sem prompt interativo no pnpm 10 — confirmado. `sharp` veio como dep transitiva do Next.
+- **Fontes via `next/font/google`** (Inter + Newsreader) são baixadas no build e self-hosted —
+  bom para local-first. Expostas como `--font-inter`/`--font-newsreader`, consumidas pelos tokens
+  `--font-ui`/`--font-read` do mock no `globals.css`.
