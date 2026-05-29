@@ -1,0 +1,12 @@
+{
+  "name": "spike-d",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "chat": "node run.mjs chat",
+    "models": "node run.mjs models"
+  },
+  "dependencies": {
+    "openai": "^4.77.0"
+  }
+}

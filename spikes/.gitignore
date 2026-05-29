@@ -1,0 +1,9 @@
+node_modules/
+.next/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+spike-a/outputs/
+spike-d/.env
+.env.local

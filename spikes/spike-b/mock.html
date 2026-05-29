@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zetel — Mock Visual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..500&family=Inter:wght@300..600&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    button { font: inherit; cursor: pointer; border: none; background: none; }
+    ul { list-style: none; }
+
+    /* ── Tokens ── */
+    :root {
+      --bg:           #fafaf8;
+      --bg-side:      #f2f2ef;
+      --bg-tabs:      #f7f7f5;
+      --bg-chat:      #fafaf8;
+      --bg-msg-user:  #e8eeff;
+      --bg-msg-ai:    #ffffff;
+      --bg-card:      #f4f4f1;
+      --bg-hover:     #eaeae7;
+      --border:       #e3e3df;
+      --border-light: #ebebea;
+      --text:         #1a1a1a;
+      --text-2:       #555450;
+      --text-3:       #8a8884;
+      --text-inv:     #fafaf8;
+      --accent:       #3b7bdb;
+      --accent-dim:   #3b7bdb22;
+      --accent-hover: #2e69c4;
+      --ok:           #2d8a4e;
+      --warn:         #b45309;
+      --font-ui:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-read:    'Newsreader', Georgia, serif;
+      --radius:       6px;
+      --radius-lg:    10px;
+      --shadow:       0 1px 4px rgba(0,0,0,.07), 0 0 1px rgba(0,0,0,.05);
+      --shadow-md:    0 4px 16px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    [data-theme="dark"] {
+      --bg:           #16161a;
+      --bg-side:      #1e1e22;
+      --bg-tabs:      #1a1a1e;
+      --bg-chat:      #16161a;
+      --bg-msg-user:  #1e2a42;
+      --bg-msg-ai:    #1e1e22;
+      --bg-card:      #1e1e22;
+      --bg-hover:     #25252a;
+      --border:       #2c2c32;
+      --border-light: #242428;
+      --text:         #e8e8e4;
+      --text-2:       #a0a09c;
+      --text-3:       #6a6a68;
+      --text-inv:     #1a1a1a;
+      --accent:       #5a9cf2;
+      --accent-dim:   #5a9cf222;
+      --accent-hover: #4d8ee0;
+      --ok:           #4eba72;
+      --warn:         #e59235;
+      --shadow:       0 1px 4px rgba(0,0,0,.3);
+      --shadow-md:    0 4px 16px rgba(0,0,0,.4);
+    }
+
+    /* ── App shell ── */
+    html, body { height: 100%; }
+
+    body {
+      display: flex;
+      font-family: var(--font-ui);
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    /* ══════════════════════════════════════════
+       SIDEBAR ESQUERDA
+    ══════════════════════════════════════════ */
+    .sidebar {
+      width: 232px;
+      min-width: 232px;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-side);
+      border-right: 1px solid var(--border);
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .logo-mark {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-mark svg { width: 16px; height: 16px; fill: white; }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    .sidebar-nav {
+      padding: 10px 8px;
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      color: var(--text-2);
+      font-size: 13.5px;
+      font-weight: 450;
+      cursor: pointer;
+      transition: background .12s, color .12s;
+      user-select: none;
+    }
+
+    .nav-item:hover { background: var(--bg-hover); color: var(--text); }
+    .nav-item.active { background: var(--accent-dim); color: var(--accent); font-weight: 550; }
+
+    .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 1.75; }
+
+    .nav-section-label {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      padding: 12px 10px 4px;
+    }
+
+    .sidebar-zetel-list {
+      padding: 2px 8px 8px;
+    }
+
+    .zetel-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-2);
+      transition: background .1s, color .1s;
+    }
+
+    .zetel-item:hover { background: var(--bg-hover); color: var(--text); }
+    .zetel-item.active { background: var(--accent-dim); color: var(--accent); font-weight: 500; }
+
+    .zetel-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+
+    .zetel-item.active .zetel-dot { opacity: 1; }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-label {
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 8px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text-2);
+      font-size: 12px;
+      transition: background .12s, color .12s;
+    }
+
+    .theme-toggle:hover { background: var(--bg-hover); color: var(--text); }
+    .theme-toggle svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.75; }
+
+    /* ══════════════════════════════════════════
+       MAIN (centro + chat)
+    ══════════════════════════════════════════ */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Cabeçalho do Zetel ── */
+    .zetel-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+
+    .zetel-header-title {
+      font-size: 15.5px;
+      font-weight: 550;
+      letter-spacing: -0.01em;
+      flex: 1;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px 3px 8px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid transparent;
+    }
+
+    .status-badge.ok {
+      background: color-mix(in srgb, var(--ok) 10%, transparent);
+      color: var(--ok);
+      border-color: color-mix(in srgb, var(--ok) 25%, transparent);
+    }
+
+    .status-badge.warn {
+      background: color-mix(in srgb, var(--warn) 10%, transparent);
+      color: var(--warn);
+      border-color: color-mix(in srgb, var(--warn) 25%, transparent);
+    }
+
+    .status-badge svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    .header-btn {
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-2);
+      background: var(--bg);
+      transition: background .1s, color .1s, border-color .1s;
+    }
+    .header-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .header-btn.primary {
+      background: var(--accent);
+      color: var(--text-inv);
+      border-color: var(--accent);
+    }
+    .header-btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+    /* ── Abas internas ── */
+    .tabs-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-tabs);
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .tab-item {
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 450;
+      color: var(--text-3);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color .1s, border-color .1s;
+    }
+
+    .tab-item:hover { color: var(--text-2); }
+    .tab-item.active { color: var(--accent); font-weight: 550; border-bottom-color: var(--accent); }
+
+    /* ── Corpo ── */
+    .body-area {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ══════════════════════════════════════════
+       ABA LEITURA
+    ══════════════════════════════════════════ */
+    .reading-pane {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Mini-índice */
+    .mini-index {
+      width: 196px;
+      min-width: 196px;
+      padding: 20px 12px;
+      border-right: 1px solid var(--border-light);
+      overflow-y: auto;
+      font-size: 12.5px;
+    }
+
+    .idx-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 10px;
+    }
+
+    .idx-item {
+      display: block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: var(--text-2);
+      text-decoration: none;
+      line-height: 1.45;
+      margin-bottom: 1px;
+      transition: background .1s, color .1s;
+    }
+
+    .idx-item:hover { background: var(--bg-hover); color: var(--text); }
+    .idx-item.active { background: var(--accent-dim); color: var(--accent); font-weight: 550; }
+    .idx-item.h2 { padding-left: 18px; font-size: 12px; }
+    .idx-item.h3 { padding-left: 28px; font-size: 11.5px; color: var(--text-3); }
+
+    /* Área de leitura */
+    .reading-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 48px 60px;
+    }
+
+    .reading-prose {
+      max-width: 70ch;
+      font-family: var(--font-read);
+      font-size: 18px;
+      line-height: 1.78;
+      color: var(--text);
+    }
+
+    .reading-prose h1 { font-size: 1.8rem; line-height: 1.2; margin: 0 0 1.2rem; font-weight: 500; }
+    .reading-prose h2 { font-size: 1.3rem; line-height: 1.3; margin: 2rem 0 0.75rem; font-weight: 500; }
+    .reading-prose h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; font-style: italic; font-weight: 400; }
+    .reading-prose p  { margin-bottom: 1rem; }
+    .reading-prose ul, .reading-prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .reading-prose li { margin-bottom: 0.3rem; }
+    .reading-prose blockquote {
+      border-left: 2.5px solid var(--border);
+      padding: 0.4rem 1rem;
+      margin: 1.2rem 0;
+      color: var(--text-2);
+      font-style: italic;
+    }
+    .reading-prose code {
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 0.85em;
+      background: var(--bg-card);
+      padding: 0.15em 0.4em;
+      border-radius: 3px;
+    }
+    .reading-prose strong { font-weight: 600; }
+
+    /* Navegação de páginas */
+    .page-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 48px;
+      border-top: 1px solid var(--border-light);
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text-2);
+      font-size: 13px;
+      transition: background .1s, color .1s;
+    }
+
+    .nav-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .nav-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    .page-indicator {
+      font-size: 12.5px;
+      color: var(--text-3);
+      font-family: var(--font-ui);
+    }
+
+    /* ══════════════════════════════════════════
+       PAINEL DE CHAT LATERAL DIREITO
+    ══════════════════════════════════════════ */
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-chat);
+      border-left: 1px solid var(--border);
+      transition: width .2s ease, min-width .2s ease;
+      overflow: hidden;
+      width: 380px;
+      min-width: 380px;
+      flex-shrink: 0;
+    }
+
+    .chat-panel.collapsed {
+      width: 44px;
+      min-width: 44px;
+    }
+
+    /* Botão Interagir (tab vertical quando collapsed) */
+    .chat-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-2);
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: background .1s, color .1s;
+      flex-shrink: 0;
+    }
+
+    .chat-toggle:hover { background: var(--bg-hover); color: var(--text); }
+
+    .chat-toggle-label { transition: opacity .15s; }
+    .chat-panel.collapsed .chat-toggle-label { opacity: 0; pointer-events: none; }
+
+    .chat-toggle svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.75; flex-shrink: 0; }
+
+    /* Cabeçalho do chat */
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .chat-header-title { font-size: 12.5px; font-weight: 600; color: var(--text); }
+    .chat-context {
+      font-size: 11px;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .chat-context svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    /* Mensagens */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 94%;
+    }
+
+    .msg.user { align-self: flex-end; }
+    .msg.ai { align-self: flex-start; }
+
+    .msg-bubble {
+      padding: 9px 13px;
+      border-radius: var(--radius-lg);
+      font-size: 13.5px;
+      line-height: 1.55;
+    }
+
+    .msg.user .msg-bubble {
+      background: var(--bg-msg-user);
+      color: var(--text);
+      border-bottom-right-radius: 3px;
+    }
+
+    .msg.ai .msg-bubble {
+      background: var(--bg-msg-ai);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 3px;
+      box-shadow: var(--shadow);
+    }
+
+    .msg-meta {
+      font-size: 10.5px;
+      color: var(--text-3);
+      padding: 0 4px;
+    }
+
+    .msg.user .msg-meta { text-align: right; }
+
+    /* Card de sugestão de nota */
+    .note-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 13px;
+      margin-top: 4px;
+    }
+
+    .note-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .note-card-label svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .note-card-title { font-size: 13.5px; font-weight: 600; margin-bottom: 5px; }
+    .note-card-body { font-size: 12.5px; color: var(--text-2); line-height: 1.5; margin-bottom: 10px; }
+
+    .note-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .note-action-btn {
+      padding: 5px 11px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+      background: var(--bg);
+      transition: background .1s, color .1s, border-color .1s;
+    }
+
+    .note-action-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .note-action-btn.save { background: var(--accent); color: var(--text-inv); border-color: var(--accent); }
+    .note-action-btn.save:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .note-action-btn.reject { color: var(--text-3); }
+
+    /* Contador de tokens */
+    .token-counter {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      padding: 4px 14px 6px;
+      font-size: 10.5px;
+      color: var(--text-3);
+      flex-shrink: 0;
+    }
+
+    /* Input do chat */
+    .chat-input-area {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .chat-input-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 8px 10px;
+      transition: border-color .15s;
+    }
+
+    .chat-input-wrap:focus-within { border-color: var(--accent); }
+
+    .chat-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font: 13.5px / 1.4 var(--font-ui);
+      color: var(--text);
+      resize: none;
+      max-height: 120px;
+      min-height: 20px;
+    }
+
+    .chat-input::placeholder { color: var(--text-3); }
+
+    .send-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background .1s;
+    }
+
+    .send-btn:hover { background: var(--accent-hover); }
+    .send-btn svg { width: 14px; height: 14px; stroke: white; fill: none; stroke-width: 2.25; }
+
+    /* ══════════════════════════════════════════
+       ABAS INATIVAS (placeholder)
+    ══════════════════════════════════════════ */
+    .tab-placeholder {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+      color: var(--text-3);
+      font-size: 14px;
+    }
+
+    /* ── Scroll styling ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+  </style>
+</head>
+<body>
+
+  <!-- ══ SIDEBAR ESQUERDA ══════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <!-- Z de Zetel -->
+        <svg viewBox="0 0 16 16"><path d="M3 3h10L5 13h8" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </div>
+      <span class="logo-text">Zetel</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Menu</div>
+      <div class="nav-item active" onclick="alert('Área Zetel')">
+        <svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 6h6M5 9h4"/></svg>
+        Zetel
+      </div>
+      <div class="nav-item" onclick="alert('Área Memória')">
+        <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2.5 1.5"/></svg>
+        Memória
+      </div>
+      <div class="nav-item" onclick="alert('Área Configurações')">
+        <svg viewBox="0 0 16 16"><path d="M8 10a2 2 0 100-4 2 2 0 000 4z"/><path d="M8 2v1M8 13v1M2 8H1m14 0h-1m-2.05-4.95-.7.7M4.75 11.25l-.7.7M11.25 11.25l.7.7M4.05 3.05l.7.7"/></svg>
+        Configurações
+      </div>
+    </nav>
+
+    <div class="sidebar-zetel-list">
+      <div class="nav-section-label">Zetels recentes</div>
+      <div class="zetel-item active">
+        <span class="zetel-dot"></span>
+        Pragmatic Thinking
+      </div>
+      <div class="zetel-item">
+        <span class="zetel-dot"></span>
+        Sistemas Complexos
+      </div>
+      <div class="zetel-item">
+        <span class="zetel-dot"></span>
+        Deep Work — Cal Newport
+      </div>
+      <div class="zetel-item">
+        <span class="zetel-dot"></span>
+        Arquitetura Hexagonal
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <span class="footer-label">v0.1-spike</span>
+      <button class="theme-toggle" id="theme-btn" title="Alternar tema">
+        <svg id="theme-icon-light" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8H3M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M11.54 3.05l-1.41 1.41M4.46 11.54l-1.41 1.41"/></svg>
+        <svg id="theme-icon-dark" viewBox="0 0 16 16" style="display:none"><path d="M13.2 9a5 5 0 01-6.2-6.2A6 6 0 108 14a6 6 0 005.2-5z"/></svg>
+        <span id="theme-label">Escuro</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ══ ÁREA PRINCIPAL ════════════════════════════════════════════ -->
+  <div class="main">
+
+    <!-- Cabeçalho do Zetel -->
+    <header class="zetel-header">
+      <span class="zetel-header-title">Pragmatic Thinking &amp; Learning</span>
+
+      <div class="status-badge ok" id="status-badge" title="HTML da leitura está atualizado">
+        <svg viewBox="0 0 16 16"><polyline points="3 8 6.5 12 13 4"/></svg>
+        Leitura atualizada
+      </div>
+
+      <button class="header-btn" onclick="toggleStatus()">Simular estado</button>
+      <button class="header-btn primary">Preparar leitura</button>
+    </header>
+
+    <!-- Abas internas -->
+    <div class="tabs-bar">
+      <div class="tab-item active" data-tab="leitura" onclick="switchTab(this, 'leitura')">Leitura</div>
+      <div class="tab-item" data-tab="arquivos" onclick="switchTab(this, 'arquivos')">Arquivos</div>
+      <div class="tab-item" data-tab="notas-rapidas" onclick="switchTab(this, 'notas-rapidas')">Notas rápidas</div>
+      <div class="tab-item" data-tab="notas-literatura" onclick="switchTab(this, 'notas-literatura')">Notas de literatura</div>
+      <div class="tab-item" data-tab="artefatos" onclick="switchTab(this, 'artefatos')">Artefatos</div>
+    </div>
+
+    <div class="body-area">
+
+      <!-- Aba LEITURA -->
+      <div class="reading-pane" id="tab-leitura">
+
+        <!-- Mini-índice -->
+        <nav class="mini-index">
+          <p class="idx-title">Conteúdo</p>
+          <a class="idx-item active" href="#">Parte I — Sobre Expertise</a>
+          <a class="idx-item h2" href="#">Novato vs. Especialista</a>
+          <a class="idx-item h2" href="#">O modelo de Dreyfus</a>
+          <a class="idx-item h3" href="#">Iniciante</a>
+          <a class="idx-item h3" href="#">Avançado iniciante</a>
+          <a class="idx-item h3" href="#">Competente</a>
+          <a class="idx-item h3" href="#">Proficiente</a>
+          <a class="idx-item h3" href="#">Especialista</a>
+          <a class="idx-item" href="#">Parte II — Pensamento</a>
+          <a class="idx-item h2" href="#">Cérebro esquerdo e direito</a>
+          <a class="idx-item h2" href="#">Modo L e modo R</a>
+          <a class="idx-item" href="#">Parte III — Aprendizado</a>
+          <a class="idx-item h2" href="#">Deliberate practice</a>
+          <a class="idx-item h2" href="#">SRS e espaçamento</a>
+          <a class="idx-item h2" href="#">SMART vs. A-SMART</a>
+        </nav>
+
+        <!-- Conteúdo da página atual (simulado) -->
+        <div class="reading-content">
+          <article class="reading-prose">
+            <h1>Parte I — Sobre Expertise e Desenvolvimento de Habilidades</h1>
+
+            <p>O modelo de Dreyfus de aquisição de habilidades — desenvolvido pelos irmãos Stuart e Hubert Dreyfus nos anos 1970 a partir de estudos com pilotos militares e jogadores de xadrez — descreve cinco estágios distintos pelo qual um aprendiz passa ao adquirir qualquer habilidade complexa: de iniciante a especialista.</p>
+
+            <p>O que torna esse modelo particularmente valioso para qualquer pessoa comprometida com o desenvolvimento pessoal é que ele não apenas descreve os estágios — ele explica <em>por que</em> as estratégias de aprendizado que funcionam bem em um estágio são frequentemente contraproducentes em outro. O iniciante precisa de regras explícitas e claras; o especialista opera principalmente por intuição e fica confuso quando forçado a articular regras que internalizou tão profundamente que deixaram de ser conscientes.</p>
+
+            <h2>O modelo de Dreyfus em detalhe</h2>
+
+            <p>No estágio de <strong>Iniciante</strong>, o aprendiz segue regras à risca, sem contexto ou julgamento situacional. Ele não sabe o que não sabe. O contexto é ignorado porque o iniciante ainda não tem o repertório para reconhecer o que é relevante em uma situação nova.</p>
+
+            <p>O <strong>Avançado iniciante</strong> começa a perceber padrões situacionais, mas ainda os trata de forma isolada. Ele reconhece aspectos da situação que o iniciante não vê, mas ainda não tem uma visão integrada do problema.</p>
+
+            <blockquote>
+              "O especialista não aplica regras — ele vê o que fazer diretamente, sem precisar deliberar. A regra que o novato precisa aprender de cabeça é invisível para o especialista."
+              <br>— Stuart Dreyfus
+            </blockquote>
+
+            <p>A passagem do <strong>Competente</strong> ao <strong>Proficiente</strong> é onde muitos praticantes ficam presos por anos. O competente tem suficiente repertório para criar planos conscientes e deliberados; o proficiente começa a ter <em>visão maximal</em> — ele percebe a situação como um todo, não como um conjunto de aspectos isolados.</p>
+
+            <p>O <strong>Especialista</strong> opera principalmente de forma intuitiva. Ele sabe o que fazer sem precisar saber por que. Quando forçado a articular regras, frequentemente simplifica demais — suas regras explícitas são uma aproximação grosseira do processo interno rico que realmente guia suas decisões.</p>
+
+            <ul>
+              <li>Iniciante — segue regras, ignora contexto</li>
+              <li>Avançado iniciante — percebe padrões situacionais isolados</li>
+              <li>Competente — cria planos conscientes, sente responsabilidade pelos resultados</li>
+              <li>Proficiente — visão holística, mas ainda delibera sobre ações</li>
+              <li>Especialista — ação intuitiva baseada em reconhecimento de padrões profundos</li>
+            </ul>
+          </article>
+        </div>
+
+        <!-- Controles de navegação -->
+        <nav class="page-nav">
+          <button class="nav-btn">
+            <svg viewBox="0 0 16 16"><polyline points="10 4 6 8 10 12"/></svg>
+            Anterior
+          </button>
+          <span class="page-indicator">Página 3 de 12</span>
+          <button class="nav-btn">
+            Próxima
+            <svg viewBox="0 0 16 16"><polyline points="6 4 10 8 6 12"/></svg>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Aba ARQUIVOS (placeholder) -->
+      <div class="tab-placeholder" id="tab-arquivos" style="display:none">
+        <div style="text-align:center">
+          <svg viewBox="0 0 40 40" width="40" height="40" style="margin-bottom:12px;stroke:var(--text-3);fill:none;stroke-width:1.5"><rect x="8" y="6" width="24" height="28" rx="3"/><path d="M14 14h12M14 19h12M14 24h8"/></svg>
+          <div>Aba Arquivos — disponível no Módulo 3</div>
+        </div>
+      </div>
+
+      <!-- Aba NOTAS RÁPIDAS (placeholder) -->
+      <div class="tab-placeholder" id="tab-notas-rapidas" style="display:none">
+        <div style="text-align:center">
+          <svg viewBox="0 0 40 40" width="40" height="40" style="margin-bottom:12px;stroke:var(--text-3);fill:none;stroke-width:1.5"><path d="M8 8h24M8 14h24M8 20h16"/><path d="M22 28l4-4 6 6-4 4-6-6z"/></svg>
+          <div>Notas rápidas — disponível no Módulo 7</div>
+        </div>
+      </div>
+
+      <!-- Aba NOTAS DE LITERATURA (placeholder) -->
+      <div class="tab-placeholder" id="tab-notas-literatura" style="display:none">
+        <div style="text-align:center">
+          <svg viewBox="0 0 40 40" width="40" height="40" style="margin-bottom:12px;stroke:var(--text-3);fill:none;stroke-width:1.5"><rect x="8" y="4" width="20" height="28" rx="2"/><path d="M14 10h8M14 15h8M14 20h5"/><circle cx="30" cy="30" r="6"/><path d="M28 30h4M30 28v4"/></svg>
+          <div>Notas de literatura — disponível no Módulo 7</div>
+        </div>
+      </div>
+
+      <!-- Aba ARTEFATOS (placeholder) -->
+      <div class="tab-placeholder" id="tab-artefatos" style="display:none">
+        <div style="text-align:center">
+          <svg viewBox="0 0 40 40" width="40" height="40" style="margin-bottom:12px;stroke:var(--text-3);fill:none;stroke-width:1.5"><path d="M10 32L20 8l10 24"/><path d="M14 24h12"/></svg>
+          <div>Artefatos — disponível no Módulo 4</div>
+        </div>
+      </div>
+
+    </div><!-- /body-area -->
+  </div><!-- /main -->
+
+  <!-- ══ PAINEL DE CHAT ═══════════════════════════════════════════ -->
+  <aside class="chat-panel" id="chat-panel">
+
+    <!-- Toggle (Interagir) -->
+    <button class="chat-toggle" id="chat-toggle-btn" onclick="toggleChat()">
+      <svg viewBox="0 0 16 16"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v7a1 1 0 01-1 1H9l-3 2.5V11H3a1 1 0 01-1-1V3z"/></svg>
+      <span class="chat-toggle-label">Interagir</span>
+    </button>
+
+    <!-- Cabeçalho do chat (oculto quando recolhido) -->
+    <div class="chat-header" id="chat-inner">
+      <div>
+        <div class="chat-header-title">Parceiro</div>
+        <div class="chat-context">
+          <svg viewBox="0 0 16 16"><path d="M2 4h12v8H2z"/><path d="M2 7h12"/></svg>
+          Pg. 3 — Modelo de Dreyfus
+        </div>
+      </div>
+      <button class="header-btn" style="font-size:11px;padding:4px 8px">Limpar</button>
+    </div>
+
+    <!-- Mensagens -->
+    <div class="chat-messages" id="chat-messages">
+
+      <div class="msg ai">
+        <div class="msg-bubble">
+          Olá! Estou na página 3 de <em>Pragmatic Thinking &amp; Learning</em>, na seção sobre o modelo de Dreyfus. Sobre o que você gostaria de conversar?
+        </div>
+        <div class="msg-meta">Parceiro · 14:02</div>
+      </div>
+
+      <div class="msg user">
+        <div class="msg-bubble">
+          Qual é a diferença prática entre os estágios Competente e Proficiente? Parece que eles se confundem.
+        </div>
+        <div class="msg-meta">Você · 14:04</div>
+      </div>
+
+      <div class="msg ai">
+        <div class="msg-bubble">
+          Boa distinção para explorar. A diferença central está em como cada um percebe a situação:<br><br>
+          O <strong>Competente</strong> ainda desmonta o problema em partes e escolhe entre opções deliberadamente — ele precisa raciocinar sobre o que fazer. Já o <strong>Proficiente</strong> percebe a situação como um <em>todo</em> imediatamente, mas ainda delibera sobre qual ação tomar a partir dessa percepção.<br><br>
+          Uma analogia: o competente vê o trânsito como "carro à frente a 15m, sinaleiro amarelo a 30m" e raciocina. O proficiente vê "momento de frear aqui" de forma direta — mas ainda pondera se freia gradualmente ou de uma vez.
+        </div>
+        <div class="msg-meta">Parceiro · 14:04</div>
+      </div>
+
+      <div class="msg user">
+        <div class="msg-bubble">
+          Então o especialista seria o que freia sem nem pensar nisso?
+        </div>
+        <div class="msg-meta">Você · 14:05</div>
+      </div>
+
+      <div class="msg ai">
+        <div class="msg-bubble">
+          Exatamente. O especialista age de forma intuitiva — a ação certa emerge da percepção da situação sem etapa deliberativa no meio. Isso é o que Dreyfus chama de "reconhecimento de padrões fluente".<br><br>
+          Vale notar que isso tem um custo: o especialista tem dificuldade em articular regras porque a sua "regra" é o padrão internalizado, não uma proposição verbal. Quando forçado a verbalizar, ele simplifica — o que pode confundir iniciantes que esperam que a versão verbalizada seja o real processo.
+        </div>
+        <div class="msg-meta">Parceiro · 14:06</div>
+      </div>
+
+      <!-- Sugestão de nota -->
+      <div class="msg ai">
+        <div class="msg-bubble">
+          Acho que acabamos de articular algo que vale registrar:
+
+          <div class="note-card">
+            <div class="note-card-label">
+              <svg viewBox="0 0 16 16"><path d="M2 13.5V11l7-7 2.5 2.5-7 7H2zM11 4l1.5-1.5a1 1 0 011.4 0l1.1 1.1a1 1 0 010 1.4L13.5 6.5"/></svg>
+              Sugestão de nota rápida
+            </div>
+            <div class="note-card-title">Por que o especialista explica mal</div>
+            <div class="note-card-body">
+              O especialista verbaliza regras que são aproximações grosseiras de seu processo intuitivo. Isso acontece porque a ação certa emerge do reconhecimento direto de padrões, sem etapa deliberativa. Forçar a articulação de regras não captura — e pode distorcer — o processo real.
+            </div>
+            <div class="note-actions">
+              <button class="note-action-btn save" onclick="alert('Nota salva em notas-rapidas/')">Guardar</button>
+              <button class="note-action-btn" onclick="alert('Modo edição')">Editar</button>
+              <button class="note-action-btn" onclick="alert('1 rodada de refinamento')">Discutir</button>
+              <button class="note-action-btn reject" onclick="alert('Nota rejeitada')">Rejeitar</button>
+            </div>
+          </div>
+        </div>
+        <div class="msg-meta">Parceiro · 14:07</div>
+      </div>
+
+    </div><!-- /chat-messages -->
+
+    <!-- Contador de tokens -->
+    <div class="token-counter">
+      <svg viewBox="0 0 16 16" width="12" height="12" stroke="currentColor" fill="none" stroke-width="1.75"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>
+      ~1.240 tokens usados neste turno
+    </div>
+
+    <!-- Input -->
+    <div class="chat-input-area" id="chat-input-area">
+      <div class="chat-input-wrap">
+        <textarea class="chat-input" placeholder="Pergunte sobre a página atual…" rows="1"
+          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+        ></textarea>
+        <button class="send-btn" onclick="sendMsg()">
+          <svg viewBox="0 0 16 16"><path d="M2 14L14 8 2 2v5l8 1-8 1v5z"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </aside><!-- /chat-panel -->
+
+  <script>
+    // ── Tema ──
+    var isDark = localStorage.getItem('zetel-theme') === 'dark';
+    function applyTheme(dark) {
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      document.getElementById('theme-icon-light').style.display = dark ? 'none' : 'block';
+      document.getElementById('theme-icon-dark').style.display  = dark ? 'block' : 'none';
+      document.getElementById('theme-label').textContent = dark ? 'Claro' : 'Escuro';
+    }
+    applyTheme(isDark);
+    document.getElementById('theme-btn').addEventListener('click', function() {
+      isDark = !isDark;
+      localStorage.setItem('zetel-theme', isDark ? 'dark' : 'light');
+      applyTheme(isDark);
+    });
+
+    // ── Abas ──
+    function switchTab(el, tab) {
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      var tabs = ['leitura','arquivos','notas-rapidas','notas-literatura','artefatos'];
+      tabs.forEach(function(t) {
+        var el = document.getElementById('tab-' + t);
+        if (el) el.style.display = t === tab ? (t === 'leitura' ? 'flex' : 'flex') : 'none';
+      });
+    }
+
+    // ── Chat recolhível ──
+    var chatOpen = true;
+    function toggleChat() {
+      chatOpen = !chatOpen;
+      var panel = document.getElementById('chat-panel');
+      var inner = document.getElementById('chat-inner');
+      var msgs  = document.getElementById('chat-messages');
+      var input = document.getElementById('chat-input-area');
+      var tokens = document.querySelector('.token-counter');
+      panel.classList.toggle('collapsed', !chatOpen);
+      [inner, msgs, input, tokens].forEach(function(el) {
+        if (el) el.style.display = chatOpen ? '' : 'none';
+      });
+    }
+
+    // ── Status badge ──
+    var isOk = true;
+    function toggleStatus() {
+      isOk = !isOk;
+      var badge = document.getElementById('status-badge');
+      badge.className = 'status-badge ' + (isOk ? 'ok' : 'warn');
+      badge.innerHTML = isOk
+        ? '<svg viewBox="0 0 16 16"><polyline points="3 8 6.5 12 13 4"/></svg>Leitura atualizada'
+        : '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 11h.01"/></svg>Leitura desatualizada';
+    }
+
+    // ── Envio de mensagem fictício ──
+    function sendMsg() {
+      var ta = document.querySelector('.chat-input');
+      var text = ta.value.trim();
+      if (!text) return;
+      var container = document.getElementById('chat-messages');
+      var msg = document.createElement('div');
+      msg.className = 'msg user';
+      msg.innerHTML = '<div class="msg-bubble">' + text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'
+                    + '<div class="msg-meta">Você · agora</div>';
+      container.appendChild(msg);
+      ta.value = '';
+      ta.style.height = 'auto';
+      container.scrollTop = container.scrollHeight;
+      // Resposta simulada
+      setTimeout(function() {
+        var reply = document.createElement('div');
+        reply.className = 'msg ai';
+        reply.innerHTML = '<div class="msg-bubble">Esta é uma resposta simulada do parceiro. No Módulo 6, o chat chamará o OpenRouter via SSE.</div>'
+                        + '<div class="msg-meta">Parceiro · agora</div>';
+        container.appendChild(reply);
+        container.scrollTop = container.scrollHeight;
+      }, 800);
+    }
+  </script>
+</body>
+</html>
