@@ -10,10 +10,12 @@ export function ConfiguracoesTabs({
   initialVaultPath,
   hasKey,
   initialModel,
+  initialHistoryWindow,
 }: {
   initialVaultPath: string;
   hasKey: boolean;
   initialModel: string;
+  initialHistoryWindow: number;
 }) {
   const [tab, setTab] = useState<Tab>('geral');
 
@@ -41,6 +43,7 @@ export function ConfiguracoesTabs({
           initialVaultPath={initialVaultPath}
           hasKey={hasKey}
           initialModel={initialModel}
+          initialHistoryWindow={initialHistoryWindow}
         />
       ) : (
         <LixeiraPanel />

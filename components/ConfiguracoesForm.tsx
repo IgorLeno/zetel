@@ -8,10 +8,12 @@ export function ConfiguracoesForm({
   initialVaultPath,
   hasKey,
   initialModel,
+  initialHistoryWindow,
 }: {
   initialVaultPath: string;
   hasKey: boolean;
   initialModel: string;
+  initialHistoryWindow: number;
 }) {
   // ── Vault ──
   const [vaultPath, setVaultPath] = useState(initialVaultPath);
@@ -28,8 +30,9 @@ export function ConfiguracoesForm({
   const [testFeedback, setTestFeedback] = useState<Feedback>(null);
   const [testing, setTesting] = useState(false);
 
-  // ── Modelo ──
+  // ── Modelo e chat ──
   const [model, setModel] = useState(initialModel);
+  const [historyWindow, setHistoryWindow] = useState(String(initialHistoryWindow));
   const [modelFeedback, setModelFeedback] = useState<Feedback>(null);
   const [savingModel, setSavingModel] = useState(false);
 
@@ -87,10 +90,13 @@ export function ConfiguracoesForm({
     setTesting(true);
     setTestFeedback(null);
     try {
-      const res = await fetch('/api/test-connection');
+      const res = await fetch('/api/openrouter/test', { method: 'POST' });
       const data = await res.json();
       if (res.ok && data.ok) {
-        setTestFeedback({ kind: 'ok', text: '✓ Conexão OK — chave válida.' });
+        setTestFeedback({
+          kind: 'ok',
+          text: `✓ Conectado (modelo: ${data.model ?? model})`,
+        });
       } else {
         setTestFeedback({ kind: 'err', text: data.error ?? 'Falha na conexão.' });
       }
@@ -104,20 +110,29 @@ export function ConfiguracoesForm({
   async function saveModel() {
     setSavingModel(true);
     setModelFeedback(null);
+    const windowNum = Number.parseInt(historyWindow, 10);
+    if (!Number.isFinite(windowNum) || windowNum < 1 || windowNum > 50) {
+      setModelFeedback({ kind: 'err', text: 'Janela de histórico deve ser entre 1 e 50.' });
+      setSavingModel(false);
+      return;
+    }
     try {
-      const res = await fetch('/api/config', {
-        method: 'POST',
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model }),
+        body: JSON.stringify({
+          default_model: model.trim(),
+          chat_history_window: windowNum,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
-        setModelFeedback({ kind: 'ok', text: 'Modelo padrão salvo.' });
+        setModelFeedback({ kind: 'ok', text: 'Modelo e janela de histórico salvos.' });
       } else {
-        setModelFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar o modelo.' });
+        setModelFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar.' });
       }
     } catch {
-      setModelFeedback({ kind: 'err', text: 'Erro de rede ao salvar o modelo.' });
+      setModelFeedback({ kind: 'err', text: 'Erro de rede ao salvar.' });
     } finally {
       setSavingModel(false);
     }
@@ -196,6 +211,7 @@ export function ConfiguracoesForm({
             id="model"
             className="input"
             type="text"
+            placeholder="anthropic/claude-3.5-haiku"
             value={model}
             onChange={(e) => setModel(e.target.value)}
           />
@@ -204,6 +220,26 @@ export function ConfiguracoesForm({
           </button>
         </div>
         <p className="field-hint">Identificador do modelo no OpenRouter usado pelo parceiro.</p>
+      </div>
+
+      <div className="field">
+        <label className="field-label" htmlFor="history-window">
+          Janela de histórico
+        </label>
+        <div className="field-row">
+          <input
+            id="history-window"
+            className="input"
+            type="number"
+            min={1}
+            max={50}
+            value={historyWindow}
+            onChange={(e) => setHistoryWindow(e.target.value)}
+          />
+        </div>
+        <p className="field-hint">
+          Quantas mensagens anteriores enviar ao parceiro em cada turno (1–50, padrão 10).
+        </p>
         {modelFeedback && <p className={`feedback ${modelFeedback.kind}`}>{modelFeedback.text}</p>}
       </div>
     </div>

@@ -2,7 +2,9 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 4 (Leitura paginada determinística) implementado em 2026-05-29 — aguardando Gate 4 → 5 manual.** Módulo 4 entregou: `lib/render-service.ts` (`renderZetel`: re-segmentação com paridade de `anchor`/`content_hash`, MDAST→HTML via `remark-rehype`+`rehype-slug`+`hast-util-sanitize`, reescrita de imagens com sentinelas, template autocontido `artefatos/leitura.html` com mini-índice e JS de navegação); `lib/sanitize.ts`; `lib/format-utils.ts`; rotas `build` (POST), `leitura` (GET HTML), `artifacts` (GET metadata); UI `LeituraPanel` (iframe `sandbox="allow-scripts"`, Preparar/Atualizar leitura) + `ArtefatosPanel` (metadata, baixar, regenerar). `renderZetel` seta `reading_stale=0` + `last_built_at`; `processZetel` seta `reading_stale=1` (HTML desatualizado até build). Deps: `rehype-slug rehype-sanitize remark-rehype hast-util-to-html hast-util-sanitize` (+ `@types/hast` dev). `pnpm build` limpo. Ver `spikes/lessons.md` (Módulo 4).
+**Estado atual: Módulo 5 (Chat contextual com LLM) implementado em 2026-05-29 — aguardando Gate 5 → 6 manual.** Módulo 5 entregou: `migrations/004_chat_messages.sql`; `types/chat-message.ts`; `lib/{chat-service,openrouter,chat-prompt}.ts`; rotas `zetels/[id]/chat` (GET/POST SSE/DELETE), `openrouter/test` (POST), `settings` (GET/PUT); `ChatPanel` + `LeituraPanel` (painel 320px, `postMessage` de página do iframe); Configurações (modelo padrão, janela de histórico 1–50, teste com modelo). OpenRouter via `fetch` no backend (sem SDK); chave via `readApiKey()` (env fallback → `~/.zetel/config`). `stream_options` só com `ZETEL_LOG_TOKENS=1`. Ver `spikes/lessons.md` (Módulo 5).
+
+**Módulo 4 (Leitura paginada determinística) concluído em 2026-05-29 — Gate 4 → 5 OK.** Módulo 4 entregou: `lib/render-service.ts` (`renderZetel`: re-segmentação com paridade de `anchor`/`content_hash`, MDAST→HTML via `remark-rehype`+`rehype-slug`+`hast-util-sanitize`, reescrita de imagens com sentinelas, template autocontido `artefatos/leitura.html` com mini-índice e JS de navegação); `lib/sanitize.ts`; `lib/format-utils.ts`; rotas `build` (POST), `leitura` (GET HTML), `artifacts` (GET metadata); UI `LeituraPanel` (iframe `sandbox="allow-scripts"`, Preparar/Atualizar leitura) + `ArtefatosPanel` (metadata, baixar, regenerar). `renderZetel` seta `reading_stale=0` + `last_built_at`; `processZetel` seta `reading_stale=1` (HTML desatualizado até build). Deps: `rehype-slug rehype-sanitize remark-rehype hast-util-to-html hast-util-sanitize` (+ `@types/hast` dev). `pnpm build` limpo. Ver `spikes/lessons.md` (Módulo 4).
 
 **Módulo 3 (Ingestão de Markdown + aba Arquivos) concluído e validado em 2026-05-29 — Gate 3 → 4 OK.** Módulo 3 entregou: `migrations/003_ingestao.sql` (`zetel_files`, `zetel_pages` com `UNIQUE (zetel_id, anchor)` e índices); `types/zetel-file.ts` e `types/zetel-page.ts`; `lib/ingestao-service.ts` (add/list/reorder/remove + `processZetel` determinístico: parse `remark`+`remark-gfm` → mapa de imagens → **segmentação por arquivo** com `page_index` global contínuo → `zetel_pages`, idempotente); rotas `zetels/[id]/files` (GET/POST multipart), `files/[fileId]` (DELETE), `files/order` (PATCH), `process` (POST); UI `ArquivosPanel` + badge de leitura no header. `reading_stale=1` nas mutações e após `processZetel`; build limpa stale. Imagens externas (`__blocked__`); locais em `images/` (`__notfound__` quando ausente). Ver `spikes/lessons.md` (Módulo 3).
 
@@ -33,7 +35,7 @@ Não escolher alternativas sem aprovação explícita.
 - **Backend**: rotas API do Next.js em **runtime Node** — não Edge (dependência de `better-sqlite3` e `fs`).
 - **SQLite**: `better-sqlite3` em **instância única (singleton) por processo** — biblioteca síncrona, sem pool de conexões.
 - **Pipeline de leitura**: `remark` + `rehype` + plugins (gfm, slug estável, autolink-headings) + `rehype-sanitize` (allowlist explícita). Determinístico. **Sem LLM.**
-- **Chat**: SSE para streaming; SDK OpenRouter (compatível OpenAI) chamado do backend.
+- **Chat**: SSE para streaming; OpenRouter (`fetch` em `lib/openrouter.ts`) só no backend — frontend nunca chama a API externa.
 - **Idioma da UI e do parceiro**: PT-BR, independente do idioma do material (D15).
 
 ---
@@ -138,27 +140,26 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | 1 | Fundação ✅ | Next.js + vault + SQLite + settings mínimas | 0 |
 | 2 | Zetel CRUD + lixeira ✅ | Entidade Zetel funcional sem conteúdo | 1 |
 | **3** | **Ingestão Markdown + aba Arquivos** ✅ | Anexar `.md`, ordenar, processar, detectar drift | 2 |
-| **4** | **Leitura paginada determinística** ← gate manual | HTML autocontido, mini-índice, navegação | 3 + mock aprovado |
-| 5 | Configurações OpenRouter + modelo de chat ← próximo | Modelo selecionado, persistido, testado | 1 + Spike D |
-| 6 | Chat textual | Conversar com parceiro por texto com SSE | 4 + 5 |
-| 7 | Notas cooperativas | Fluxo Guardar/Editar/Discutir/Rejeitar | 6 |
-| 8 | Memória cooperativa | Memória global em Markdown, leitura sob demanda | 7 |
-| 9 | Polimento → **MVP TEXTUAL ENTREGUE** | Estados vazios, erros, tema, jornada completa | 1–8 |
-| 10 | Prompts editáveis em runtime | Pós-MVP | 9 |
-| 11 | Modo internet | Pós-MVP | 9 |
-| 12 | TTS | Fase 2 | 9 |
-| 13 | STT | Fase 2 | 12 |
-| 14 | Memória emergente automática | Fase 2+ | 9 |
+| **4** | **Leitura paginada determinística** ✅ | HTML autocontido, mini-índice, navegação | 3 + mock aprovado |
+| **5** | **Chat contextual com LLM** ← gate manual | Chat lateral, SSE, histórico, settings de modelo | 4 + Spike D |
+| 6 | Notas cooperativas ← próximo | Fluxo Guardar/Editar/Discutir/Rejeitar | 5 |
+| 7 | Memória cooperativa | Memória global em Markdown, leitura sob demanda | 6 |
+| 8 | Polimento → **MVP TEXTUAL ENTREGUE** | Estados vazios, erros, tema, jornada completa | 1–7 |
+| 9 | Prompts editáveis em runtime | Pós-MVP | 8 |
+| 10 | Modo internet | Pós-MVP | 8 |
+| 11 | TTS | Fase 2 | 8 |
+| 12 | STT | Fase 2 | 11 |
+| 13 | Memória emergente automática | Fase 2+ | 8 |
 
 ---
 
 ## Contratos críticos
 
-**Chat** (`POST /api/zetels/:id/chat`):
-- Request: `{ page_id, message, content_text? }` — `content_text` é otimização opcional.
-- Servidor valida `page_id` contra `zetel_pages`; se inválido → 400.
-- Servidor usa `zetel_pages.content_text` como fonte autoritativa; descarta `content_text` divergente.
-- Registra em `chat_messages.meta`: `page_id`, `page_anchor`, `page_hash_match`, `model`, `tokens_in`, `tokens_out`.
+**Chat** (`GET`/`POST`/`DELETE /api/zetels/:id/chat`):
+- POST body: `{ userMessage, pageIndex?, model? }` — `pageIndex` sincronizado via `postMessage` do iframe (`zetel:page-change`).
+- Servidor busca `zetel_pages.content_text` por `page_index` (truncado 3000 chars); se índice inválido → 400.
+- Resposta POST: SSE `data: <JSON string chunk>\n\n`; erro `data: [ERROR] …`.
+- Histórico em `chat_messages` (`role`, `content`, `page_index`, `model`) — sem `meta` JSON no MVP deste módulo.
 
 **Processar** (`POST /api/zetels/:id/process`):
 - Idempotente: mesmo input → mesmos `content_hash` em `zetel_files` e `zetel_pages`.

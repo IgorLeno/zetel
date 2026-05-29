@@ -5,9 +5,10 @@ import { CONFIG_PATH, ZETEL_HOME } from './paths';
  * Configuração sensível do Zetel em `~/.zetel/config` (D12 / regra inviolável #13).
  *
  * Formato texto simples `chave=valor`, uma por linha. Permissão 600.
- * A chave OpenRouter vive AQUI e em nenhum outro lugar — nunca em SQLite,
- * variável de ambiente ou git. Este módulo não importa o logger para evitar
- * ciclo (logger → config); falhas são lançadas para quem chama tratar/logar.
+ * Em uso normal, a chave OpenRouter vive só neste arquivo — nunca em SQLite
+ * ou git. `OPENROUTER_API_KEY` no ambiente do processo é fallback opcional
+ * para dev/CI; `readApiKey()` em `lib/openrouter.ts` tenta env antes do arquivo.
+ * Este módulo não importa o logger para evitar ciclo (logger → config).
  */
 
 const FILE_MODE = 0o600;
@@ -55,7 +56,7 @@ export function writeConfig(key: string, value: string): void {
   chmodSync(CONFIG_PATH, FILE_MODE);
 }
 
-/** Retorna a chave OpenRouter ou null se ausente. */
+/** Chave em `~/.zetel/config` (canônico). Para leitura unificada use `readApiKey()`. */
 export function getOpenRouterKey(): string | null {
   return readConfig().OPENROUTER_API_KEY || null;
 }

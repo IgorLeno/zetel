@@ -362,7 +362,7 @@ Módulo 4 (PRD §Módulo 4).
 
 ## Lessons — Módulo 4 (Leitura paginada determinística)
 
-**Status: implementado em 2026-05-29. Gate 4 → 5 pendente (validação manual).**
+**Status: concluído em 2026-05-29. Gate 4 → 5 OK.**
 
 Entregue: `lib/render-service.ts`, `lib/sanitize.ts`, `lib/format-utils.ts`; rotas
 `build` / `leitura` / `artifacts`; `LeituraPanel` + `ArtefatosPanel`; exports em
@@ -422,3 +422,46 @@ no iframe (mesmo com `allow-scripts` e sem `allow-same-origin`).
 | M4-1 | Tema do `leitura.html` não segue cookie do app | Propagar tema via query param ou `postMessage` pós-MVP |
 | M4-2 | `hast-util-sanitize` direto + `rehype-sanitize` instalado mas não usado no pipeline | Unificar em um só caminho se simplificar manutenção |
 | M4-3 | M3-3 (`<img>` HTML inline) ainda sem placeholder | Estender visita a nós `html` com imagem |
+
+---
+
+## Lessons — Módulo 5 (Chat contextual com LLM)
+
+**Status: implementado em 2026-05-29. Gate 5 → 6 pendente (validação manual).**
+
+Entregue: `migrations/004_chat_messages.sql`, `types/chat-message.ts`, `lib/{chat-service,openrouter,chat-prompt}.ts`, rotas `chat` / `openrouter/test` / `settings`, `ChatPanel`, `LeituraPanel` com `postMessage`, campos de modelo e janela em Configurações.
+
+### Ordem: comentário em `config.ts` antes de `readApiKey()`
+
+[2026-05-29] Context: fallback `OPENROUTER_API_KEY` no ambiente para dev/CI.
+Rule: atualizar doc em `lib/config.ts` **antes** de implementar `readApiKey()` em `openrouter.ts`, para o histórico git não registrar comentário “nunca env var” desatualizado.
+
+### `stream_options` só com opt-in explícito
+
+[2026-05-29] Context: `include_usage` no body do OpenRouter.
+Mistake: enviar `stream_options: { include_usage: true }` por padrão — alguns modelos respondem 400 e o stream inteiro falha.
+Rule: incluir `stream_options` **somente** se `process.env.ZETEL_LOG_TOKENS === '1'`. Log de `usage` em `try/catch` silencioso; ausência de `usage` no chunk → ignorar, sem erro.
+
+### SSE com chunks JSON
+
+[2026-05-29] Context: tokens do modelo podem conter `\n`.
+Rule: servidor envia `data: ${JSON.stringify(chunk)}\n\n`; cliente faz `JSON.parse` — nunca colocar texto cru em linha `data:` se o chunk pode quebrar o protocolo.
+
+### `postMessage` do iframe sem `allow-same-origin`
+
+[2026-05-29] Context: `LeituraPanel` + `buildNavScript`.
+Rule: iframe mantém `sandbox="allow-scripts"` apenas; `window.parent.postMessage({ type: 'zetel:page-change', pageIndex }, '*')` no fim de `show(n)`, preferindo `dataset.page` do `<article>`. Pai valida `e.data?.type` antes de atualizar estado.
+
+### Teste de conexão com completion mínima
+
+[2026-05-29] Context: `POST /api/openrouter/test`.
+Rule: validar chave + modelo com `chat/completions` (`max_tokens: 1`), retornando `{ ok, model }`. `/api/v1/key` continua útil para checagem rápida de credencial, mas o botão de Configurações usa a rota nova para provar o modelo configurado.
+
+### Dívidas pendentes (não bloqueiam o Gate)
+
+| # | Dívida | Correção futura |
+|---|--------|-----------------|
+| M5-1 | Sem `meta` JSON / `page_id` / `page_hash_match` (PRD Módulo 6) | Migration + contrato D8 completo |
+| M5-2 | Sem saudação automática quando histórico vazio (I1) | Módulo 6 ou polimento |
+| M5-3 | Catálogo `/api/openrouter/models` com preços | PRD Módulo 5 original |
+| M5-4 | `GET /api/test-connection` legado | Remover ou redirecionar para `/api/openrouter/test` |

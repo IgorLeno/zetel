@@ -320,6 +320,11 @@ function buildNavScript(): string {
     document.getElementById('btn-prev').disabled = current === 0;
     document.getElementById('btn-next').disabled = current === total - 1;
     document.getElementById('reader').scrollTop = 0;
+    try {
+      var el = pages[current];
+      var idx = el && el.dataset.page != null ? Number(el.dataset.page) : current;
+      window.parent.postMessage({ type: 'zetel:page-change', pageIndex: idx }, '*');
+    } catch (_) {}
   }
 
   document.getElementById('btn-prev').addEventListener('click', () => show(current - 1));

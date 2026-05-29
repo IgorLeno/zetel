@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ChatPanel } from './ChatPanel';
 
 export function LeituraPanel({
   zetelId,
@@ -16,12 +17,24 @@ export function LeituraPanel({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [currentPageIndex, setCurrentPageIndex] = useState<number | null>(null);
 
   const hasBuilt = lastBuiltAt !== null;
   const showIframe = hasBuilt && !building;
 
   const buttonLabel = hasBuilt ? 'Atualizar leitura' : 'Preparar leitura';
   const buttonPrimary = !hasBuilt || readingStale;
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'zetel:page-change' && typeof e.data.pageIndex === 'number') {
+        setCurrentPageIndex(e.data.pageIndex);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
 
   async function onBuild() {
     setBuilding(true);
@@ -55,6 +68,15 @@ export function LeituraPanel({
         >
           {building ? 'Construindo…' : buttonLabel}
         </button>
+        {showIframe && (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setChatOpen((o) => !o)}
+          >
+            {chatOpen ? 'Fechar chat' : 'Interagir'}
+          </button>
+        )}
         {hasBuilt && !readingStale && !building && (
           <span className="feedback ok">Leitura pronta para uso.</span>
         )}
@@ -66,13 +88,18 @@ export function LeituraPanel({
           <div>Nenhuma leitura construída ainda.</div>
         </div>
       ) : showIframe ? (
-        <iframe
-          ref={iframeRef}
-          className="leitura-iframe"
-          title="Leitura do Zetel"
-          sandbox="allow-scripts"
-          src={`/api/zetels/${zetelId}/leitura`}
-        />
+        <div className={`leitura-body${chatOpen ? ' leitura-with-chat' : ''}`}>
+          <iframe
+            ref={iframeRef}
+            className="leitura-iframe"
+            title="Leitura do Zetel"
+            sandbox="allow-scripts"
+            src={`/api/zetels/${zetelId}/leitura`}
+          />
+          {chatOpen && (
+            <ChatPanel zetelId={zetelId} currentPageIndex={currentPageIndex} />
+          )}
+        </div>
       ) : building ? (
         <div className="empty-state leitura-empty">
           <div>Gerando HTML de leitura…</div>
