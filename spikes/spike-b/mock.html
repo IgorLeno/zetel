@@ -322,17 +322,35 @@
     .reading-pane {
       flex: 1;
       display: flex;
+      flex-direction: column;
       overflow: hidden;
     }
 
-    /* Mini-índice */
+    .reading-main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Mini-índice (drawer, fechado por padrão) */
     .mini-index {
-      width: 196px;
-      min-width: 196px;
-      padding: 20px 12px;
-      border-right: 1px solid var(--border-light);
+      position: absolute;
+      top: 0; bottom: 0; left: 0;
+      width: 220px;
+      z-index: 20;
+      background: var(--bg-side);
+      border-right: 1px solid var(--border);
+      padding: 16px 12px;
       overflow-y: auto;
       font-size: 12.5px;
+      transform: translateX(-100%);
+      transition: transform .2s ease;
+      box-shadow: var(--shadow-md);
+    }
+
+    .mini-index.open {
+      transform: translateX(0);
     }
 
     .idx-title {
@@ -364,11 +382,12 @@
     .reading-content {
       flex: 1;
       overflow-y: auto;
-      padding: 28px 48px 60px;
+      padding: 28px 40px 36px;
     }
 
     .reading-prose {
       max-width: 70ch;
+      margin: 0 auto;
       font-family: var(--font-read);
       font-size: 18px;
       line-height: 1.78;
@@ -397,39 +416,68 @@
     }
     .reading-prose strong { font-weight: 600; }
 
-    /* Navegação de páginas */
+    /* Navegação de páginas (compacta) */
     .page-nav {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: space-between;
-      padding: 14px 48px;
+      gap: 8px;
+      padding: 7px 16px;
       border-top: 1px solid var(--border-light);
       background: var(--bg);
       flex-shrink: 0;
     }
 
+    .page-nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
     .nav-btn {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
       border-radius: var(--radius);
       border: 1px solid var(--border);
       background: var(--bg);
       color: var(--text-2);
-      font-size: 13px;
       transition: background .1s, color .1s;
     }
 
     .nav-btn:hover { background: var(--bg-hover); color: var(--text); }
     .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-    .nav-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .nav-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
 
     .page-indicator {
-      font-size: 12.5px;
+      font-size: 12px;
       color: var(--text-3);
       font-family: var(--font-ui);
+      min-width: 42px;
+      text-align: center;
     }
+
+    .index-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px 4px 8px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text-2);
+      font-size: 12px;
+      font-weight: 450;
+      cursor: pointer;
+      justify-self: start;
+      transition: background .1s, color .1s, border-color .1s;
+    }
+
+    .index-toggle-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .index-toggle-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+    .index-toggle-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.75; }
 
     /* ══════════════════════════════════════════
        PAINEL DE CHAT LATERAL DIREITO
@@ -441,8 +489,8 @@
       border-left: 1px solid var(--border);
       transition: width .2s ease, min-width .2s ease;
       overflow: hidden;
-      width: 380px;
-      min-width: 380px;
+      width: 340px;
+      min-width: 340px;
       flex-shrink: 0;
     }
 
@@ -759,72 +807,82 @@
       <!-- Aba LEITURA -->
       <div class="reading-pane" id="tab-leitura">
 
-        <!-- Mini-índice -->
-        <nav class="mini-index">
-          <p class="idx-title">Conteúdo</p>
-          <a class="idx-item active" href="#">Parte I — Sobre Expertise</a>
-          <a class="idx-item h2" href="#">Novato vs. Especialista</a>
-          <a class="idx-item h2" href="#">O modelo de Dreyfus</a>
-          <a class="idx-item h3" href="#">Iniciante</a>
-          <a class="idx-item h3" href="#">Avançado iniciante</a>
-          <a class="idx-item h3" href="#">Competente</a>
-          <a class="idx-item h3" href="#">Proficiente</a>
-          <a class="idx-item h3" href="#">Especialista</a>
-          <a class="idx-item" href="#">Parte II — Pensamento</a>
-          <a class="idx-item h2" href="#">Cérebro esquerdo e direito</a>
-          <a class="idx-item h2" href="#">Modo L e modo R</a>
-          <a class="idx-item" href="#">Parte III — Aprendizado</a>
-          <a class="idx-item h2" href="#">Deliberate practice</a>
-          <a class="idx-item h2" href="#">SRS e espaçamento</a>
-          <a class="idx-item h2" href="#">SMART vs. A-SMART</a>
-        </nav>
+        <div class="reading-main">
 
-        <!-- Conteúdo da página atual (simulado) -->
-        <div class="reading-content">
-          <article class="reading-prose">
-            <h1>Parte I — Sobre Expertise e Desenvolvimento de Habilidades</h1>
+          <!-- Mini-índice (drawer, fechado por padrão) -->
+          <nav class="mini-index" id="mini-index">
+            <p class="idx-title">Conteúdo</p>
+            <a class="idx-item active" href="#" onclick="toggleIndex();return false;">Parte I — Sobre Expertise</a>
+            <a class="idx-item h2" href="#" onclick="toggleIndex();return false;">Novato vs. Especialista</a>
+            <a class="idx-item h2" href="#" onclick="toggleIndex();return false;">O modelo de Dreyfus</a>
+            <a class="idx-item h3" href="#" onclick="toggleIndex();return false;">Iniciante</a>
+            <a class="idx-item h3" href="#" onclick="toggleIndex();return false;">Avançado iniciante</a>
+            <a class="idx-item h3" href="#" onclick="toggleIndex();return false;">Competente</a>
+            <a class="idx-item h3" href="#" onclick="toggleIndex();return false;">Proficiente</a>
+            <a class="idx-item h3" href="#" onclick="toggleIndex();return false;">Especialista</a>
+            <a class="idx-item" href="#" onclick="toggleIndex();return false;">Parte II — Pensamento</a>
+            <a class="idx-item h2" href="#" onclick="toggleIndex();return false;">Cérebro esquerdo e direito</a>
+            <a class="idx-item h2" href="#" onclick="toggleIndex();return false;">Modo L e modo R</a>
+            <a class="idx-item" href="#" onclick="toggleIndex();return false;">Parte III — Aprendizado</a>
+            <a class="idx-item h2" href="#" onclick="toggleIndex();return false;">Deliberate practice</a>
+            <a class="idx-item h2" href="#" onclick="toggleIndex();return false;">SRS e espaçamento</a>
+            <a class="idx-item h2" href="#" onclick="toggleIndex();return false;">SMART vs. A-SMART</a>
+          </nav>
 
-            <p>O modelo de Dreyfus de aquisição de habilidades — desenvolvido pelos irmãos Stuart e Hubert Dreyfus nos anos 1970 a partir de estudos com pilotos militares e jogadores de xadrez — descreve cinco estágios distintos pelo qual um aprendiz passa ao adquirir qualquer habilidade complexa: de iniciante a especialista.</p>
+          <!-- Conteúdo da página atual (simulado) -->
+          <div class="reading-content">
+            <article class="reading-prose">
+              <h1>Parte I — Sobre Expertise e Desenvolvimento de Habilidades</h1>
 
-            <p>O que torna esse modelo particularmente valioso para qualquer pessoa comprometida com o desenvolvimento pessoal é que ele não apenas descreve os estágios — ele explica <em>por que</em> as estratégias de aprendizado que funcionam bem em um estágio são frequentemente contraproducentes em outro. O iniciante precisa de regras explícitas e claras; o especialista opera principalmente por intuição e fica confuso quando forçado a articular regras que internalizou tão profundamente que deixaram de ser conscientes.</p>
+              <p>O modelo de Dreyfus de aquisição de habilidades — desenvolvido pelos irmãos Stuart e Hubert Dreyfus nos anos 1970 a partir de estudos com pilotos militares e jogadores de xadrez — descreve cinco estágios distintos pelo qual um aprendiz passa ao adquirir qualquer habilidade complexa: de iniciante a especialista.</p>
 
-            <h2>O modelo de Dreyfus em detalhe</h2>
+              <p>O que torna esse modelo particularmente valioso para qualquer pessoa comprometida com o desenvolvimento pessoal é que ele não apenas descreve os estágios — ele explica <em>por que</em> as estratégias de aprendizado que funcionam bem em um estágio são frequentemente contraproducentes em outro. O iniciante precisa de regras explícitas e claras; o especialista opera principalmente por intuição e fica confuso quando forçado a articular regras que internalizou tão profundamente que deixaram de ser conscientes.</p>
 
-            <p>No estágio de <strong>Iniciante</strong>, o aprendiz segue regras à risca, sem contexto ou julgamento situacional. Ele não sabe o que não sabe. O contexto é ignorado porque o iniciante ainda não tem o repertório para reconhecer o que é relevante em uma situação nova.</p>
+              <h2>O modelo de Dreyfus em detalhe</h2>
 
-            <p>O <strong>Avançado iniciante</strong> começa a perceber padrões situacionais, mas ainda os trata de forma isolada. Ele reconhece aspectos da situação que o iniciante não vê, mas ainda não tem uma visão integrada do problema.</p>
+              <p>No estágio de <strong>Iniciante</strong>, o aprendiz segue regras à risca, sem contexto ou julgamento situacional. Ele não sabe o que não sabe. O contexto é ignorado porque o iniciante ainda não tem o repertório para reconhecer o que é relevante em uma situação nova.</p>
 
-            <blockquote>
-              "O especialista não aplica regras — ele vê o que fazer diretamente, sem precisar deliberar. A regra que o novato precisa aprender de cabeça é invisível para o especialista."
-              <br>— Stuart Dreyfus
-            </blockquote>
+              <p>O <strong>Avançado iniciante</strong> começa a perceber padrões situacionais, mas ainda os trata de forma isolada. Ele reconhece aspectos da situação que o iniciante não vê, mas ainda não tem uma visão integrada do problema.</p>
 
-            <p>A passagem do <strong>Competente</strong> ao <strong>Proficiente</strong> é onde muitos praticantes ficam presos por anos. O competente tem suficiente repertório para criar planos conscientes e deliberados; o proficiente começa a ter <em>visão maximal</em> — ele percebe a situação como um todo, não como um conjunto de aspectos isolados.</p>
+              <blockquote>
+                "O especialista não aplica regras — ele vê o que fazer diretamente, sem precisar deliberar. A regra que o novato precisa aprender de cabeça é invisível para o especialista."
+                <br>— Stuart Dreyfus
+              </blockquote>
 
-            <p>O <strong>Especialista</strong> opera principalmente de forma intuitiva. Ele sabe o que fazer sem precisar saber por que. Quando forçado a articular regras, frequentemente simplifica demais — suas regras explícitas são uma aproximação grosseira do processo interno rico que realmente guia suas decisões.</p>
+              <p>A passagem do <strong>Competente</strong> ao <strong>Proficiente</strong> é onde muitos praticantes ficam presos por anos. O competente tem suficiente repertório para criar planos conscientes e deliberados; o proficiente começa a ter <em>visão maximal</em> — ele percebe a situação como um todo, não como um conjunto de aspectos isolados.</p>
 
-            <ul>
-              <li>Iniciante — segue regras, ignora contexto</li>
-              <li>Avançado iniciante — percebe padrões situacionais isolados</li>
-              <li>Competente — cria planos conscientes, sente responsabilidade pelos resultados</li>
-              <li>Proficiente — visão holística, mas ainda delibera sobre ações</li>
-              <li>Especialista — ação intuitiva baseada em reconhecimento de padrões profundos</li>
-            </ul>
-          </article>
-        </div>
+              <p>O <strong>Especialista</strong> opera principalmente de forma intuitiva. Ele sabe o que fazer sem precisar saber por que. Quando forçado a articular regras, frequentemente simplifica demais — suas regras explícitas são uma aproximação grosseira do processo interno rico que realmente guia suas decisões.</p>
 
-        <!-- Controles de navegação -->
+              <ul>
+                <li>Iniciante — segue regras, ignora contexto</li>
+                <li>Avançado iniciante — percebe padrões situacionais isolados</li>
+                <li>Competente — cria planos conscientes, sente responsabilidade pelos resultados</li>
+                <li>Proficiente — visão holística, mas ainda delibera sobre ações</li>
+                <li>Especialista — ação intuitiva baseada em reconhecimento de padrões profundos</li>
+              </ul>
+            </article>
+          </div>
+
+        </div><!-- /reading-main -->
+
+        <!-- Controles de navegação (compactos) -->
         <nav class="page-nav">
-          <button class="nav-btn">
-            <svg viewBox="0 0 16 16"><polyline points="10 4 6 8 10 12"/></svg>
-            Anterior
+          <button class="index-toggle-btn" id="index-toggle-btn" onclick="toggleIndex()" title="Mostrar/ocultar índice de conteúdo">
+            <svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h8M2 12h10"/></svg>
+            Índice
           </button>
-          <span class="page-indicator">Página 3 de 12</span>
-          <button class="nav-btn">
-            Próxima
-            <svg viewBox="0 0 16 16"><polyline points="6 4 10 8 6 12"/></svg>
-          </button>
+          <div class="page-nav-controls">
+            <button class="nav-btn" disabled title="Página anterior">
+              <svg viewBox="0 0 16 16"><polyline points="10 4 6 8 10 12"/></svg>
+            </button>
+            <span class="page-indicator">3 / 12</span>
+            <button class="nav-btn" title="Próxima página">
+              <svg viewBox="0 0 16 16"><polyline points="6 4 10 8 6 12"/></svg>
+            </button>
+          </div>
+          <div></div>
         </nav>
+
       </div>
 
       <!-- Aba ARQUIVOS (placeholder) -->
@@ -998,6 +1056,21 @@
         if (el) el.style.display = t === tab ? (t === 'leitura' ? 'flex' : 'flex') : 'none';
       });
     }
+
+    // ── Mini-índice ──
+    var indexOpen = false;
+    function toggleIndex() {
+      indexOpen = !indexOpen;
+      document.getElementById('mini-index').classList.toggle('open', indexOpen);
+      document.getElementById('index-toggle-btn').classList.toggle('active', indexOpen);
+    }
+    document.addEventListener('click', function(e) {
+      if (indexOpen && !e.target.closest('#mini-index') && !e.target.closest('#index-toggle-btn')) {
+        indexOpen = false;
+        document.getElementById('mini-index').classList.remove('open');
+        document.getElementById('index-toggle-btn').classList.remove('active');
+      }
+    });
 
     // ── Chat recolhível ──
     var chatOpen = true;
