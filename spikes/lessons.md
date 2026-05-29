@@ -407,6 +407,14 @@ relativo a `artefatos/`.
 Rule: `sandbox="allow-scripts"` apenas — **sem** `allow-same-origin`. O HTML autocontido
 não precisa do DOM pai; isolamento máximo.
 
+### Scroll ao trocar de página no viewer
+
+[2026-05-29] Context: JS inline em `leitura.html`; `#reader` tem `overflow-y: auto`, `body`
+tem `overflow: hidden`.
+Rule: em `show(n)`, usar `document.getElementById('reader').scrollTop = 0` — **não**
+`window.scrollTo(0, 0)`, que não reposiciona o container scrollável ao trocar de página
+no iframe (mesmo com `allow-scripts` e sem `allow-same-origin`).
+
 ### Dívidas pendentes
 
 | # | Dívida | Correção futura |

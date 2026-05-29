@@ -319,7 +319,7 @@ function buildNavScript(): string {
     });
     document.getElementById('btn-prev').disabled = current === 0;
     document.getElementById('btn-next').disabled = current === total - 1;
-    window.scrollTo(0, 0);
+    document.getElementById('reader').scrollTop = 0;
   }
 
   document.getElementById('btn-prev').addEventListener('click', () => show(current - 1));
