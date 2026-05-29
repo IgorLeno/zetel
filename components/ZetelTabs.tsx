@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ArquivosPanel } from './ArquivosPanel';
 
 const TABS = [
   'Leitura ativa',
@@ -11,10 +12,10 @@ const TABS = [
 ] as const;
 
 /**
- * Shell das 5 abas internas do Zetel. No Módulo 2 os painéis são placeholders;
- * o conteúdo chega nos Módulos 3 (Arquivos), 4 (Leitura) e 7 (Notas).
+ * Shell das 5 abas internas do Zetel. A aba "Arquivos" ganha conteúdo no
+ * Módulo 3; as demais chegam nos Módulos 4 (Leitura) e 7 (Notas).
  */
-export function ZetelTabs() {
+export function ZetelTabs({ zetelId }: { zetelId: string }) {
   const [active, setActive] = useState(0);
 
   return (
@@ -31,9 +32,13 @@ export function ZetelTabs() {
           </button>
         ))}
       </div>
-      <div className="empty-state">
-        <div>{TABS[active]} — disponível em breve.</div>
-      </div>
+      {active === 1 ? (
+        <ArquivosPanel zetelId={zetelId} />
+      ) : (
+        <div className="empty-state">
+          <div>{TABS[active]} — disponível em breve.</div>
+        </div>
+      )}
     </div>
   );
 }

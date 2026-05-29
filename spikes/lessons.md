@@ -269,3 +269,93 @@ na direção que evita o pior estado de cada operação. `renameSync` é atômic
 | M2-1 | Sem ESLint configurado | Adicionar config flat ESLint + script `lint` real (Módulo 9 / polimento) |
 | M2-2 | Sem teste automatizado versionado | Avaliar vitest + `allowImportingTsExtensions` ou runner para regressão do serviço |
 | M2-3 | Status `400` para "não encontrado" | Mapear erros do serviço para `404`/`409` adequados se a UI precisar distinguir |
+
+---
+
+## Lessons — Módulo 3 (Ingestão de Markdown + aba Arquivos)
+
+**Status: concluído e validado em 2026-05-29. Gate 3 → 4 OK.**
+
+Entregue: `migrations/003_ingestao.sql`, `types/zetel-file.ts`, `types/zetel-page.ts`,
+`lib/ingestao-service.ts`, rotas `app/api/zetels/[id]/files/**` + `process`, UI
+`ArquivosPanel` + badge de leitura no header. Deps: `remark`/`remark-gfm`/`unist-util-visit`
+(+ `@types/mdast`/`@types/unist`). `pnpm build` limpo. Validado end-to-end num servidor
+isolado (`HOME=/tmp/...`, vault em `/tmp/...`) — **nunca tocar o `~/.zetel` real do usuário
+em teste**: rode com `HOME` próprio e configure `vault_path` para um diretório temporário.
+
+### Invariante de `reading_stale` (correção obrigatória do plano)
+
+[2026-05-29] Context: `processZetel`.
+Rule: `processZetel` bem-sucedido seta `reading_stale = 0` **e** `last_built_at = now` — não
+`= 1`. `reading_stale = 1` é marcado **só nas mutações** (`addFile`/`removeFile`/`reorderFiles`)
+e na detecção de drift em `listFiles`. O badge verde "Leitura atualizada" depende de
+`reading_stale = 0 AND last_built_at IS NOT NULL`; o âmbar "Leitura desatualizada" de
+`reading_stale = 1`. (O texto do prompt original do Módulo 3 dizia marcar `=1` ao final do
+processo e o gate falava em badge âmbar após Processar — ambos foram **corrigidos** por Igor:
+após Processar o estado correto é "atualizada".)
+
+### Regra #6: erro de filesystem vaza filename — nunca logar `error.message` de fs
+
+[2026-05-29] Context: `removeFile`, `addFile`, `processImages` e os `catch` das rotas que
+fazem `logger.error('...', { error: (err as Error).message })`.
+Mistake: mensagens de erro do `node:fs` (EACCES, EPERM, etc.) **incluem o caminho completo**,
+que contém o filename — conteúdo sensível do usuário (regra #6/DT4). A 1ª versão do erro de
+arquivo ausente em `processZetel` também embutia `"${row.filename}"` na mensagem que a rota
+loga.
+Rule: nas operações de arquivo, (a) mensagens lançadas pelo serviço devem ser **livres de
+filename** (a aba Arquivos já sinaliza o arquivo faltante via badge de drift); (b) ao logar
+falha de fs, registrar só `code: (err as NodeJS.ErrnoException).code`, nunca `error.message`.
+Vale para todos os módulos que mexem em arquivos do vault.
+
+### Segmentação por arquivo + estratégia de âncora (impacta o Módulo 4)
+
+[2026-05-29] Context: `processZetel`/`segmentFile`.
+Decisão (confirmada por Igor): **nenhuma página mistura dois arquivos** — cada arquivo é
+segmentado isoladamente; `page_index` é global contínuo na ordem dos arquivos. Nova página em
+H1/H2 (com conteúdo acumulado) ou ao atingir `max_words_per_page` (`settings`, default 1000).
+Âncora de heading = `slugify(stem-do-arquivo) + '--' + slugify(texto-do-heading)`, com dedup
+intra-Zetel por sufixo `-N` (garante `UNIQUE (zetel_id, anchor)`); página sem heading vira
+`pagina-<page_index-global>`. **Nota para o Módulo 4 (D11):** os ids de heading no HTML
+gerado precisam **bater com estas âncoras** — o mini-índice navega por elas. Não confiar
+apenas no `rehype-slug` (que geraria slugs sem o prefixo do stem); injetar/alinhar os ids com
+o `anchor` persistido em `zetel_pages`.
+
+### Sentinelas do mapa de imagens — o Módulo 4 precisa traduzi-las
+
+[2026-05-29] Context: `processImages` + `settings.image_map_<zetelId>`.
+Rule: o mapa `{ originalUrl → destino }` salvo em `settings` usa dois sentinelas em vez de um
+caminho `images/...`: `__blocked__` (URL `http[s]` externa — regra #9/DT2, nunca copiada) e
+`__notfound__` (imagem local referenciada mas inexistente, ou cópia que falhou). O **Módulo 4**,
+ao reescrever `<img src>` no HTML, deve detectar esses sentinelas e renderizar o **SVG
+placeholder** apropriado ("imagem externa bloqueada" / "imagem não encontrada") em vez de um
+caminho. O nó MDAST `image` no Módulo 3 **não** é reescrito — a reescrita de `src` é tarefa do
+Módulo 4 (PRD §Módulo 4).
+
+### Observações técnicas
+
+- **Imagens só de sintaxe Markdown (`![]()`)**: o pipeline visita nós MDAST `image`. `<img>`
+  HTML embutido vira nó `html` e **não** é tratado no MVP (fica como dívida M3-3).
+- **`images/` é limpo no início de `processZetel`** (`rmSync` + `mkdirSync`) para que a cópia
+  seja idempotente: `resolveSemColisao` parte sempre de um diretório vazio, então reprocessar
+  não acumula `imagem-2.png`, `imagem-3.png`. Páginas/hashes ficam idênticos entre passes
+  (idempotência confirmada).
+- **`order/` (estático) convive com `[fileId]` (dinâmico)** sob `files/` no App Router — o
+  segmento estático tem precedência; `/files/order` e `/files/<uuid>` roteiam corretamente.
+- **Narrowing do TS com closures**: capturar um `let x: T | null` e reatribuí-lo a `null`
+  dentro de uma closure faz o TS inferir `never` no corpo do laço ("Property … does not exist
+  on type 'never'"). Solução: passar o valor por argumento para os helpers (`pushPage(draft)`)
+  em vez de mutar a variável capturada.
+- **`addFile` copia só o `.md`, não imagens-irmãs**: a resolução de imagem em `processZetel` é
+  relativa ao `.md` **dentro de `arquivos/`** no momento do Processar. Logo, imagens locais
+  referenciadas precisam estar acessíveis a partir de `arquivos/` (ex.: o usuário colocá-las lá
+  ou usar caminho relativo que aponte para dentro do vault). Dívida M3-1.
+
+### Dívidas pendentes (não bloqueiam o Gate)
+
+| # | Dívida | Correção futura |
+|---|--------|-----------------|
+| M3-1 | `addFile` não traz imagens-irmãs do `.md` | Avaliar ingestão de imagens junto no upload, ou orientar fluxo Obsidian (imagens já no vault) |
+| M3-2 | `image_map` vive em `settings` (`image_map_<zetelId>`) | Provisório; avaliar coluna/tabela própria quando o Módulo 4 consumir o mapa |
+| M3-3 | `<img>` HTML inline não tratado | Tratar nós `html` com imagem no Módulo 4 (ou bloquear explicitamente) |
+| M3-4 | Páginas "heading-only" finas (H1 seguido de H2) | O Módulo 4 pode re-granularizar a paginação (PRD linha 556) |
+| M3-5 | Dívida #5 do Módulo 0 (`MAX_WORDS_PER_PAGE` configurável) | Lido de `settings.max_words_per_page` no serviço; falta UI nas Configurações (Módulo 4/5) |
