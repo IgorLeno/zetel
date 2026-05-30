@@ -37,3 +37,7 @@ next-env.d.ts
 
 # TypeScript
 *.tsbuildinfo
+
+# Artefatos temporários de análise/spike
+dft_reference.html
+*_reference.html
