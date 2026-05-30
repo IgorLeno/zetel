@@ -31,7 +31,7 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 #### Próximos passos
 - Gate manual → declarar **MVP TEXTUAL ENTREGUE**
-- Pós-MVP: Módulo 9 — Prompts editáveis em runtime
+- Próximo passo operacional: **Módulo 9 — Qualidade visual da leitura e do app** (PRD v3, ver `prd-v3.md`)
 
 **Módulo 7 (Memória cooperativa) concluído em 2026-05-29 — Gate 7 → 8 OK (validado 2026-05-30).** Módulo 7 entregou: `lib/memory-service.ts` (filesystem como fonte de verdade da memória global em `parceiro/memoria/`, frontmatter §13.4; sem tabela SQLite; escrita atômica `writeMemoryFile` com `flag:'wx'` + fallback `-2..-99`/timestamp; leitura sob demanda — regra #5; self-heal de `config/prompts/sugestao-memoria.md` sem clobber); injeção no chat via `buildMemoryContext(vaultPath)` chamado **a cada turno** dentro de `buildOpenRouterMessages` (ordem §8.7; truncagem a **40% do orçamento** = `MEMORY_TOKEN_BUDGET` 3200, corta arquivo inteiro priorizando recência; aviso "memória longa" acima de 10 KB sem corte automático); detecção de sugestão no stream via sentinela `<<<MEMORIA_SUGERIDA>>>…<<<FIM_MEMORIA>>>` com `earliestMark`/`HOLD = max(len marcadores)-1` retendo nota **e** memória (a `justificativa` nunca chega ao cliente) emitindo `data: [MEMORY_SUGGESTION]`; `MemoryCard` (Guardar/Editar/Discutir/Rejeitar; "Discutir" bounded em 1 rodada via `discussNextMemoryRef` — regra #10; "Discutir" mantido por fidelidade ao PRD §8 "mecanismo idêntico ao de notas", decidido no gate) + `MemoriaList` (aba `/memoria`, listagem + abertura externa em cascata D14); rotas `memory` (GET/POST), `memory/titles` (GET), `memory/reveal` (POST, anti path-traversal sob `parceiro/memoria/`) e `chat` PATCH (`kind:'memory'` → flag `memoryRejected`). `chat_messages.meta` ganha `suggestedMemory`/`memoryRejected`/`memoryLong`. Logs só contagens/`zetelOrigem` (regra #6). `pnpm build` limpo; fluxo de memória (salvar→frontmatter §13.4→listar→cascata→rejeitar) validado por inspeção; fluxo de sugestão/influência/truncagem com LLM real requer chave (teste manual). Ver `spikes/lessons.md` (Módulo 7).
 
@@ -180,11 +180,13 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **6** | **Notas cooperativas** ✅ | Fluxo Guardar/Editar/Discutir/Rejeitar | 5 |
 | **7** | **Memória cooperativa** ✅ | Memória global em Markdown, leitura sob demanda | 6 |
 | **8** | **Polimento → MVP TEXTUAL ENTREGUE** ✅ (gate manual pendente) | Estados vazios, erros, tema, jornada completa | 1–7 |
-| 9 | Prompts editáveis em runtime | Pós-MVP | 8 |
-| 10 | Modo internet | Pós-MVP | 8 |
-| 11 | TTS | Fase 2 | 8 |
-| 12 | STT | Fase 2 | 11 |
-| 13 | Memória emergente automática | Fase 2+ | 8 |
+| **9** | **Qualidade visual da leitura e do app** | PRD v3 — tipografia, KaTeX, highlight.js, Mermaid (cond.), tema, HTML-1 | 8 |
+| **10** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 9 |
+| 11 | Voz: TTS | PRD v4 | 10 |
+| 12 | Voz: STT | PRD v4 | 11 |
+| 13 | Prompts editáveis em runtime | PRD v5 | 10 |
+| 14 | Modo internet | PRD v5 | 10 |
+| 15 | Memória emergente automática | Fase futura | 10 |
 
 ---
 
