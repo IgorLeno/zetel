@@ -53,7 +53,8 @@ Módulo 1 (Fundação) concluído em 2026-05-29: scaffold Next.js 15 + TS strict
 
 | Arquivo | Papel |
 |---------|-------|
-| `piped-pondering-dahl2.md` | PRD v2 completo (Partes A–D, D1–D15, DT1–DT5) — fonte autoritativa |
+| `piped-pondering-dahl2.md` | PRD v2 completo (Partes A–D, D1–D15, DT1–DT5) — fonte autoritativa do MVP textual (Módulos 1–8) |
+| `prd-v3.md` | PRD v3 (Fase Visual + Gestão de Memória) — fonte autoritativa dos **Módulos 9–10** e das decisões D16–D24 |
 | `spikes/lessons.md` | Calibrações e dívidas técnicas do Módulo 0 — leitura obrigatória antes do Módulo 1 |
 | `estamos-construindo-um-projeto-humble-harbor.md` | Histórico: 5 ajustes de consistência aplicados ao PRD em 2026-05-28 |
 | `zetel-prd-v1.md` (fora deste diretório) | Histórico; não consultar para decisões |
@@ -122,15 +123,15 @@ Para detalhe completo, ver Partes C e D do PRD. Esta tabela usa as versões **co
 | ID | Decisão |
 |----|---------|
 | D1 | Pipeline de leitura é determinístico: `remark`→`rehype`+CSS. Sem LLM. |
-| D2 | Voz fora do MVP; vira Fase 2 (Módulos 12–13). |
+| D2 | Voz fora do MVP; vira PRD v4 (Módulos 11–12: TTS e STT). |
 | D3 | Provedor de áudio a definir após spike na Fase 2. |
 | D4 | Memória emergente automática fora do MVP; cooperativa com confirmação no MVP. |
-| D5 | Modo internet fora do MVP; vira Módulo 11. |
+| D5 | Modo internet fora do MVP; vira Módulo 14 (PRD v5). |
 | D6 | Histórico de conversa por Zetel em SQLite (`chat_messages`), não em Markdown. |
 | D7 | Múltiplos arquivos por Zetel suportados desde o Módulo 3; ordem via `order_index`. |
 | D8 | Cliente envia `page_id`; servidor valida contra `zetel_pages` e usa `content_text` armazenado como fonte autoritativa. Divergência registrada em `meta.page_hash_match = false`. |
 | D9 | Lixeira em pasta no vault (`zetels/.lixeira/`) + flag `trashed_at` em SQLite. |
-| D10 | Prompts editáveis em runtime fora do MVP; vivem em `config/prompts/` no vault. |
+| D10 | Prompts editáveis em runtime fora do MVP (vira Módulo 13, PRD v5); vivem em `config/prompts/` no vault. |
 | D11 | Mini-índice derivado dos headings do Markdown original; persistido em `zetel_pages`. |
 | D12 | Chave OpenRouter em `~/.zetel/config` (`600`). Fora do vault, código e SQLite. |
 | D13 | HTML autocontido (CSS inline) gerado por `rehype`+`rehype-sanitize`. Renderização em `<iframe sandbox>`; `allow-same-origin` só se Spike B justificar. |
