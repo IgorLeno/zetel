@@ -72,17 +72,29 @@ function buildFrontmatter(opts: {
 }
 
 /**
- * Nome de arquivo livre dentro de `dir`: `<base>.md`, `<base>-2.md`… até -99.
- * Esgotados os sufixos numéricos, cai num sufixo de timestamp (sempre único)
- * em vez de lançar — guardar uma memória nunca deve resultar em HTTP 500.
+ * Grava a memória num nome livre de forma **atômica**, evitando o TOCTOU de um
+ * `existsSync`+`writeFile` separados: dois saves concorrentes com o mesmo título
+ * poderiam resolver o mesmo nome e um sobrescrever o outro. Aqui cada tentativa
+ * usa `flag: 'wx'` (cria com exclusividade; falha com `EEXIST` se já existe),
+ * passando ao próximo candidato `<base>.md`, `<base>-2.md`… até -99 e, esgotados,
+ * a um sufixo de timestamp. Retorna o nome efetivamente gravado.
  */
-function resolveFreeName(dir: string, base: string): string {
-  if (!existsSync(join(dir, `${base}.md`))) return `${base}.md`;
-  for (let n = 2; n <= 99; n++) {
-    const candidate = `${base}-${n}.md`;
-    if (!existsSync(join(dir, candidate))) return candidate;
+function writeMemoryFile(dir: string, base: string, content: string): string {
+  const candidates = [`${base}.md`];
+  for (let n = 2; n <= 99; n++) candidates.push(`${base}-${n}.md`);
+  candidates.push(`${base}-${Date.now()}.md`);
+  for (const filename of candidates) {
+    try {
+      writeFileSync(join(dir, filename), content, { flag: 'wx' });
+      return filename;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'EEXIST') continue;
+      throw err;
+    }
   }
-  return `${base}-${Date.now()}.md`;
+  // Inalcançável na prática (o candidato com timestamp é ~único); guardar uma
+  // memória nunca deve resultar em HTTP 500 silencioso, então falha explícita.
+  throw new Error('Não foi possível gravar o arquivo de memória.');
 }
 
 /**
@@ -99,7 +111,6 @@ export function saveMemory(vaultPath: string, input: SaveMemoryInput): SavedMemo
   mkdirSync(dir, { recursive: true });
 
   const base = slugify(titulo);
-  const filename = resolveFreeName(dir, base);
   const now = new Date().toISOString();
 
   const frontmatter = buildFrontmatter({
@@ -111,7 +122,7 @@ export function saveMemory(vaultPath: string, input: SaveMemoryInput): SavedMemo
   });
   const fileContent = `${frontmatter}\n\n# ${titulo}\n\n${corpo}\n`;
 
-  writeFileSync(join(dir, filename), fileContent);
+  const filename = writeMemoryFile(dir, base, fileContent);
 
   const slug = filename.replace(/\.md$/, '');
   const relPath = `${MEMORY_REL_DIR}/${filename}`;
