@@ -581,6 +581,15 @@ Regra: para o caminho do vault em rotas, usar `getSetting('vault_path')` com gua
 [2026-05-29] Contexto: leitura de memória no contexto do chat.
 Regra (PRD §11 / regra #5): `buildMemoryContext(vaultPath)` é chamado dentro de `buildOpenRouterMessages` a CADA POST — nunca cache de processo. Truncagem corta arquivo inteiro priorizando os mais recentes; só conta no log (`memorias_truncadas`), nunca conteúdo.
 
-### Pendências / atenção para teste manual (Gate 7 → 8)
-- Fluxo de sugestão/memória com LLM real exige chave OpenRouter (teste manual + `pnpm test:e2e memory-basic`).
+### Fechamento do Gate 7 → 8 (validado 2026-05-30)
+
+[2026-05-30] Contexto: validação do gate apontou conflito entre a checklist do orientador ("MemoryCard não deve ter botão Discutir") e o PRD §8 (Módulo 8, linha 711: "mecanismo de proposta de memória **idêntico ao de notas**", e notas têm Discutir bounded — regra #10).
+Decisão: PRD vence (regra de precedência do CLAUDE.md). O "Discutir" da memória **fica**, limitado a 1 rodada via `discussNextMemoryRef` no `ChatPanel`, espelhando o de notas. Aprovado pelo orientador no gate.
+Regra: divergência checklist×PRD não se resolve em silêncio — levar ao orientador antes de gravar "gate aprovado". Os três critérios oficiais do PRD (memória editada externamente reflete; memória influencia respostas; truncagem evita estouro) não mencionam Discutir.
+
+Resultado do gate (inspeção estática + `pnpm build` limpo): C1 leitura sob demanda PASS (`chat-prompt.ts:54-79`); C2 injeção no prompt §8.7 PASS (`chat-prompt.ts:110-130`); C3 truncagem 40%/recência PASS (`chat-prompt.ts:24-79`); C4 fluxo cooperativo PASS (frontmatter §13.4 completo; `suggestedMemory` em `meta`; `justificativa` held-back); C5 escrita atômica `wx` PASS; C6 aba `/memoria` + cascata D14 PASS; C7 logs sem conteúdo PASS.
+
+### Pendências / atenção para teste manual (não bloqueiam o gate)
+- Fluxo de sugestão/memória com LLM real exige chave OpenRouter (teste manual + `pnpm test:e2e memory-basic`) — não coberto por inspeção estática.
 - Verificar: memória editada no Obsidian reflete no próximo turno sem reiniciar; memória influencia respostas; truncagem com 50+ entradas; grep regra #6 em `~/.zetel/logs/zetel.log`.
+- Herdada M6-1: system prompt do parceiro ainda hardcoded em `chat-prompt.ts` (PRD pede `config/prompts/parceiro.md`). Endereçar no Módulo 8 (Polimento).
