@@ -159,11 +159,16 @@ export function buildOpenRouterMessages(opts: {
   if (opts.vaultPath) {
     const mem = buildMemoryContext(opts.vaultPath);
     memoryWarnings = mem.warnings;
-    if (mem.titles.length > 0) {
-      systemContent += `\n\nMemórias já registradas (evite duplicatas):\n- ${mem.titles.join('\n- ')}`;
-    }
+    // Injeta o CONTEÚDO das memórias com instrução explícita de uso (§8.7 / regra #5).
+    // O rótulo é diretivo ("USE") para que o LLM adapte seu comportamento — sem instrução
+    // explícita, o LLM pode tratar as memórias como referência passiva em vez de ativas.
     if (mem.text) {
-      systemContent += `\n\nMemória global do parceiro (contexto persistente entre Zetels):\n\n${mem.text}`;
+      systemContent += `\n\nMemória global do usuário — USE estas informações para adaptar suas respostas:\n\n${mem.text}`;
+    }
+    // Títulos separados: usados apenas para evitar sugestões duplicadas (§11 anti-padrão).
+    // Aparecem APÓS o conteúdo para que o LLM não confunda "evitar duplicatas" com "ignorar".
+    if (mem.titles.length > 0) {
+      systemContent += `\n\nTítulos das memórias acima (para evitar sugestões duplicadas): ${mem.titles.join(', ')}`;
     }
   }
 

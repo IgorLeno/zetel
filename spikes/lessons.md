@@ -629,3 +629,19 @@ Regra: cores semânticas novas devem ser definidas como tokens CSS (`--memory`, 
 - C7 `pnpm build` limpo PASS.
 - C8 Logger PASS (auditoria prévia): ≈50 call sites revisados, zero conteúdo sensível.
 - Gate manual com orientador pendente antes de declarar MVP TEXTUAL ENTREGUE.
+
+### CORREÇÃO BLOQUEANTE: memória editada externamente não refletia no próximo turno
+
+[2026-05-30] Contexto: Gate 8 → release falhou em "Memória editada externamente é refletida no próximo turno".
+Investigação: a leitura é correta — `readFileSync` e `readdirSync` em `listMemories` sempre leem o disco na hora da requisição (sem cache de processo). Node.js confirmado: conteúdo editado externamente reflete imediatamente em chamadas sequenciais de `readFileSync`.
+Causa raiz: problema de semântica do prompt, não de leitura. A estrutura anterior do `buildOpenRouterMessages` produzia:
+  1. `memoryRubric` (instrução: "não proponha memórias duplicadas, verifique a lista de títulos")
+  2. `"Memórias já registradas (evite duplicatas):\n- título1\n- título2"` — rótulo de anti-duplicata
+  3. `"Memória global do parceiro (contexto persistente entre Zetels):\n\n## título1\ncorpo1"` — conteúdo
+
+O LLM lia "evite duplicatas" → lista de títulos → conteúdo e tendia a tratar o bloco inteiro como "memórias a não repetir em sugestões", não como "informações a usar para adaptar comportamento". Não havia instrução diretiva de uso ("USE estas informações"). O critério "memória influencia respostas" passava em inspeção estática porque o conteúdo estava no prompt, mas na prática o LLM agia como referência passiva.
+Correção (`lib/chat-prompt.ts`, função `buildOpenRouterMessages`):
+  - Conteúdo das memórias injetado com rótulo diretivo: `"Memória global do usuário — USE estas informações para adaptar suas respostas:"`
+  - Títulos movidos para APÓS o conteúdo com rótulo restrito ao uso anti-duplicata: `"Títulos das memórias acima (para evitar sugestões duplicadas): ..."`
+  - Separação semântica clara: "o que usar" vem antes, "o que não repetir em sugestões" vem depois.
+Regra: quando injetar contexto persistente no prompt de um LLM, o rótulo deve ser DIRETIVO ("USE") não descritivo ("contexto persistente"). Rótulos descritivos causam uso passivo; rótulos diretivos causam uso ativo. Teste: enviar mensagem genérica e verificar se a resposta demonstra o conteúdo editado.
