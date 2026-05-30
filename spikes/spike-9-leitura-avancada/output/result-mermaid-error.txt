@@ -19,7 +19,7 @@ RESULTADO: server-side puro INVIÁVEL.
    o que o PRD v3 (D19) explicitamente quer evitar.
 
 3) ALTERNATIVA client-side (JS embutido no <iframe sandbox>):
-   Tamanho do bundle: mermaid.js ≈ 7454 KB (mermaid completo, sem gzip).
+   Tamanho do bundle: mermaid.esm.min.mjs ≈ 27.5 KB raw, 10.4 KB gzipped (entry minificado ESM preferido).
    Mermaid completo é pesado (~mega-bytes) para embutir inline em CADA
    leitura.html. Renderizaria no carregamento do iframe (custo de JS no
    cliente), e o iframe hoje é sandbox="allow-scripts" — compatível, mas

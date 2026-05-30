@@ -9,8 +9,8 @@
  *  - se o CSS embute inline sem CDN
  *  - se o sanitize schema do app precisa ser estendido (achado central)
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
@@ -41,18 +41,46 @@ const mathmlTags = [
   'munderover', 'mtable', 'mtr', 'mtd', 'mspace', 'mpadded', 'mphantom',
   'mstyle', 'menclose', 'merror',
 ];
+// Atributos MathML usados por KaTeX e por renderizadores acessíveis — revisar na 9.2
+// antes de promover este schema a lib/sanitize.ts (decisão spike README §1).
+const mathmlAttrKeys = [
+  'mathvariant',
+  'stretchy',
+  'fence',
+  'displaystyle',
+  'scriptlevel',
+  'lspace',
+  'rspace',
+  'accent',
+  'largeop',
+  'movablelimits',
+  'symmetric',
+  'maxsize',
+  'minsize',
+  'linethickness',
+  'bevelled',
+  'notation',
+];
 const katexSchema = {
   ...appSanitizeSchema,
   tagNames: [...(appSanitizeSchema.tagNames ?? defaultSchema.tagNames ?? []), ...mathmlTags],
   attributes: {
     ...appSanitizeSchema.attributes,
-    '*': [
-      ...(appSanitizeSchema.attributes?.['*'] ?? []),
-      'style', 'ariaHidden', 'aria-hidden',
-    ],
-    math: ['xmlns', 'display'],
-    annotation: ['encoding'],
-    span: ['className', 'style', 'ariaHidden', 'aria-hidden'],
+    // ariaHidden (camelCase) — não usar 'aria-hidden' (hast-util-sanitize ignora).
+    // style NÃO em '*' (XSS se HTML cru escapar); só em tags que o KaTeX controla.
+    '*': [...(appSanitizeSchema.attributes?.['*'] ?? []), 'ariaHidden'],
+    math: ['xmlns', 'display', ...mathmlAttrKeys],
+    annotation: ['encoding', ...mathmlAttrKeys],
+    mrow: mathmlAttrKeys,
+    mi: mathmlAttrKeys,
+    mo: mathmlAttrKeys,
+    mn: mathmlAttrKeys,
+    msup: mathmlAttrKeys,
+    msub: mathmlAttrKeys,
+    msubsup: mathmlAttrKeys,
+    mfrac: mathmlAttrKeys,
+    mstyle: [...mathmlAttrKeys, 'style'],
+    span: ['className', 'style', 'ariaHidden'],
   },
 };
 
@@ -80,9 +108,29 @@ const htmlKatexBody2 = await renderKatex();
 const mathmlSurvivesExt = /<math/.test(htmlKatexBody1);
 const katexClassPresent = /class="[^"]*katex/.test(htmlKatexBody1);
 
-// ── CSS do KaTeX embutido inline (sem CDN) ──────────────────────────────────────
+// ── CSS do KaTeX embutido inline (sem CDN) + fontes como data: URI ───────────────
 const katexCssPath = require.resolve('katex/dist/katex.min.css');
-const katexCss = readFileSync(katexCssPath, 'utf8');
+const katexFontsDir = join(dirname(katexCssPath), 'fonts');
+
+/** Substitui url(fonts/...) por data:base64 para leitura.html autocontido. */
+function inlineKatexFontUrls(css) {
+  return css.replace(/url\((['"]?)([^)'"]+)\1\)/g, (match, _quote, url) => {
+    const rel = url.replace(/^fonts\//, '');
+    const fontPath = join(katexFontsDir, basename(rel));
+    if (!existsSync(fontPath)) return match;
+    const buf = readFileSync(fontPath);
+    const ext = rel.split('.').pop()?.toLowerCase() ?? '';
+    const mime =
+      ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : 'font/ttf';
+    return `url(data:${mime};base64,${buf.toString('base64')})`;
+  });
+}
+
+let katexCss = readFileSync(katexCssPath, 'utf8');
+katexCss = inlineKatexFontUrls(katexCss);
+const cssAutocontido =
+  !/url\([^)]*fonts\//.test(katexCss) && !/url\(fonts\//.test(katexCss);
+const fontsInlined = cssAutocontido;
 
 // Documento final autocontido (CSS inline). É o que iria para leitura.html.
 const buildDoc = (body, css) => `<!DOCTYPE html>
@@ -101,7 +149,10 @@ writeFileSync(join(outDir, 'result-katex.html'), finalDoc1, 'utf8');
 const deterministic = sha(finalDoc1) === sha(finalDoc2);
 
 console.log('═══ KaTeX ═══');
-console.log('CSS embutível inline (sem CDN)?     ', 'sim');
+console.log(
+  'CSS+fontes autocontidos (sem CDN)?  ',
+  cssAutocontido && fontsInlined ? 'sim' : 'NÃO (fontes ou URLs relativas pendentes)',
+);
 console.log('katex.min.css                       ', sizeKB(katexCss), 'KB');
 console.log('');
 console.log('HTML body SEM KaTeX (math = texto)  ', sizeKB(htmlNoKatex), 'KB');

@@ -11,7 +11,8 @@
  *  - sucesso → output/result-mermaid.html (SVG)
  *  - falha   → output/result-mermaid-error.txt (diagnóstico + alternativa)
  */
-import { writeFileSync, mkdirSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readdirSync, readFileSync, existsSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -67,16 +68,41 @@ try {
   const distDir = join(dirname(pkgPath), 'dist');
   if (existsSync(distDir)) {
     const candidates = readdirSync(distDir)
-      .filter((f) => /mermaid.*\.(m?js)$/.test(f) && !f.includes('.map'))
-      .map((f) => ({ f, kb: statSync(join(distDir, f)).size / 1024 }))
-      .sort((a, b) => b.kb - a.kb);
-    if (candidates.length) {
-      const biggest = candidates[0];
-      bundleInfo = `${biggest.f} ≈ ${biggest.kb.toFixed(0)} KB (mermaid completo, sem gzip)`;
+      .filter((f) => /mermaid.*\.(m?js)$/.test(f))
+      .map((f) => {
+        const buf = readFileSync(join(distDir, f));
+        return {
+          f,
+          rawKb: buf.length / 1024,
+          gzipKb: gzipSync(buf).length / 1024,
+        };
+      });
+
+    const entryScore = (c) => {
+      let score = 0;
+      if (c.f.includes('.min.')) score += 100;
+      if (c.f.includes('esm')) score += 50;
+      if (c.f.endsWith('.min.mjs') || c.f.endsWith('.min.js')) score += 30;
+      if (!c.f.includes('.min') && c.rawKb > 500) score -= 80;
+      return score;
+    };
+
+    const ranked = [...candidates].sort((a, b) => {
+      const byScore = entryScore(b) - entryScore(a);
+      return byScore !== 0 ? byScore : b.rawKb - a.rawKb;
+    });
+
+    if (ranked.length) {
+      const biggest = ranked[0];
+      bundleInfo = `${biggest.f} ≈ ${biggest.rawKb.toFixed(1)} KB raw, ${biggest.gzipKb.toFixed(1)} KB gzipped (entry minificado ESM preferido)`;
       say('3) Bundle client-side (mermaid dist):');
-      for (const c of candidates.slice(0, 6)) {
-        say(`   ${c.f.padEnd(34)} ${c.kb.toFixed(0).padStart(6)} KB`);
+      const bySize = [...candidates].sort((a, b) => b.rawKb - a.rawKb);
+      for (const c of bySize.slice(0, 6)) {
+        say(
+          `   ${c.f.padEnd(34)} ${c.rawKb.toFixed(1).padStart(7)} KB raw  ${c.gzipKb.toFixed(1).padStart(6)} KB gzip`,
+        );
       }
+      say(`   → referência: ${biggest.f} (minificado ESM, se disponível)`);
     }
   }
 } catch (err) {

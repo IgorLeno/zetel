@@ -46,10 +46,14 @@ export async function renderMarkdown(md, opts = {}) {
   const { remarkPlugins = [], rehypePlugins = [], schema = appSanitizeSchema } = opts;
 
   let processor = unified().use(remarkParse).use(remarkGfm);
-  for (const p of remarkPlugins) processor = processor.use(...[].concat(p));
+  for (const p of remarkPlugins) {
+    processor = Array.isArray(p) ? processor.use(...p) : processor.use(p);
+  }
 
   processor = processor.use(remarkRehype, { allowDangerousHtml: false }).use(rehypeSlug);
-  for (const p of rehypePlugins) processor = processor.use(...[].concat(p));
+  for (const p of rehypePlugins) {
+    processor = Array.isArray(p) ? processor.use(...p) : processor.use(p);
+  }
 
   // Espelha o app: .run() → hast, depois sanitize, depois toHtml.
   const mdast = processor.parse(md);

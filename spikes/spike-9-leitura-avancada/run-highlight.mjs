@@ -48,14 +48,35 @@ const lightCss = readFileSync(require.resolve('highlight.js/styles/github.css'),
 const darkRaw = readFileSync(require.resolve('highlight.js/styles/github-dark.css'), 'utf8');
 
 // Escopar o tema escuro sob [data-theme="dark"] para coexistir com o claro.
-// Prefixo simples de cada seletor de regra (o app já usa esse atributo no <html>).
-const darkScoped = darkRaw.replace(/(^|\})\s*([^{}@][^{}]*)\{/g, (m, brace, sel) => {
-  const scoped = sel
-    .split(',')
-    .map((s) => `[data-theme="dark"] ${s.trim()}`)
-    .join(', ');
-  return `${brace}\n${scoped} {`;
-});
+// Comentários permanecem intactos; só seletores reais recebem o prefixo.
+const DARK_SCOPE = '[data-theme="dark"]';
+
+function scopeDarkSelectors(css) {
+  const commentRe = /\/\*[\s\S]*?\*\//g;
+  let out = '';
+  let last = 0;
+  let m;
+  while ((m = commentRe.exec(css)) !== null) {
+    out += scopeDarkChunk(css.slice(last, m.index));
+    out += m[0];
+    last = m.index + m[0].length;
+  }
+  out += scopeDarkChunk(css.slice(last));
+  return out;
+}
+
+function scopeDarkChunk(chunk) {
+  return chunk.replace(/(?:^|})\s*([^{}@][^{}]*?)\s*\{/g, (match, sel) => {
+    const brace = match.startsWith('}') ? '}' : '';
+    const scoped = sel
+      .split(',')
+      .map((s) => `${DARK_SCOPE} ${s.trim()}`)
+      .join(', ');
+    return `${brace}\n${scoped} {`;
+  });
+}
+
+const darkScoped = scopeDarkSelectors(darkRaw);
 
 const themeCss = `/* light */\n${lightCss}\n/* dark (escopado) */\n${darkScoped}`;
 
