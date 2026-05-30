@@ -1,0 +1,220 @@
+# AGENTS.md — Zetel
+
+Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
+
+**Estado atual: Módulo 9 (Qualidade visual da leitura) — etapa 9.2 implementada; gate visual manual pendente**
+
+#### Resumo
+MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
+
+#### Data de conclusão
+2026-05-30
+
+#### Build / Gate
+- `pnpm build` limpo
+- Gate 8 → release: validação manual com orientador pendente
+
+#### Entregáveis
+- Robustez de erros API: `leitura/route.ts`; reads de `notes/titles`, `memory` GET, `memory/titles` (try/catch + JSON estruturado)
+- **M6-1 fechada:** `config/prompts/parceiro.md` via `ensureParceiroPrompt` em `lib/chat-prompt.ts` (self-heal sem clobber); seed em `lib/vault.ts`; `partnerPrompt` em `buildOpenRouterMessages` (regra #5)
+- **M6-3 fechada:** `ChatPanel` sempre montado em `LeituraPanel`; visibilidade via CSS `display:none` (stream não se perde ao recolher)
+- Polish: `metadata`/`generateMetadata` (4 rotas); loading em "Remover" (`ArquivosPanel`) e "Limpar" (`ChatPanel`); tokens `--memory` / `--memory-dim` com variante dark em `globals.css`
+- `docs/BACKUP.md` criado
+- Ver `spikes/lessons.md` (Módulo 8)
+
+#### Dívidas fechadas
+- **M6-1** — prompt do parceiro lido do vault sob demanda
+- **M6-3** — chat recolhível sem perder stream
+
+#### Dívidas pendentes
+- **M6-2** — saudação automática quando histórico vazio (I1); pós-MVP
+
+#### Próximos passos
+- Gate manual → declarar **MVP TEXTUAL ENTREGUE**
+- Próximo passo operacional: **Módulo 9 — Qualidade visual da leitura e do app** (PRD v3, ver `prd-v3.md`)
+
+**Módulo 9 (Qualidade visual da leitura) — etapa 9.2 implementada em 2026-05-30; `pnpm build` limpo; render verificado por harness (KaTeX/MathML, highlight, fontes woff2 inline, tema escuro escopado); gate visual manual em app pendente.** Entregou: `lib/sanitize.ts` estendido com subset MathML (+`annotation-xml`) e atributos do KaTeX (`style` só em `span`/`mstyle`, `ariaHidden` em `*`; `rehype-highlight` dispensa extensão); `remark-math` adicionado ao parser de segmentação em `processZetel` (`ingestao-service.ts`) **e** `renderZetel` (`render-service.ts`) — devem ficar IDÊNTICOS pela paridade `anchor`/`content_hash`; `pageNodesToHtml` agora `remark-rehype`→`rehype-katex`→`rehype-slug`→`rehype-highlight` (subset 7 linguagens, `detect:false`) — Regra #1 preservada (sem LLM); `leitura.html` com CSS inline (`katex.min.css` + 20 fontes woff2 como `data:` URIs → 100% offline, ~0,35 MB; `github.css` claro + `github-dark.css` escopado sob `[data-theme="dark"]`); template novo: corpo serif Georgia 65ch/1.7, UI system-ui, H1 display/H2 bold/H3 semibold, `text-wrap:pretty`, **capa para primeira página com H1 isolado (fecha dívida HTML-1)**, blockquote com borda+fundo itálico, tabelas com `.table-wrap` (`overflow-x`) e sticky header (>10 linhas), fallback de bloco mermaid via `:has()` (badge discreto, adiado p/ PRD v4); tema por `data-theme` com fallback `prefers-color-scheme` (script no `<head>`) + listener `postMessage` `zetel:theme`; mini-índice com seção ativa via `IntersectionObserver` + dropdown `<select>` < 768px; botões Anterior/Próxima ≥44px com "Página X de Y" e estados desabilitados. `components/LeituraPanel.tsx` envia o tema ao iframe no `onLoad` e via `MutationObserver` do `data-theme` no `<html>` (D13/Regra #2: o app NÃO injeta CSS, só `postMessage`). Deps adicionadas: `remark-math@^6`, `rehype-katex@^7`, `rehype-highlight@^7`, `katex@^0.16`, `highlight.js@^11`. Ver `spikes/lessons.md` (Módulo 9).
+
+**Módulo 7 (Memória cooperativa) concluído em 2026-05-29 — Gate 7 → 8 OK (validado 2026-05-30).** Módulo 7 entregou: `lib/memory-service.ts` (filesystem como fonte de verdade da memória global em `parceiro/memoria/`, frontmatter §13.4; sem tabela SQLite; escrita atômica `writeMemoryFile` com `flag:'wx'` + fallback `-2..-99`/timestamp; leitura sob demanda — regra #5; self-heal de `config/prompts/sugestao-memoria.md` sem clobber); injeção no chat via `buildMemoryContext(vaultPath)` chamado **a cada turno** dentro de `buildOpenRouterMessages` (ordem §8.7; truncagem a **40% do orçamento** = `MEMORY_TOKEN_BUDGET` 3200, corta arquivo inteiro priorizando recência; aviso "memória longa" acima de 10 KB sem corte automático); detecção de sugestão no stream via sentinela `<<<MEMORIA_SUGERIDA>>>…<<<FIM_MEMORIA>>>` com `earliestMark`/`HOLD = max(len marcadores)-1` retendo nota **e** memória (a `justificativa` nunca chega ao cliente) emitindo `data: [MEMORY_SUGGESTION]`; `MemoryCard` (Guardar/Editar/Discutir/Rejeitar; "Discutir" bounded em 1 rodada via `discussNextMemoryRef` — regra #10; "Discutir" mantido por fidelidade ao PRD §8 "mecanismo idêntico ao de notas", decidido no gate) + `MemoriaList` (aba `/memoria`, listagem + abertura externa em cascata D14); rotas `memory` (GET/POST), `memory/titles` (GET), `memory/reveal` (POST, anti path-traversal sob `parceiro/memoria/`) e `chat` PATCH (`kind:'memory'` → flag `memoryRejected`). `chat_messages.meta` ganha `suggestedMemory`/`memoryRejected`/`memoryLong`. Logs só contagens/`zetelOrigem` (regra #6). `pnpm build` limpo; fluxo de memória (salvar→frontmatter §13.4→listar→cascata→rejeitar) validado por inspeção; fluxo de sugestão/influência/truncagem com LLM real requer chave (teste manual). Ver `spikes/lessons.md` (Módulo 7).
+
+**Módulo 6 (Notas cooperativas) concluído em 2026-05-29 — Gate 6 → 7 OK.** Módulo 6 entregou: `migrations/005_chat_meta.sql` (coluna `chat_messages.meta` JSON — **fecha o item 7 do Gate 5 → 6**); `lib/notes-service.ts` (filesystem como fonte de verdade das notas, frontmatter §13.3; sem tabela SQLite de notas); rotas `zetels/[id]/notes` (GET/POST), `notes/titles` (GET), `notes/reveal` (POST, com guarda anti path-traversal) e `chat` PATCH (flag `noteRejected`); detecção de sugestão no stream via sentinela `<<<NOTA_SUGERIDA>>>…<<<FIM_NOTA>>>` com buffer *held-back* (a `justificativa` nunca chega ao cliente) emitindo evento `data: [SUGGESTION]`; `NoteCard` (Guardar/Editar/Discutir/Rejeitar; "Discutir" bounded em 1 rodada — regra #10) + `NotasPanel` (listagem + abertura externa em cascata D14). Rubrica real em `config/prompts/sugestao-nota.md` (`SUGESTAO_NOTA_PROMPT`, self-heal sem clobber). `streamChat` agora envia `stream_options.include_usage` **sempre** e grava `tokens_in/out` em `meta` (contagens, não conteúdo — regra #6); `ZETEL_LOG_TOKENS` controla só o log em arquivo. `pnpm build` limpo; fluxo de notas (salvar→frontmatter→listar→cascata→rejeitar) validado end-to-end em HOME/vault isolados; fluxo de chat/sugestão com LLM requer chave (teste manual). Ver `spikes/lessons.md` (Módulo 6).
+
+**Módulo 5 (Chat contextual com LLM) concluído em 2026-05-29 — Gate 5 → 6 OK (item 7 fechado no Módulo 6).** Módulo 5 entregou: `migrations/004_chat_messages.sql`; `types/chat-message.ts`; `lib/{chat-service,openrouter,chat-prompt}.ts`; rotas `zetels/[id]/chat` (GET/POST SSE/DELETE), `openrouter/test` (POST), `settings` (GET/PUT); `ChatPanel` + `LeituraPanel` (painel 320px, `postMessage` de página do iframe); Configurações (modelo padrão, janela de histórico 1–50, teste com modelo). OpenRouter via `fetch` no backend (sem SDK); chave via `readApiKey()` (env fallback → `~/.zetel/config`). Ver `spikes/lessons.md` (Módulo 5).
+
+**Módulo 4 (Leitura paginada determinística) concluído em 2026-05-29 — Gate 4 → 5 OK.** Módulo 4 entregou: `lib/render-service.ts` (`renderZetel`: re-segmentação com paridade de `anchor`/`content_hash`, MDAST→HTML via `remark-rehype`+`rehype-slug`+`hast-util-sanitize`, reescrita de imagens com sentinelas, template autocontido `artefatos/leitura.html` com mini-índice e JS de navegação); `lib/sanitize.ts`; `lib/format-utils.ts`; rotas `build` (POST), `leitura` (GET HTML), `artifacts` (GET metadata); UI `LeituraPanel` (iframe `sandbox="allow-scripts"`, Preparar/Atualizar leitura) + `ArtefatosPanel` (metadata, baixar, regenerar). `renderZetel` seta `reading_stale=0` + `last_built_at`; `processZetel` seta `reading_stale=1` (HTML desatualizado até build). Deps: `rehype-slug rehype-sanitize remark-rehype hast-util-to-html hast-util-sanitize` (+ `@types/hast` dev). `pnpm build` limpo. Ver `spikes/lessons.md` (Módulo 4).
+
+**Módulo 3 (Ingestão de Markdown + aba Arquivos) concluído e validado em 2026-05-29 — Gate 3 → 4 OK.** Módulo 3 entregou: `migrations/003_ingestao.sql` (`zetel_files`, `zetel_pages` com `UNIQUE (zetel_id, anchor)` e índices); `types/zetel-file.ts` e `types/zetel-page.ts`; `lib/ingestao-service.ts` (add/list/reorder/remove + `processZetel` determinístico: parse `remark`+`remark-gfm` → mapa de imagens → **segmentação por arquivo** com `page_index` global contínuo → `zetel_pages`, idempotente); rotas `zetels/[id]/files` (GET/POST multipart), `files/[fileId]` (DELETE), `files/order` (PATCH), `process` (POST); UI `ArquivosPanel` + badge de leitura no header. `reading_stale=1` nas mutações e após `processZetel`; build limpa stale. Imagens externas (`__blocked__`); locais em `images/` (`__notfound__` quando ausente). Ver `spikes/lessons.md` (Módulo 3).
+
+**Módulo 2 (Zetel CRUD + Lixeira) concluído e validado em 2026-05-29 — Gate 2 → 3 OK.** Módulo 2 entregou: `migrations/002_zetel_crud.sql` (índices `trashed_at`/`slug`); `types/zetel.ts`; `lib/zetel-service.ts` (slugify determinístico, slug único global incl. lixeira, create/list/rename/trash/restore/purge com consistência DB→fs); rotas API `zetels` (GET/POST), `zetels/[id]` (PATCH/DELETE com `?purge=true`), `zetels/[id]/restore` (POST); UI `ZetelList` (lista, modais criar/renomear, confirmação de lixeira, menu de contexto), rota `/zetel/[slug]` com shell das 5 abas vazias (`ZetelTabs`), aba Lixeira nas Configurações (`ConfiguracoesTabs` + `LixeiraPanel`), `lib/relative-time.ts`, `components/Modal.tsx`. Lógica do serviço validada por teste de fumaça isolado (20/20 checks). Ver `spikes/lessons.md` (Módulo 2).
+
+Módulo 1 (Fundação) concluído em 2026-05-29: scaffold Next.js 15 + TS strict + better-sqlite3 + Tailwind v4; `lib/{paths,logger,config,db,migrate,settings,vault}.ts`; `001_init.sql`; rotas `vault`/`config`/`test-connection`/`theme`; shell de UI + Configurações. Quitou dívidas #1/#2/#3/#7/#8 do Módulo 0. Módulo 0: spikes A/B/C/D concluídos; Spike B aprovado por Igor; Spike D TTFT 1 006 ms. PRD v2 aprovado em 2026-05-28.
+
+---
+
+## Fontes de verdade
+
+| Arquivo | Papel |
+|---------|-------|
+| `piped-pondering-dahl2.md` | PRD v2 completo (Partes A–D, D1–D15, DT1–DT5) — fonte autoritativa do MVP textual (Módulos 1–8) |
+| `prd-v3.md` | PRD v3 (Fase Visual + Gestão de Memória) — fonte autoritativa dos **Módulos 9–10** e das decisões D16–D24 |
+| `spikes/lessons.md` | Calibrações e dívidas técnicas do Módulo 0 — leitura obrigatória antes do Módulo 1 |
+| `estamos-construindo-um-projeto-humble-harbor.md` | Histórico: 5 ajustes de consistência aplicados ao PRD em 2026-05-28 |
+| `zetel-prd-v1.md` (fora deste diretório) | Histórico; não consultar para decisões |
+
+Regra: divergência entre este `AGENTS.md` e o PRD → **PRD vence**. Este arquivo é resumo comportamental, não substituto.
+
+---
+
+## Stack obrigatória
+
+Não escolher alternativas sem aprovação explícita.
+
+- **Frontend**: Next.js (App Router) + React + TypeScript.
+- **Backend**: rotas API do Next.js em **runtime Node** — não Edge (dependência de `better-sqlite3` e `fs`).
+- **SQLite**: `better-sqlite3` em **instância única (singleton) por processo** — biblioteca síncrona, sem pool de conexões.
+- **Pipeline de leitura**: `remark` + `rehype` + plugins (gfm, slug estável, autolink-headings) + `rehype-sanitize` (allowlist explícita). Determinístico. **Sem LLM.**
+- **Chat**: SSE para streaming; OpenRouter (`fetch` em `lib/openrouter.ts`) só no backend — frontend nunca chama a API externa.
+- **Idioma da UI e do parceiro**: PT-BR, independente do idioma do material (D15).
+
+---
+
+## Estrutura física (caminhos canônicos)
+
+```
+~/.zetel/
+  zetel.db          # SQLite, permissão 600
+  config            # chave OpenRouter, permissão 600
+  logs/
+    zetel.log       # rotacionado: 5 MB, mantém 3 arquivos
+
+<vault>/
+  zetels/
+    <slug>/
+      arquivos/       # .md originais copiados
+      notas-rapidas/
+      notas-literatura/
+      artefatos/
+        leitura.html  # artefato regenerável
+      attachments/
+      images/         # imagens locais copiadas no "Processar"
+    .lixeira/
+      <slug>-<timestamp>/
+  parceiro/
+    memoria/          # arquivos .md de memória global
+
+  config/
+    prompts/
+      parceiro.md
+      sugestao-nota.md
+      sugestao-memoria.md
+
+<repo>/
+  migrations/
+    001_init.sql      # arquivos numerados, no código, fora do vault
+    002_*.sql
+```
+
+SQLite e HTML ficam fora de controle de versão. Vault (Markdown) é amigo de git.
+
+---
+
+## Decisões fundadoras — referência rápida
+
+Para detalhe completo, ver Partes C e D do PRD. Esta tabela usa as versões **corrigidas** (ajustes do plano `humble-harbor` já incorporados aqui).
+
+| ID | Decisão |
+|----|---------|
+| D1 | Pipeline de leitura é determinístico: `remark`→`rehype`+CSS. Sem LLM. |
+| D2 | Voz fora do MVP; vira PRD v4 (Módulos 11–12: TTS e STT). |
+| D3 | Provedor de áudio a definir após spike na Fase 2. |
+| D4 | Memória emergente automática fora do MVP; cooperativa com confirmação no MVP. |
+| D5 | Modo internet fora do MVP; vira Módulo 14 (PRD v5). |
+| D6 | Histórico de conversa por Zetel em SQLite (`chat_messages`), não em Markdown. |
+| D7 | Múltiplos arquivos por Zetel suportados desde o Módulo 3; ordem via `order_index`. |
+| D8 | Cliente envia `page_id`; servidor valida contra `zetel_pages` e usa `content_text` armazenado como fonte autoritativa. Divergência registrada em `meta.page_hash_match = false`. |
+| D9 | Lixeira em pasta no vault (`zetels/.lixeira/`) + flag `trashed_at` em SQLite. |
+| D10 | Prompts editáveis em runtime fora do MVP (vira Módulo 13, PRD v5); vivem em `config/prompts/` no vault. |
+| D11 | Mini-índice derivado dos headings do Markdown original; persistido em `zetel_pages`. |
+| D12 | Chave OpenRouter em `~/.zetel/config` (`600`). Fora do vault, código e SQLite. |
+| D13 | HTML autocontido (CSS inline) gerado por `rehype`+`rehype-sanitize`. Renderização em `<iframe sandbox>`; `allow-same-origin` só se Spike B justificar. |
+| D14 | Abertura de notas/memórias externa em cascata: `obsidian://open?vault=...&file=...` → copiar caminho → abrir pasta. Sem editor embutido no MVP. |
+| D15 | Parceiro responde em PT-BR por padrão, independente do idioma do material. |
+| DT1 | Slug do Zetel imutável após criação; `display_name` mutável; pasta no disco não é renomeada no MVP. |
+| DT2 | Imagens locais copiadas para `images/` e `src` reescrito. URLs externas bloqueadas no MVP (placeholder visível). |
+| DT3 | Migrations: arquivos SQL numerados em `migrations/`, aplicados via `schema_migrations`. Transação por migration. Sem down automática no MVP. |
+| DT4 | Logs: só IDs e contagens em `~/.zetel/logs/`. Nenhum conteúdo de usuário. |
+| DT5 | Rubrica de sugestão de nota em `config/prompts/sugestao-nota.md`; JSON inclui campo `justificativa` (interno, não exibido). |
+
+---
+
+## Regras invioláveis
+
+1. **Não usar LLM no pipeline "Processar" ou "Preparar leitura"** — D1.
+2. **Não injetar CSS no iframe pelo app** — `leitura.html` é autocontido (CSS inline); o app só renderiza.
+3. **Não confiar no `content_text` que o cliente envia no chat** — usar sempre `zetel_pages.content_text`; registrar divergência em `meta.page_hash_match = false`.
+4. **Não renomear pasta física do Zetel no MVP** — slug é imutável; apenas `display_name` muda (DT1).
+5. **Não cachear memória global em memória de processo** — leitura sob demanda no início de cada turno (permite edição externa no Obsidian sem inconsistência).
+6. **Não logar conteúdo do usuário** — zero texto de páginas, chat, notas, memória ou chave em `~/.zetel/logs/`. Apenas IDs e contagens (DT4).
+7. **Não usar pool de conexões com `better-sqlite3`** — singleton síncrono por processo.
+8. **Não declarar `anchor TEXT UNIQUE` global** — unicidade é composta: `UNIQUE (zetel_id, anchor)`.
+9. **Não renderizar URLs externas de imagem no MVP** — bloquear e exibir placeholder (DT2).
+10. **Não loopar a ação "Discutir" em sugestão de nota** — exatamente 1 rodada de refinamento; depois reapresenta sem "Discutir" (I7).
+11. **Não disparar saudação do parceiro ao reabrir chat com histórico** — saudação só quando `chat_messages` está vazio (I1).
+12. **Não adicionar `allow-same-origin` ao iframe por padrão** — `<iframe sandbox>` puro até Spike B justificar (D13).
+13. **Não armazenar chave OpenRouter em SQLite, vault ou git** — vive em `~/.zetel/config` com `600` (D12).
+14. **Não criar editor de notas embutido no MVP** — abertura externa em cascata: `obsidian://open?vault=...&file=...` → copiar caminho → abrir pasta (D14).
+15. **Não introduzir voz, internet ou prompts editáveis em runtime no MVP** — D2, D5, D10.
+16. **Não renomear Zetel mexendo na pasta física** — somente `display_name`; slug físico é imutável (DT1).
+
+---
+
+## Plano modular
+
+Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validação entre módulos" no PRD para checklists detalhados.
+
+| # | Módulo | Objetivo | Depende de |
+|---|--------|----------|-----------|
+| 0 | Spikes + mock visual | A ✅ B ✅ C ✅ D ✅ | — |
+| 1 | Fundação ✅ | Next.js + vault + SQLite + settings mínimas | 0 |
+| 2 | Zetel CRUD + lixeira ✅ | Entidade Zetel funcional sem conteúdo | 1 |
+| **3** | **Ingestão Markdown + aba Arquivos** ✅ | Anexar `.md`, ordenar, processar, detectar drift | 2 |
+| **4** | **Leitura paginada determinística** ✅ | HTML autocontido, mini-índice, navegação | 3 + mock aprovado |
+| **5** | **Chat contextual com LLM** ✅ | Chat lateral, SSE, histórico, settings de modelo | 4 + Spike D |
+| **6** | **Notas cooperativas** ✅ | Fluxo Guardar/Editar/Discutir/Rejeitar | 5 |
+| **7** | **Memória cooperativa** ✅ | Memória global em Markdown, leitura sob demanda | 6 |
+| **8** | **Polimento → MVP TEXTUAL ENTREGUE** ✅ (gate manual pendente) | Estados vazios, erros, tema, jornada completa | 1–7 |
+| **9** | **Qualidade visual da leitura e do app** | PRD v3 — tipografia, KaTeX, highlight.js, Mermaid (cond.), tema, HTML-1 | 8 |
+| **10** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 9 |
+| 11 | Voz: TTS | PRD v4 | 10 |
+| 12 | Voz: STT | PRD v4 | 11 |
+| 13 | Prompts editáveis em runtime | PRD v5 | 10 |
+| 14 | Modo internet | PRD v5 | 10 |
+| 15 | Memória emergente automática | Fase futura | 10 |
+
+---
+
+## Contratos críticos
+
+**Chat** (`GET`/`POST`/`DELETE /api/zetels/:id/chat`):
+- POST body: `{ userMessage, pageIndex?, model? }` — `pageIndex` sincronizado via `postMessage` do iframe (`zetel:page-change`).
+- Servidor busca `zetel_pages.content_text` por `page_index` (truncado 3000 chars); se índice inválido → 400.
+- Resposta POST: SSE `data: <JSON string chunk>\n\n`; erro `data: [ERROR] …`.
+- Histórico em `chat_messages` (`role`, `content`, `page_index`, `model`) — sem `meta` JSON no MVP deste módulo.
+
+**Processar** (`POST /api/zetels/:id/process`):
+- Idempotente: mesmo input → mesmos `content_hash` em `zetel_files` e `zetel_pages`.
+- Unicidade de anchor: `UNIQUE (zetel_id, anchor)`.
+
+**Migrations**:
+- Um arquivo SQL por migration, execução transacional, aplicação no boot via `schema_migrations`.
+- Sem down automática no MVP.
+
+---
+
+## Workflow do dev
+
+1. Antes de qualquer módulo: ler a seção correspondente no PRD.
+2. Para mudanças não triviais: entrar em modo plano antes de escrever código.
+3. Antes de declarar módulo concluído: executar o gate específico do PRD (checklists em "Gates de validação entre módulos").
+4. Antes de qualquer commit: `grep` nos anti-padrões aplicáveis ao que foi implementado.
+5. Ao descobrir uma nova armadilha: adicionar como item numerado na seção "Regras invioláveis" acima — este arquivo é log vivo, não snapshot.
