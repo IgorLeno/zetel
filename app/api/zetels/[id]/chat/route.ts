@@ -11,11 +11,14 @@ import {
 import {
   buildOpenRouterMessages,
   extractNoteSuggestion,
+  extractMemorySuggestion,
   NOTE_MARK_START,
+  MEMORY_MARK_START,
   resolveChatModel,
   resolveHistoryWindow,
 } from '@/lib/chat-prompt';
 import { ensureSugestaoNotaPrompt, listNoteTitles } from '@/lib/notes-service';
+import { ensureSugestaoMemoriaPrompt } from '@/lib/memory-service';
 import { assertZetelAtivo } from '@/lib/ingestao-service';
 import { readApiKey, streamChat, type UsageSink } from '@/lib/openrouter';
 import { getOpenRouterModel } from '@/lib/config';
@@ -59,7 +62,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'Zetel não encontrado.' }, { status: 404 });
   }
 
-  let body: { messageId?: unknown; rejected?: unknown };
+  let body: { messageId?: unknown; rejected?: unknown; kind?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -71,7 +74,9 @@ export async function PATCH(request: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'messageId ausente.' }, { status: 400 });
   }
   if (body.rejected === true) {
-    updateMessageMeta(db, messageId, { noteRejected: true });
+    // `kind: 'memory'` distingue a rejeição de memória da de nota (Módulo 7).
+    const patch = body.kind === 'memory' ? { memoryRejected: true } : { noteRejected: true };
+    updateMessageMeta(db, messageId, patch);
   }
   return NextResponse.json({ ok: true });
 }
@@ -174,24 +179,33 @@ export async function POST(request: Request, { params }: Ctx) {
   // como chat simples (degrada sem quebrar).
   const vaultPath = getSetting('vault_path');
   let noteRubric: string | undefined;
+  let memoryRubric: string | undefined;
   let existingTitles: string[] | undefined;
   if (vaultPath) {
     try {
       noteRubric = ensureSugestaoNotaPrompt(vaultPath);
+      memoryRubric = ensureSugestaoMemoriaPrompt(vaultPath);
       existingTitles = listNoteTitles(vaultPath, zetel.slug);
     } catch (err) {
-      logger.error('note rubric load failed', { zetelId, error: (err as Error).message });
+      logger.error('rubric/titles load failed', { zetelId, error: (err as Error).message });
     }
   }
 
-  const openRouterMessages = buildOpenRouterMessages({
+  // Memória global é lida sob demanda dentro de buildOpenRouterMessages (regra #5).
+  const { messages: openRouterMessages, memoryWarnings } = buildOpenRouterMessages({
     displayName: zetel.displayName,
     pageContent,
     history,
     userMessage,
     noteRubric,
+    memoryRubric,
     existingTitles,
+    vaultPath: vaultPath ?? undefined,
   });
+  if (memoryWarnings.truncatedCount > 0) {
+    // Regra #6: só contagem, nunca conteúdo.
+    logger.info('memory truncated', { memorias_truncadas: memoryWarnings.truncatedCount });
+  }
 
   // Cliente não envia conteúdo de página (D8); a fonte é sempre `zetel_pages`,
   // então o hash sempre confere quando há página.
@@ -208,7 +222,18 @@ export async function POST(request: Request, { params }: Ctx) {
 
   const encoder = new TextEncoder();
 
-  const HOLD = NOTE_MARK_START.length - 1; // tail retido p/ marcador partido entre chunks
+  // Ambas as sentinelas (nota e memória) são retidas server-side (regra #9).
+  const MARKS = [NOTE_MARK_START, MEMORY_MARK_START];
+  const HOLD = Math.max(...MARKS.map((m) => m.length)) - 1; // tail p/ marcador partido entre chunks
+  /** Índice do marcador (nota OU memória) que aparece mais cedo, ou -1. */
+  const earliestMark = (s: string): number => {
+    let idx = -1;
+    for (const m of MARKS) {
+      const i = s.indexOf(m);
+      if (i !== -1 && (idx === -1 || i < idx)) idx = i;
+    }
+    return idx;
+  };
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -231,10 +256,10 @@ export async function POST(request: Request, { params }: Ctx) {
           fullContent += chunk;
           if (markerFound) continue; // já em modo "só acumula" (bloco da sugestão)
 
-          const idx = fullContent.indexOf(NOTE_MARK_START);
+          const idx = earliestMark(fullContent);
           if (idx !== -1) {
-            // Emite a narrativa até o marcador e para — o bloco (e a justificativa)
-            // nunca chega ao cliente.
+            // Emite a narrativa até o primeiro marcador e para — os blocos (e as
+            // justificativas) nunca chegam ao cliente.
             emit(fullContent.slice(emittedLen, idx));
             emittedLen = idx;
             markerFound = true;
@@ -255,11 +280,16 @@ export async function POST(request: Request, { params }: Ctx) {
         }
 
         const { narrative, suggestion } = extractNoteSuggestion(fullContent);
+        const { suggestion: memorySuggestion } = extractMemorySuggestion(fullContent);
+        // Narrativa final: corta no marcador mais cedo (a memória pode preceder a
+        // nota). extractNoteSuggestion já corta no NOTE_MARK, mas não na memória.
+        const cut = earliestMark(fullContent);
+        const finalNarrative = cut !== -1 ? fullContent.slice(0, cut).trim() : narrative;
 
         const saved = saveMessage(db, {
           zetelId,
           role: 'assistant',
-          content: narrative,
+          content: finalNarrative,
           pageIndex,
           model,
           meta: {
@@ -269,6 +299,7 @@ export async function POST(request: Request, { params }: Ctx) {
             tokensOut: usageSink.tokensOut,
             suggestedNote: suggestion ? true : undefined,
             noteTipo: suggestion?.tipo,
+            memoryLong: memoryWarnings.hasLongFile || undefined,
           },
         });
 
@@ -276,6 +307,11 @@ export async function POST(request: Request, { params }: Ctx) {
           // Evento separado, sem `justificativa`. Inclui o id da mensagem p/ Rejeitar.
           const payload = JSON.stringify({ messageId: saved.id, model, ...suggestion });
           controller.enqueue(encoder.encode(`data: [SUGGESTION] ${payload}\n\n`));
+        }
+        if (memorySuggestion) {
+          // Sem `justificativa`. messageId p/ o PATCH de rejeição de memória.
+          const payload = JSON.stringify({ messageId: saved.id, model, ...memorySuggestion });
+          controller.enqueue(encoder.encode(`data: [MEMORY_SUGGESTION] ${payload}\n\n`));
         }
         controller.close();
       } catch (err) {

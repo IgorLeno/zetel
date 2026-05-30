@@ -9,6 +9,7 @@ import {
 import { isAbsolute, join, resolve, sep } from 'node:path';
 import { logger } from './logger';
 import { SUGESTAO_NOTA_PROMPT } from './notes-service';
+import { SUGESTAO_MEMORIA_PROMPT } from './memory-service';
 
 /**
  * Inicialização e validação do vault (§13.2).
@@ -23,8 +24,7 @@ export type VaultValidation = { ok: true; path: string } | { ok: false; error: s
 const PROMPT_PLACEHOLDERS: Record<string, string> = {
   'parceiro.md': '# Prompt do parceiro\n<!-- Conteúdo a definir no Módulo correspondente -->\n',
   'sugestao-nota.md': SUGESTAO_NOTA_PROMPT, // rubrica real desde a criação (Módulo 6)
-  'sugestao-memoria.md':
-    '# Prompt de sugestão de memória\n<!-- Conteúdo a definir no Módulo correspondente -->\n',
+  'sugestao-memoria.md': SUGESTAO_MEMORIA_PROMPT, // rubrica real desde a criação (Módulo 7)
 };
 
 /** Sobe na árvore até o primeiro ancestral existente. */

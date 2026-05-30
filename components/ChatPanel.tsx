@@ -3,15 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '@/types/chat-message';
 import { NoteCard, type Suggestion } from './NoteCard';
+import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
 
 function parseSseChunk(text: string): {
   chunks: string[];
   suggestion: Suggestion | null;
+  memorySuggestion: MemorySuggestionData | null;
   error: string | null;
   done: boolean;
 } {
   const chunks: string[] = [];
   let suggestion: Suggestion | null = null;
+  let memorySuggestion: MemorySuggestionData | null = null;
   let error: string | null = null;
   let done = false;
 
@@ -27,6 +30,16 @@ function parseSseChunk(text: string): {
     if (payload.startsWith('[ERROR]')) {
       error = payload.slice('[ERROR]'.length).trim();
       done = true;
+      continue;
+    }
+    if (payload.startsWith('[MEMORY_SUGGESTION]')) {
+      try {
+        memorySuggestion = JSON.parse(
+          payload.slice('[MEMORY_SUGGESTION]'.length).trim(),
+        ) as MemorySuggestionData;
+      } catch {
+        /* sugestão de memória malformada — ignora */
+      }
       continue;
     }
     if (payload.startsWith('[SUGGESTION]')) {
@@ -45,7 +58,7 @@ function parseSseChunk(text: string): {
     }
   }
 
-  return { chunks, suggestion, error, done };
+  return { chunks, suggestion, memorySuggestion, error, done };
 }
 
 export function ChatPanel({
@@ -62,11 +75,17 @@ export function ChatPanel({
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [suggestion, setSuggestion] = useState<{ data: Suggestion; canDiscuss: boolean } | null>(null);
+  const [memorySuggestion, setMemorySuggestion] = useState<{
+    data: MemorySuggestionData;
+    canDiscuss: boolean;
+  } | null>(null);
   const [noteBusy, setNoteBusy] = useState(false);
+  const [memoryBusy, setMemoryBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   // Quando true, a PRÓXIMA sugestão recebida vem sem "Discutir" (bounded — regra #10).
   const discussNextRef = useRef(false);
+  const discussNextMemoryRef = useRef(false);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -97,7 +116,7 @@ export function ChatPanel({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streaming, suggestion, scrollToBottom]);
+  }, [messages, streaming, suggestion, memorySuggestion, scrollToBottom]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -113,6 +132,7 @@ export function ChatPanel({
         setMessages([]);
         setStreaming('');
         setSuggestion(null);
+        setMemorySuggestion(null);
       }
     } catch {
       setError('Falha ao limpar o histórico.');
@@ -128,8 +148,10 @@ export function ChatPanel({
     setIsLoading(true);
     setStreaming('');
     setSuggestion(null);
+    setMemorySuggestion(null);
 
     let received: Suggestion | null = null;
+    let receivedMemory: MemorySuggestionData | null = null;
 
     try {
       const res = await fetch(`/api/zetels/${zetelId}/chat`, {
@@ -167,6 +189,7 @@ export function ChatPanel({
         const parsed = parseSseChunk(text);
         if (parsed.error) streamError = parsed.error;
         if (parsed.suggestion) received = parsed.suggestion;
+        if (parsed.memorySuggestion) receivedMemory = parsed.memorySuggestion;
         if (parsed.done) return; // stream encerrado via [DONE] — não processar mais chunks
         for (const c of parsed.chunks) {
           accumulated += c;
@@ -197,12 +220,19 @@ export function ChatPanel({
         if (received) {
           setSuggestion({ data: received, canDiscuss: !discussNextRef.current });
         }
+        if (receivedMemory) {
+          setMemorySuggestion({
+            data: receivedMemory,
+            canDiscuss: !discussNextMemoryRef.current,
+          });
+        }
       }
     } catch {
       setError('Erro de rede ao conversar com o parceiro.');
       setStreaming('');
     } finally {
       discussNextRef.current = false;
+      discussNextMemoryRef.current = false;
       setIsLoading(false);
       inputRef.current?.focus();
     }
@@ -262,6 +292,60 @@ export function ChatPanel({
     );
   }
 
+  async function saveMemory(titulo: string, corpo: string) {
+    if (!memorySuggestion) return;
+    setMemoryBusy(true);
+    try {
+      const res = await fetch('/api/memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo,
+          corpo,
+          zetelOrigem: zetelId,
+          modelo: memorySuggestion.data.model,
+          messageId: memorySuggestion.data.messageId,
+        }),
+      });
+      if (res.ok) {
+        setMemorySuggestion(null);
+        showToast('Memória guardada.');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? 'Falha ao guardar a memória.');
+      }
+    } catch {
+      setError('Erro de rede ao guardar a memória.');
+    } finally {
+      setMemoryBusy(false);
+    }
+  }
+
+  async function rejectMemory() {
+    if (!memorySuggestion) return;
+    const messageId = memorySuggestion.data.messageId;
+    setMemorySuggestion(null);
+    try {
+      await fetch(`/api/zetels/${zetelId}/chat`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, rejected: true, kind: 'memory' }),
+      });
+    } catch {
+      /* a flag é só para auditoria; falha não bloqueia o usuário */
+    }
+    showToast('Memória rejeitada.');
+  }
+
+  function discussMemory() {
+    if (!memorySuggestion) return;
+    const { titulo, corpo } = memorySuggestion.data;
+    discussNextMemoryRef.current = true; // a próxima sugestão volta sem "Discutir"
+    void sendMessage(
+      `Sobre esta sugestão de memória ("${titulo}"): o que você acha de refiná-la? Rascunho atual:\n\n${corpo}`,
+    );
+  }
+
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -306,6 +390,16 @@ export function ChatPanel({
             onSave={(corpo) => void saveNote(corpo)}
             onDiscuss={discussNote}
             onReject={() => void rejectNote()}
+          />
+        )}
+        {memorySuggestion && (
+          <MemoryCard
+            suggestion={memorySuggestion.data}
+            canDiscuss={memorySuggestion.canDiscuss}
+            busy={memoryBusy || isLoading}
+            onSave={(titulo, corpo) => void saveMemory(titulo, corpo)}
+            onDiscuss={discussMemory}
+            onReject={() => void rejectMemory()}
           />
         )}
         {error && <p className="feedback err chat-inline-error">{error}</p>}
