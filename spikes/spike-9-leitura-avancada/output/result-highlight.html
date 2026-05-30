@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Spike highlight.js</title>
+<style>/* light */
+pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1em
+}
+code.hljs {
+  padding: 3px 5px
+}
+/*!
+  Theme: GitHub
+  Description: Light theme as seen on github.com
+  Author: github.com
+  Maintainer: @Hirse
+  Updated: 2021-05-15
+
+  Outdated base version: https://github.com/primer/github-syntax-light
+  Current colors taken from GitHub's CSS
+*/
+.hljs {
+  color: #24292e;
+  background: #ffffff
+}
+.hljs-doctag,
+.hljs-keyword,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  /* prettylights-syntax-keyword */
+  color: #d73a49
+}
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  /* prettylights-syntax-entity */
+  color: #6f42c1
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-variable,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  /* prettylights-syntax-constant */
+  color: #005cc5
+}
+.hljs-regexp,
+.hljs-string,
+.hljs-meta .hljs-string {
+  /* prettylights-syntax-string */
+  color: #032f62
+}
+.hljs-built_in,
+.hljs-symbol {
+  /* prettylights-syntax-variable */
+  color: #e36209
+}
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+  /* prettylights-syntax-comment */
+  color: #6a737d
+}
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  /* prettylights-syntax-entity-tag */
+  color: #22863a
+}
+.hljs-subst {
+  /* prettylights-syntax-storage-modifier-import */
+  color: #24292e
+}
+.hljs-section {
+  /* prettylights-syntax-markup-heading */
+  color: #005cc5;
+  font-weight: bold
+}
+.hljs-bullet {
+  /* prettylights-syntax-markup-list */
+  color: #735c0f
+}
+.hljs-emphasis {
+  /* prettylights-syntax-markup-italic */
+  color: #24292e;
+  font-style: italic
+}
+.hljs-strong {
+  /* prettylights-syntax-markup-bold */
+  color: #24292e;
+  font-weight: bold
+}
+.hljs-addition {
+  /* prettylights-syntax-markup-inserted */
+  color: #22863a;
+  background-color: #f0fff4
+}
+.hljs-deletion {
+  /* prettylights-syntax-markup-deleted */
+  color: #b31d28;
+  background-color: #ffeef0
+}
+.hljs-char.escape_,
+.hljs-link,
+.hljs-params,
+.hljs-property,
+.hljs-punctuation,
+.hljs-tag {
+  /* purposely ignored */
+  
+}
+/* dark (escopado) */
+
+[data-theme="dark"] pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1em
+}
+[data-theme="dark"] code.hljs {
+  padding: 3px 5px
+}
+[data-theme="dark"] /*!
+  Theme: GitHub Dark
+  Description: Dark theme as seen on github.com
+  Author: github.com
+  Maintainer: @Hirse
+  Updated: 2021-05-15
+
+  Outdated base version: https://github.com/primer/github-syntax-dark
+  Current colors taken from GitHub's CSS
+*/
+.hljs {
+  color: #c9d1d9;
+  background: #0d1117
+}
+[data-theme="dark"] .hljs-doctag, [data-theme="dark"] .hljs-keyword, [data-theme="dark"] .hljs-meta .hljs-keyword, [data-theme="dark"] .hljs-template-tag, [data-theme="dark"] .hljs-template-variable, [data-theme="dark"] .hljs-type, [data-theme="dark"] .hljs-variable.language_ {
+  /* prettylights-syntax-keyword */
+  color: #ff7b72
+}
+[data-theme="dark"] .hljs-title, [data-theme="dark"] .hljs-title.class_, [data-theme="dark"] .hljs-title.class_.inherited__, [data-theme="dark"] .hljs-title.function_ {
+  /* prettylights-syntax-entity */
+  color: #d2a8ff
+}
+[data-theme="dark"] .hljs-attr, [data-theme="dark"] .hljs-attribute, [data-theme="dark"] .hljs-literal, [data-theme="dark"] .hljs-meta, [data-theme="dark"] .hljs-number, [data-theme="dark"] .hljs-operator, [data-theme="dark"] .hljs-variable, [data-theme="dark"] .hljs-selector-attr, [data-theme="dark"] .hljs-selector-class, [data-theme="dark"] .hljs-selector-id {
+  /* prettylights-syntax-constant */
+  color: #79c0ff
+}
+[data-theme="dark"] .hljs-regexp, [data-theme="dark"] .hljs-string, [data-theme="dark"] .hljs-meta .hljs-string {
+  /* prettylights-syntax-string */
+  color: #a5d6ff
+}
+[data-theme="dark"] .hljs-built_in, [data-theme="dark"] .hljs-symbol {
+  /* prettylights-syntax-variable */
+  color: #ffa657
+}
+[data-theme="dark"] .hljs-comment, [data-theme="dark"] .hljs-code, [data-theme="dark"] .hljs-formula {
+  /* prettylights-syntax-comment */
+  color: #8b949e
+}
+[data-theme="dark"] .hljs-name, [data-theme="dark"] .hljs-quote, [data-theme="dark"] .hljs-selector-tag, [data-theme="dark"] .hljs-selector-pseudo {
+  /* prettylights-syntax-entity-tag */
+  color: #7ee787
+}
+[data-theme="dark"] .hljs-subst {
+  /* prettylights-syntax-storage-modifier-import */
+  color: #c9d1d9
+}
+[data-theme="dark"] .hljs-section {
+  /* prettylights-syntax-markup-heading */
+  color: #1f6feb;
+  font-weight: bold
+}
+[data-theme="dark"] .hljs-bullet {
+  /* prettylights-syntax-markup-list */
+  color: #f2cc60
+}
+[data-theme="dark"] .hljs-emphasis {
+  /* prettylights-syntax-markup-italic */
+  color: #c9d1d9;
+  font-style: italic
+}
+[data-theme="dark"] .hljs-strong {
+  /* prettylights-syntax-markup-bold */
+  color: #c9d1d9;
+  font-weight: bold
+}
+[data-theme="dark"] .hljs-addition {
+  /* prettylights-syntax-markup-inserted */
+  color: #aff5b4;
+  background-color: #033a16
+}
+[data-theme="dark"] .hljs-deletion {
+  /* prettylights-syntax-markup-deleted */
+  color: #ffdcd7;
+  background-color: #67060c
+}
+[data-theme="dark"] .hljs-char.escape_, [data-theme="dark"] .hljs-link, [data-theme="dark"] .hljs-params, [data-theme="dark"] .hljs-property, [data-theme="dark"] .hljs-punctuation, [data-theme="dark"] .hljs-tag {
+  /* purposely ignored */
+  
+}</style>
+<style>
+  body{font-family:Georgia,serif;max-width:65ch;margin:2rem auto;padding:0 1rem;line-height:1.7;background:#fafaf8;color:#1a1a1a}
+  pre{background:#f4f4f1;border:1px solid #e3e3df;border-radius:5px;padding:1rem 1.25rem;overflow-x:auto}
+  pre code{font-family:'Courier New',monospace;font-size:.85em}
+</style>
+</head><body>
+<p style="font:13px sans-serif;color:#888">Tema claro (padrão). Adicione data-theme="dark" no &lt;html&gt; para o escuro.</p>
+<h1 id="cálculo-e-algoritmos--material-de-teste">Cálculo e Algoritmos — Material de Teste</h1>
+<p>Este documento exercita matemática, código, tabelas, diagramas e estrutura de
+headings. Serve de entrada para os três scripts do spike.</p>
+<h2 id="matemática">Matemática</h2>
+<p>A famosa equivalência massa-energia é $E = mc^2$, e a integral gaussiana
+$\int_0^\infty e^{-x^2} dx$ converge para $\frac{\sqrt{\pi}}{2}$.</p>
+<p>O Teorema Fundamental do Cálculo, em forma de bloco:</p>
+<p>$$\frac{d}{dx}\left(\int_0^x f(t),dt\right) = f(x)$$</p>
+<blockquote>
+<p>A matemática é a linguagem com a qual Deus escreveu o universo.
+— atribuído a Galileu Galilei</p>
+</blockquote>
+<h3 id="implementação-em-código">Implementação em código</h3>
+<p>Um exemplo não trivial em JavaScript — memoização de Fibonacci com <code>Map</code>:</p>
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">memoize</span>(<span class="hljs-params">fn</span>) {
+  <span class="hljs-keyword">const</span> cache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">function</span> (<span class="hljs-params">...args</span>) {
+    <span class="hljs-keyword">const</span> key = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(args);
+    <span class="hljs-keyword">if</span> (cache.<span class="hljs-title function_">has</span>(key)) <span class="hljs-keyword">return</span> cache.<span class="hljs-title function_">get</span>(key);
+    <span class="hljs-keyword">const</span> result = fn.<span class="hljs-title function_">apply</span>(<span class="hljs-variable language_">this</span>, args);
+    cache.<span class="hljs-title function_">set</span>(key, result);
+    <span class="hljs-keyword">return</span> result;
+  };
+}
+
+<span class="hljs-keyword">const</span> fib = <span class="hljs-title function_">memoize</span>(<span class="hljs-function">(<span class="hljs-params">n</span>) =></span> (n &#x3C; <span class="hljs-number">2</span> ? n : <span class="hljs-title function_">fib</span>(n - <span class="hljs-number">1</span>) + <span class="hljs-title function_">fib</span>(n - <span class="hljs-number">2</span>)));
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-title function_">fib</span>(<span class="hljs-number">50</span>)); <span class="hljs-comment">// 12586269025</span>
+</code></pre>
+<p>O equivalente em Python, usando <code>functools.lru_cache</code>:</p>
+<pre><code class="language-python"><span class="hljs-keyword">from</span> functools <span class="hljs-keyword">import</span> lru_cache
+
+<span class="hljs-meta">@lru_cache(<span class="hljs-params">maxsize=<span class="hljs-literal">None</span></span>)</span>
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">fib</span>(<span class="hljs-params">n: <span class="hljs-built_in">int</span></span>) -> <span class="hljs-built_in">int</span>:
+    <span class="hljs-keyword">if</span> n &#x3C; <span class="hljs-number">2</span>:
+        <span class="hljs-keyword">return</span> n
+    <span class="hljs-keyword">return</span> fib(n - <span class="hljs-number">1</span>) + fib(n - <span class="hljs-number">2</span>)
+
+<span class="hljs-keyword">if</span> __name__ == <span class="hljs-string">"__main__"</span>:
+    <span class="hljs-built_in">print</span>([fib(i) <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">10</span>)])  <span class="hljs-comment"># [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]</span>
+</code></pre>
+<h2 id="tabela-de-complexidade">Tabela de complexidade</h2>
+<p>Comparação de algoritmos de ordenação por características de desempenho:</p>
+<table>
+<thead>
+<tr>
+<th>Algoritmo</th>
+<th>Melhor caso</th>
+<th>Caso médio</th>
+<th>Pior caso</th>
+<th>Memória</th>
+<th>Estável</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quick Sort</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(n²)</td>
+<td>O(log n)</td>
+<td>Não</td>
+</tr>
+<tr>
+<td>Merge Sort</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(n)</td>
+<td>Sim</td>
+</tr>
+<tr>
+<td>Heap Sort</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(1)</td>
+<td>Não</td>
+</tr>
+<tr>
+<td>Insertion Sort</td>
+<td>O(n)</td>
+<td>O(n²)</td>
+<td>O(n²)</td>
+<td>O(1)</td>
+<td>Sim</td>
+</tr>
+<tr>
+<td>Bubble Sort</td>
+<td>O(n)</td>
+<td>O(n²)</td>
+<td>O(n²)</td>
+<td>O(1)</td>
+<td>Sim</td>
+</tr>
+<tr>
+<td>Counting Sort</td>
+<td>O(n + k)</td>
+<td>O(n + k)</td>
+<td>O(n + k)</td>
+<td>O(k)</td>
+<td>Sim</td>
+</tr>
+<tr>
+<td>Radix Sort</td>
+<td>O(nk)</td>
+<td>O(nk)</td>
+<td>O(nk)</td>
+<td>O(n + k)</td>
+<td>Sim</td>
+</tr>
+<tr>
+<td>Tim Sort</td>
+<td>O(n)</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+<td>O(n)</td>
+<td>Sim</td>
+</tr>
+</tbody>
+</table>
+<h2 id="diagrama-de-fluxo">Diagrama de fluxo</h2>
+<p>O fluxo de decisão do pipeline de leitura:</p>
+<pre><code class="language-mermaid">flowchart TD
+  A --> B --> C
+</code></pre>
+<p>Fim do material de teste.</p>
+</body></html>

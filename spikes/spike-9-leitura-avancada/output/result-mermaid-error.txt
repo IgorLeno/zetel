@@ -1,0 +1,28 @@
+SPIKE 9.1 — MERMAID: diagnóstico
+=================================
+
+PERGUNTA: renderizar SVG de Mermaid em Node sem Puppeteer/Chromium?
+
+RESULTADO: server-side puro INVIÁVEL.
+
+1) @mermaid-js/mermaid-core: NÃO existe (nome especulativo, sem pacote publicado headless)
+
+2) mermaid (pacote oficial) server-side puro:
+   FALHA. mermaid depende do DOM do browser (document/window, medição de
+   layout de texto via getBBox/getComputedTextLength) para calcular dimensões
+   de nós e arestas. Em Node puro esses globais não existem.
+   Erro capturado:
+   ReferenceError: document is not defined
+
+   Renderizar server-side exigiria um DOM completo (jsdom não basta: faltam
+   APIs de medição de SVG) ou um Chromium headless via Puppeteer/Playwright —
+   o que o PRD v3 (D19) explicitamente quer evitar.
+
+3) ALTERNATIVA client-side (JS embutido no <iframe sandbox>):
+   Tamanho do bundle: mermaid.js ≈ 7454 KB (mermaid completo, sem gzip).
+   Mermaid completo é pesado (~mega-bytes) para embutir inline em CADA
+   leitura.html. Renderizaria no carregamento do iframe (custo de JS no
+   cliente), e o iframe hoje é sandbox="allow-scripts" — compatível, mas
+   adiciona peso considerável ao artefato autocontido.
+
+RECOMENDAÇÃO: ver README.md do spike (decisão Mermaid).
