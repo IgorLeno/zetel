@@ -11,6 +11,7 @@ import {
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { remark } from 'remark';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import { visit } from 'unist-util-visit';
 import type { Root, RootContent } from 'mdast';
 import type { Node } from 'unist';
@@ -558,7 +559,11 @@ export function processZetel(
   const imageMap: Record<string, string> = {};
   const counters = { copied: 0, blocked: 0, warned: 0 };
   const anchorOf = makeAnchorFactory(new Set<string>());
-  const parser = remark().use(remarkGfm);
+  // remark-math converte `$…$`/`$$…$$` em nós math/inlineMath (Módulo 9). Deve
+  // espelhar EXATAMENTE o parser de renderZetel (lib/render-service.ts): a
+  // paridade anchor/content_hash compara as duas segmentações. Continua sem LLM
+  // (Regra #1) e determinístico. Zetels sem `$` ficam idênticos (mesmo hash).
+  const parser = remark().use(remarkGfm).use(remarkMath);
 
   // Passos 2–5 — parsear, processar imagens e segmentar por arquivo.
   const pages: SegmentedPage[] = [];

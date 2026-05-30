@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChatPanel } from './ChatPanel';
 
@@ -35,6 +35,24 @@ export function LeituraPanel({
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, []);
+
+  // Tema → iframe via postMessage (D13/Regra #2: o app NÃO injeta CSS no iframe;
+  // só informa o tema atual). O leitura.html aplica `data-theme` ao receber.
+  const postCurrentTheme = useCallback(() => {
+    const theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    iframeRef.current?.contentWindow?.postMessage({ type: 'zetel:theme', theme }, '*');
+  }, []);
+
+  // ThemeToggle altera `data-theme` no <html>; observamos para repassar ao iframe
+  // sem acoplar a este componente (sandbox sem same-origin → targetOrigin '*').
+  useEffect(() => {
+    const obs = new MutationObserver(() => postCurrentTheme());
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => obs.disconnect();
+  }, [postCurrentTheme]);
 
   async function onBuild() {
     setBuilding(true);
@@ -101,6 +119,7 @@ export function LeituraPanel({
             title="Leitura do Zetel"
             sandbox="allow-scripts"
             src={`/api/zetels/${zetelId}/leitura`}
+            onLoad={postCurrentTheme}
           />
           <div style={{ display: chatOpen ? 'contents' : 'none' }}>
             <ChatPanel zetelId={zetelId} currentPageIndex={currentPageIndex} />

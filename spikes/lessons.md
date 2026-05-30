@@ -645,3 +645,42 @@ Correção (`lib/chat-prompt.ts`, função `buildOpenRouterMessages`):
   - Títulos movidos para APÓS o conteúdo com rótulo restrito ao uso anti-duplicata: `"Títulos das memórias acima (para evitar sugestões duplicadas): ..."`
   - Separação semântica clara: "o que usar" vem antes, "o que não repetir em sugestões" vem depois.
 Regra: quando injetar contexto persistente no prompt de um LLM, o rótulo deve ser DIRETIVO ("USE") não descritivo ("contexto persistente"). Rótulos descritivos causam uso passivo; rótulos diretivos causam uso ativo. Teste: enviar mensagem genérica e verificar se a resposta demonstra o conteúdo editado.
+
+---
+
+## Módulo 9 — Leitura avançada (KaTeX · highlight.js · tema)
+
+Etapa 9.2 (implementação). Decisões do spike 9.1 aplicadas a `lib/render-service.ts`.
+
+### remark-math é extensão de PARSE, não transformer
+- O pipeline real tem DOIS processadores: a segmentação faz `parse()` (em
+  `processZetel` e `renderZetel`); `pageNodesToHtml` faz `.run()` sobre os nós já
+  parseados. `remark-math` só atua no `parse()`. Portanto entrou nos DOIS parsers
+  de segmentação (`lib/ingestao-service.ts` e `lib/render-service.ts`), que devem
+  ficar IDÊNTICOS — a paridade `anchor`/`content_hash` compara as duas segmentações.
+- `mdast-util-math` (remark-math v6) grava `data.hName='code'` +
+  `data.hProperties.className=['language-math','math-inline'|'math-display']` no
+  nó já no parse. Por isso o `remark-rehype` do SEGUNDO processador converte os nós
+  math em `<span class="math-inline">` mesmo sem `remark-math` lá, e `rehype-katex`
+  (que age por classe CSS, não por tipo de nó) renderiza. Verificado por harness.
+- Zetels SEM `$` produzem mdast idêntico → mesmo `content_hash` → zero regressão.
+  Zetels com `$` precisam reprocessar (a paridade detecta e orienta).
+
+### Sanitize: KaTeX some em silêncio sem o subset MathML
+- `appSanitizeSchema` (defaultSchema + className/id) remove `<math>`/`<mrow>`/`style`
+  → equações desaparecem sem erro. Liberar: tags MathML (lista do spike +
+  `annotation-xml`), `ariaHidden` em `*`, `style` só em `span`/`mstyle` (NÃO em `*`:
+  seria XSS se HTML cru vazasse; o pipeline usa `allowDangerousHtml:false`).
+- `rehype-highlight` NÃO precisa de extensão: emite `<span class="hljs-*">`, já
+  coberto por `*`/className.
+
+### Fontes do KaTeX precisam ser embutidas para render offline
+- `katex.min.css` (23 KB) referencia `url(fonts/*.woff2)` relativo → 404 no iframe.
+  Decisão do usuário: inlinar só os 20 woff2 como data: URIs (~0,35 MB no artefato).
+  woff/ttf restantes ficam relativos mas nunca são buscados (browser usa o 1º
+  formato suportado). Resultado: leitura.html 100% offline (Restrição #1).
+
+### Gotcha de verificação: ESM + node_modules
+- Harness `.mjs` descartável em `/tmp` falha com `ERR_MODULE_NOT_FOUND` para imports
+  bare (`remark`): o ESM resolve a partir do diretório DO ARQUIVO, não do cwd.
+  Rodar o harness a partir da raiz do projeto (e remover depois).
