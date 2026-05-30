@@ -559,3 +559,28 @@ Rule: não rodar `pnpm build` com `next dev` vivo no mesmo `.next`. Para verific
 
 [2026-05-29] Context: suíte E2E em `e2e/` (Playwright) validando o chat real.
 Rule: testes são **local-only** — dependem de OpenRouter real + um Zetel com leitura preparada (DB/vault fora do git). `E2E_ZETEL_SLUG` (via `.env.e2e`, dotenv no `playwright.config.ts`) aponta o Zetel; sem ele, helper clica no 1º card (frágil). `reuseExistingServer: true`. Specs de nota são **LLM-dependentes**: o modelo só emite `<<<NOTA_SUGERIDA>>>` com mensagem fortemente indutora ("quero MUITO guardar… inclua o bloco de sugestão") — mensagens brandas não disparam (claude-3.5-haiku é parcimonioso, fiel à rubrica). `note-save` cria nota real no vault e acumula duplicatas (sem API de exclusão, regra #14) → asserir com `.first()` e timeout generoso (troca de aba + fetch). `workers: 1` (specs compartilham o Zetel de teste).
+
+## Módulo 7 — Memória global cooperativa (2026-05-29)
+
+[2026-05-29] Contexto: o prompt da tarefa veio rotulado "Módulo 8", mas CLAUDE.md e PRD definem memória = Módulo 7 (Módulo 8 = Polimento).
+Erro evitado: numerar entregáveis/commits/gate por um rótulo externo em vez da fonte canônica do repo.
+Regra: numeração de módulo segue sempre CLAUDE.md/PRD; ao receber rótulo divergente em um prompt, confirmar com o usuário antes de codar.
+
+[2026-05-29] Contexto: held-back da sentinela de nota no `chat/route.ts` era inline e cobria só `NOTA_SUGERIDA`.
+Erro evitado: ao adicionar `MEMORIA_SUGERIDA`, esquecer de reter a segunda sentinela vazaria o bloco/justificativa no stream (regra #9), e `HOLD = NOTE_MARK.length-1` seria curto para a sentinela maior.
+Regra: held-back retém o marcador que aparece mais cedo entre TODOS os marcadores (`earliestMark`), com `HOLD = max(len(marcadores)) - 1`. A narrativa salva corta no `earliestMark` (a memória pode preceder a nota no fim da resposta).
+
+[2026-05-29] Contexto: `logger.info`/`error` aceitam só `Record<string, string|number>`.
+Erro: passar `zetelOrigem: input.zetelOrigem ?? null` (string|null) quebrou o build.
+Regra: campos opcionais em log → coalescer para string/number (`?? 'none'`/`?? 0`), nunca `null`. (Também reforça regra #6: log só id/contagem.)
+
+[2026-05-29] Contexto: rotas novas precisavam do caminho do vault.
+Erro evitado: `lib/paths.ts` NÃO exporta `getVaultPath` (só caminhos de `~/.zetel`). O vault vive em `getSetting('vault_path')`.
+Regra: para o caminho do vault em rotas, usar `getSetting('vault_path')` com guarda de ausência (NO_VAULT 400), como nas rotas de notas.
+
+[2026-05-29] Contexto: leitura de memória no contexto do chat.
+Regra (PRD §11 / regra #5): `buildMemoryContext(vaultPath)` é chamado dentro de `buildOpenRouterMessages` a CADA POST — nunca cache de processo. Truncagem corta arquivo inteiro priorizando os mais recentes; só conta no log (`memorias_truncadas`), nunca conteúdo.
+
+### Pendências / atenção para teste manual (Gate 7 → 8)
+- Fluxo de sugestão/memória com LLM real exige chave OpenRouter (teste manual + `pnpm test:e2e memory-basic`).
+- Verificar: memória editada no Obsidian reflete no próximo turno sem reiniciar; memória influencia respostas; truncagem com 50+ entradas; grep regra #6 em `~/.zetel/logs/zetel.log`.
