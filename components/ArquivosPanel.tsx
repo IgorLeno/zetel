@@ -15,6 +15,7 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
   const [processing, setProcessing] = useState(false);
   const [processMsg, setProcessMsg] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const dragIndex = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -72,6 +73,7 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
   async function remove(fileId: string) {
     setError(null);
     setConfirmingRemove(null);
+    setRemovingId(fileId);
     try {
       const res = await fetch(`/api/zetels/${zetelId}/files/${fileId}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -81,6 +83,7 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
     } catch {
       setError('Erro de rede ao remover o arquivo.');
     } finally {
+      setRemovingId(null);
       await load();
       router.refresh();
     }
@@ -214,8 +217,13 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
               </div>
               {confirmingRemove === f.id ? (
                 <span className="file-confirm">
-                  <button className="btn danger" type="button" onClick={() => remove(f.id)}>
-                    Remover
+                  <button
+                    className="btn danger"
+                    type="button"
+                    disabled={removingId === f.id}
+                    onClick={() => remove(f.id)}
+                  >
+                    {removingId === f.id ? 'Removendo…' : 'Remover'}
                   </button>
                   <button className="btn" type="button" onClick={() => setConfirmingRemove(null)}>
                     Cancelar

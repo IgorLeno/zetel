@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
 import { assertZetelAtivo } from '@/lib/ingestao-service';
 import { listNoteTitles } from '@/lib/notes-service';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -23,5 +24,10 @@ export async function GET(_request: Request, { params }: Ctx) {
   const vaultPath = getSetting('vault_path');
   if (!vaultPath) return NextResponse.json({ titles: [] });
 
-  return NextResponse.json({ titles: listNoteTitles(vaultPath, slug) });
+  try {
+    return NextResponse.json({ titles: listNoteTitles(vaultPath, slug) });
+  } catch (err) {
+    logger.error('notes titles read failed', { zetelId: id, error: (err as Error).message });
+    return NextResponse.json({ error: 'Falha ao listar títulos de notas.' }, { status: 500 });
+  }
 }

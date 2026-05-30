@@ -87,7 +87,13 @@ export function LeituraPanel({
         <div className="empty-state leitura-empty">
           <div>Nenhuma leitura construída ainda.</div>
         </div>
-      ) : showIframe ? (
+      ) : building ? (
+        <div className="empty-state leitura-empty">
+          <div>Gerando HTML de leitura…</div>
+        </div>
+      ) : (
+        /* ChatPanel sempre montado — toggle de visibilidade via CSS para não perder
+           streams em curso ao recolher o painel (M6-3). */
         <div className={`leitura-body${chatOpen ? ' leitura-with-chat' : ''}`}>
           <iframe
             ref={iframeRef}
@@ -96,15 +102,11 @@ export function LeituraPanel({
             sandbox="allow-scripts"
             src={`/api/zetels/${zetelId}/leitura`}
           />
-          {chatOpen && (
+          <div style={{ display: chatOpen ? undefined : 'none' }}>
             <ChatPanel zetelId={zetelId} currentPageIndex={currentPageIndex} />
-          )}
+          </div>
         </div>
-      ) : building ? (
-        <div className="empty-state leitura-empty">
-          <div>Gerando HTML de leitura…</div>
-        </div>
-      ) : null}
+      )}
     </div>
   );
 }

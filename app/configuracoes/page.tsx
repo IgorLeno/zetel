@@ -1,8 +1,11 @@
+import type { Metadata } from 'next';
 import { getSetting } from '@/lib/settings';
 import { getOpenRouterKey, getOpenRouterModel } from '@/lib/config';
 import { ConfiguracoesTabs } from '@/components/ConfiguracoesTabs';
 
 export const dynamic = 'force-dynamic'; // lê estado vivo (SQLite + config) a cada visita
+
+export const metadata: Metadata = { title: 'Configurações' };
 
 export default function ConfiguracoesPage() {
   const vaultPath = getSetting('vault_path') ?? '';

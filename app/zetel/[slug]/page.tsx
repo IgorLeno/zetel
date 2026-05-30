@@ -1,9 +1,20 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import { getZetelBySlug } from '@/lib/zetel-service';
 import { ZetelTabs } from '@/components/ZetelTabs';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const zetel = getZetelBySlug(getDb(), slug);
+  return { title: zetel?.displayName ?? 'Zetel' };
+}
 
 export default async function ZetelDetailPage({
   params,

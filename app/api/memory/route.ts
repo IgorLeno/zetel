@@ -16,7 +16,14 @@ export async function GET() {
   const vaultPath = getSetting('vault_path');
   if (!vaultPath) return NextResponse.json({ error: NO_VAULT }, { status: 400 });
 
-  const memories = listMemories(vaultPath).map((m) => ({
+  let memories: ReturnType<typeof listMemories>;
+  try {
+    memories = listMemories(vaultPath);
+  } catch (err) {
+    logger.error('memory list failed', { error: (err as Error).message });
+    return NextResponse.json({ error: 'Falha ao listar memórias.' }, { status: 500 });
+  }
+  const mapped = memories.map((m) => ({
     slug: m.slug,
     titulo: m.titulo,
     corpo: m.corpo,
@@ -29,7 +36,7 @@ export async function GET() {
     bytes: m.bytes,
     long: m.bytes > MEMORY_FILE_WARN_BYTES,
   }));
-  return NextResponse.json({ memories, vaultName: basename(vaultPath) });
+  return NextResponse.json({ memories: mapped, vaultName: basename(vaultPath) });
 }
 
 /** POST /api/memory — guarda uma memória (Guardar/Editar do card). */

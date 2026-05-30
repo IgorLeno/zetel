@@ -82,6 +82,7 @@ export function ChatPanel({
   const [noteBusy, setNoteBusy] = useState(false);
   const [memoryBusy, setMemoryBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
 
   // Quando true, a PRÓXIMA sugestão recebida vem sem "Discutir" (bounded — regra #10).
   const discussNextRef = useRef(false);
@@ -126,6 +127,7 @@ export function ChatPanel({
   async function clearHistory() {
     if (!confirm('Apagar todo o histórico deste Zetel?')) return;
     setError(null);
+    setClearing(true);
     try {
       const res = await fetch(`/api/zetels/${zetelId}/chat`, { method: 'DELETE' });
       if (res.ok) {
@@ -136,6 +138,8 @@ export function ChatPanel({
       }
     } catch {
       setError('Falha ao limpar o histórico.');
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -357,8 +361,13 @@ export function ChatPanel({
     <aside className="chat-panel">
       <header className="chat-panel-header">
         <span className="chat-panel-title">Parceiro de estudos</span>
-        <button type="button" className="btn btn-sm" onClick={() => void clearHistory()}>
-          Limpar
+        <button
+          type="button"
+          className="btn btn-sm"
+          disabled={clearing}
+          onClick={() => void clearHistory()}
+        >
+          {clearing ? 'Limpando…' : 'Limpar'}
         </button>
       </header>
 

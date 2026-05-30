@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import { MemoriaList } from '@/components/MemoriaList';
+
+export const metadata: Metadata = { title: 'Memória' };
 
 export default function MemoriaPage() {
   return (

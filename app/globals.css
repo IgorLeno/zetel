@@ -31,6 +31,8 @@
   --bg-chat:      #fafaf8;
   --bg-msg-user:  #e8eeff;
   --bg-msg-ai:    #ffffff;
+  --memory:       #8b5cf6;
+  --memory-dim:   color-mix(in srgb, #8b5cf6 14%, transparent);
 }
 
 [data-theme='dark'] {
@@ -56,6 +58,8 @@
   --bg-chat:      #16161a;
   --bg-msg-user:  #1e2a42;
   --bg-msg-ai:    #1e1e22;
+  --memory:       #a78bfa;
+  --memory-dim:   color-mix(in srgb, #a78bfa 14%, transparent);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -727,9 +731,9 @@ body {
 .memory-card {
   align-self: stretch;
   background: var(--bg-card);
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, #8b5cf6);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--memory));
   border-left-width: 3px;
-  border-left-color: #8b5cf6;
+  border-left-color: var(--memory);
   border-radius: var(--radius);
   padding: 11px 13px;
   display: flex;
@@ -743,8 +747,8 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .04em;
-  color: #8b5cf6;
-  background: color-mix(in srgb, #8b5cf6 14%, transparent);
+  color: var(--memory);
+  background: var(--memory-dim);
   padding: 2px 7px;
   border-radius: 99px;
   white-space: nowrap;

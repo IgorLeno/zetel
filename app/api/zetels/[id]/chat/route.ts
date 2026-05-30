@@ -10,6 +10,7 @@ import {
 } from '@/lib/chat-service';
 import {
   buildOpenRouterMessages,
+  ensureParceiroPrompt,
   extractNoteSuggestion,
   extractMemorySuggestion,
   NOTE_MARK_START,
@@ -175,14 +176,16 @@ export async function POST(request: Request, { params }: Ctx) {
   const historyWindow = resolveHistoryWindow(getSetting('chat_history_window'));
   const history = listRecentMessages(db, zetelId, historyWindow);
 
-  // Rubrica de sugestão de nota + títulos existentes (Módulo 6). Sem vault, segue
-  // como chat simples (degrada sem quebrar).
+  // Prompt do parceiro + rubricas + títulos (Módulo 8: parceiro.md lido do vault).
+  // Sem vault, degrada como chat simples (regra #5: leitura sob demanda, nunca cache).
   const vaultPath = getSetting('vault_path');
+  let partnerPrompt: string | undefined;
   let noteRubric: string | undefined;
   let memoryRubric: string | undefined;
   let existingTitles: string[] | undefined;
   if (vaultPath) {
     try {
+      partnerPrompt = ensureParceiroPrompt(vaultPath);
       noteRubric = ensureSugestaoNotaPrompt(vaultPath);
       memoryRubric = ensureSugestaoMemoriaPrompt(vaultPath);
       existingTitles = listNoteTitles(vaultPath, zetel.slug);
@@ -197,6 +200,7 @@ export async function POST(request: Request, { params }: Ctx) {
     pageContent,
     history,
     userMessage,
+    partnerPrompt,
     noteRubric,
     memoryRubric,
     existingTitles,

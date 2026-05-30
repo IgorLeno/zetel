@@ -20,7 +20,7 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: 'Zetel',
+  title: { default: 'Zetel', template: '%s · Zetel' },
   description: 'Parceiro de estudos local-first',
 };
 

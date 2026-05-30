@@ -10,6 +10,7 @@ import { isAbsolute, join, resolve, sep } from 'node:path';
 import { logger } from './logger';
 import { SUGESTAO_NOTA_PROMPT } from './notes-service';
 import { SUGESTAO_MEMORIA_PROMPT } from './memory-service';
+import { PARCEIRO_PROMPT } from './chat-prompt';
 
 /**
  * Inicialização e validação do vault (§13.2).
@@ -22,9 +23,9 @@ import { SUGESTAO_MEMORIA_PROMPT } from './memory-service';
 export type VaultValidation = { ok: true; path: string } | { ok: false; error: string };
 
 const PROMPT_PLACEHOLDERS: Record<string, string> = {
-  'parceiro.md': '# Prompt do parceiro\n<!-- Conteúdo a definir no Módulo correspondente -->\n',
-  'sugestao-nota.md': SUGESTAO_NOTA_PROMPT, // rubrica real desde a criação (Módulo 6)
-  'sugestao-memoria.md': SUGESTAO_MEMORIA_PROMPT, // rubrica real desde a criação (Módulo 7)
+  'parceiro.md': PARCEIRO_PROMPT, // prompt real desde o Módulo 8 (antes: placeholder)
+  'sugestao-nota.md': SUGESTAO_NOTA_PROMPT,
+  'sugestao-memoria.md': SUGESTAO_MEMORIA_PROMPT,
 };
 
 /** Sobe na árvore até o primeiro ancestral existente. */

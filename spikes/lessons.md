@@ -593,3 +593,39 @@ Resultado do gate (inspeção estática + `pnpm build` limpo): C1 leitura sob de
 - Fluxo de sugestão/memória com LLM real exige chave OpenRouter (teste manual + `pnpm test:e2e memory-basic`) — não coberto por inspeção estática.
 - Verificar: memória editada no Obsidian reflete no próximo turno sem reiniciar; memória influencia respostas; truncagem com 50+ entradas; grep regra #6 em `~/.zetel/logs/zetel.log`.
 - Herdada M6-1: system prompt do parceiro ainda hardcoded em `chat-prompt.ts` (PRD pede `config/prompts/parceiro.md`). Endereçar no Módulo 8 (Polimento).
+
+## Módulo 8 — Polimento → MVP Textual Entregue (2026-05-30)
+
+### Dívidas fechadas neste módulo
+
+- **M6-1 FECHADA**: `config/prompts/parceiro.md` lido sob demanda a cada turno via `ensureParceiroPrompt` (`lib/chat-prompt.ts`). Self-heal sem clobber (mesmo padrão de `sugestao-nota.md`/`sugestao-memoria.md`). Seed em `lib/vault.ts` atualizado de placeholder para `PARCEIRO_PROMPT`. Chat route passa `partnerPrompt` para `buildOpenRouterMessages`; sem vault, degrada para default embutido.
+- **M6-3 FECHADA**: `ChatPanel` em `LeituraPanel` agora sempre montado — toggle de visibilidade via `style={{ display: chatOpen ? undefined : 'none' }}` em vez de render condicional `{chatOpen && <ChatPanel/>}`. Streams não se perdem ao recolher o painel.
+
+### Dívida herdada para o próximo ciclo
+
+- **M6-2** (saudação contextual quando histórico vazio, I1): mantida como dívida — implementar seria adicionar feature nova neste módulo de polimento. Registrar para Módulo 9 ou ciclo pós-MVP.
+
+### Lições novas
+
+[2026-05-30] Contexto: `readFileSync` sem try/catch na rota `/api/zetels/[id]/leitura`.
+Situação: mesmo com `existsSync` antes, uma race condition (arquivo apagado entre check e read) ou erro de permissão IO retornaria 500 cru sem JSON, quebrando o contrato de erro estruturado do app.
+Regra: qualquer leitura de arquivo em rotas de API deve ser envolida em try/catch, mesmo após `existsSync`. O `existsSync` não é uma garantia de sucesso do `readFileSync` subsequente.
+
+[2026-05-30] Contexto: reads de lista (`listMemories`, `listMemoryTitles`, `listNoteTitles`) em rotas GET sem try/catch.
+Situação: falha de filesystem (vault inacessível, permissão, disco cheio) causaria 500 genérico sem JSON, inconsistente com o restante do app.
+Regra: envolver toda chamada de serviço em rotas GET numa try/catch com `logger.error` + resposta JSON estruturada. A convenção do app é `{ error: 'mensagem PT-BR' }`.
+
+[2026-05-30] Contexto: cor hardcoded `#8b5cf6` para elementos de memória global no CSS.
+Situação: único elemento que ignorava o tema escuro — cor não tinha variante `[data-theme='dark']`.
+Regra: cores semânticas novas devem ser definidas como tokens CSS (`--memory`, `--memory-dim`) em `:root` e `[data-theme='dark']` antes de serem usadas em componentes. Nunca usar hex literal de paleta fora da seção de tokens.
+
+### Resultado do gate 8 → release (inspeção estática + `pnpm build` limpo)
+- C1 Robustez API PASS: leitura, notes/titles, memory GET, memory/titles com try/catch estruturado.
+- C2 parceiro.md PASS: `ensureParceiroPrompt` em `lib/chat-prompt.ts`; leitura sob demanda; regra #5 mantida.
+- C3 ChatPanel sobrevive ao toggle PASS: LeituraPanel usa `display:none` em vez de render condicional.
+- C4 titles/metadata PASS: 4 rotas com `metadata`/`generateMetadata` próprios.
+- C5 Loading states PASS: Remover (ArquivosPanel) e Limpar (ChatPanel) com disabled durante a requisição.
+- C6 Cor memória tema-aware PASS: token `--memory`/`--memory-dim` em `:root` e `[data-theme='dark']`.
+- C7 `pnpm build` limpo PASS.
+- C8 Logger PASS (auditoria prévia): ≈50 call sites revisados, zero conteúdo sensível.
+- Gate manual com orientador pendente antes de declarar MVP TEXTUAL ENTREGUE.

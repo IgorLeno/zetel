@@ -1,6 +1,9 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { ChatMessage } from '@/types/chat-message';
 import type { NoteTipo } from './notes-service';
 import { readAllMemoriesContent, listMemoryTitles } from './memory-service';
+import { logger } from './logger';
 
 const PAGE_CONTEXT_MAX = 3000;
 
@@ -25,6 +28,36 @@ const TURN_TOKEN_BUDGET = 8000;
 const MEMORY_TOKEN_BUDGET = Math.floor(TURN_TOKEN_BUDGET * 0.4); // 3200
 /** Acima disto, a UI sugere consolidar a memória (sem cortar automaticamente). */
 export const MEMORY_FILE_WARN_BYTES = 10_000;
+
+/** Prompt-base do parceiro de estudos (lido de config/prompts/parceiro.md no vault). */
+export const PARCEIRO_PROMPT = `# Prompt do parceiro de estudos
+
+Você é um parceiro de estudos. Responda sempre em PT-BR. Seja preciso e objetivo.
+
+Seu papel é ajudar o usuário a compreender e aprofundar o material que está estudando,
+fazendo perguntas, esclarecendo conceitos, apontando conexões e sugerindo reflexões.
+Não reproduza passagens longas do texto — prefira explicar com suas próprias palavras.`;
+
+const PLACEHOLDER_MARKER = '<!-- Conteúdo a definir';
+
+/**
+ * Garante que `config/prompts/parceiro.md` exista e contenha um prompt real.
+ * Só escreve se ausente ou se ainda contém o placeholder de inicialização —
+ * nunca sobrescreve edição do usuário (D10; prompts vivem no vault).
+ * Lido sob demanda a cada turno (regra #5 — sem cache de processo).
+ */
+export function ensureParceiroPrompt(vaultPath: string): string {
+  const dir = join(vaultPath, 'config', 'prompts');
+  const file = join(dir, 'parceiro.md');
+  if (existsSync(file)) {
+    const current = readFileSync(file, 'utf8');
+    if (!current.includes(PLACEHOLDER_MARKER)) return current;
+  }
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(file, PARCEIRO_PROMPT);
+  logger.info('parceiro prompt ensured');
+  return PARCEIRO_PROMPT;
+}
 
 /** Aproximação grosseira de tokens (mesma heurística do PRD §11). */
 function approxTokens(text: string): number {
@@ -106,8 +139,11 @@ export function buildOpenRouterMessages(opts: {
   existingTitles?: string[];
   /** Caminho do vault — habilita a injeção da memória global (lida sob demanda). */
   vaultPath?: string;
+  /** Prompt-base do parceiro (lido de config/prompts/parceiro.md). Se ausente, usa default embutido. */
+  partnerPrompt?: string;
 }): { messages: OpenRouterMessage[]; memoryWarnings: MemoryWarnings } {
-  let systemContent = `Você é um parceiro de estudos do Zetel "${opts.displayName}". Responda sempre em PT-BR. Seja preciso e objetivo.`;
+  const basePrompt = opts.partnerPrompt ?? PARCEIRO_PROMPT;
+  let systemContent = `${basePrompt}\n\nZetel atual: "${opts.displayName}".`;
 
   // Ordem §8.7: prompt do parceiro → rubricas → memória global → (página/histórico).
   if (opts.noteRubric) {
