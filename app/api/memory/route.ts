@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const saved = saveMemory(vaultPath, { titulo, corpo, zetelOrigem, modelo });
     // Marca a mensagem de origem (só flag — regra #6).
     if (messageId) {
-      updateMessageMeta(getDb(), messageId, { suggested_memory: true });
+      updateMessageMeta(getDb(), messageId, { suggestedMemory: true });
     }
     return NextResponse.json(saved);
   } catch (err) {

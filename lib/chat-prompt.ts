@@ -15,6 +15,11 @@ export const MEMORY_MARK_END = '<<<FIM_MEMORIA>>>';
 /**
  * Orçamento de tokens do turno (sem catálogo de context_window — fallback fixo).
  * A memória global consome no máximo 40% desse orçamento (§11).
+ *
+ * Valor conservador e independente do modelo: ainda não temos a `context_window`
+ * por modelo do OpenRouter. Modelos modernos têm janelas ≫ 8k, então o risco de
+ * estouro é baixo. Quando passarmos a ler a janela real por modelo (settings),
+ * este valor deve virar `min(context_window * fração, teto)` em vez de constante.
  */
 const TURN_TOKEN_BUDGET = 8000;
 const MEMORY_TOKEN_BUDGET = Math.floor(TURN_TOKEN_BUDGET * 0.4); // 3200

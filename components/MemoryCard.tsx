@@ -14,6 +14,11 @@ export interface MemorySuggestionData {
  * `justificativa` (ela não chega ao cliente). "Discutir" some quando
  * `canDiscuss=false` (bounded em 1 rodada — regra #10). Visualmente distinto
  * do NoteCard (classe `memory-card`) para não confundir nota com memória.
+ *
+ * O modo de edição altera apenas o **corpo**: `onSave` é sempre chamado com
+ * `suggestion.titulo` original. Isso é intencional — o título vira o nome do
+ * arquivo no filesystem, e renomear exigiria mover o `.md`. Para renomear,
+ * o usuário edita o arquivo diretamente no Obsidian (D14).
  */
 export function MemoryCard({
   suggestion,
@@ -59,7 +64,7 @@ export function MemoryCard({
               className="btn btn-sm primary"
               disabled={busy || !draft.trim()}
               onClick={() => onSave(suggestion.titulo, draft)}
-              data-testid="memory-action-save"
+              data-testid="memory-action-save-edit"
             >
               Salvar edição
             </button>

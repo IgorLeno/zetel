@@ -71,14 +71,18 @@ function buildFrontmatter(opts: {
   ].join('\n');
 }
 
-/** Nome de arquivo livre dentro de `dir`: `<base>.md`, `<base>-2.md`… até -99. */
+/**
+ * Nome de arquivo livre dentro de `dir`: `<base>.md`, `<base>-2.md`… até -99.
+ * Esgotados os sufixos numéricos, cai num sufixo de timestamp (sempre único)
+ * em vez de lançar — guardar uma memória nunca deve resultar em HTTP 500.
+ */
 function resolveFreeName(dir: string, base: string): string {
   if (!existsSync(join(dir, `${base}.md`))) return `${base}.md`;
   for (let n = 2; n <= 99; n++) {
     const candidate = `${base}-${n}.md`;
     if (!existsSync(join(dir, candidate))) return candidate;
   }
-  throw new Error('Não foi possível gerar um nome de arquivo livre para a memória (até -99).');
+  return `${base}-${Date.now()}.md`;
 }
 
 /**

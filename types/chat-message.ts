@@ -13,7 +13,7 @@ export interface ChatMessageMeta {
   /** Usuário rejeitou a sugestão deste turno (Módulo 6). */
   noteRejected?: boolean;
   /** Uma memória foi guardada a partir desta mensagem (Módulo 7). */
-  suggested_memory?: boolean;
+  suggestedMemory?: boolean;
   /** Usuário rejeitou a sugestão de memória deste turno (Módulo 7). */
   memoryRejected?: boolean;
   /** Há memória longa no contexto deste turno — UI sugere consolidar (Módulo 7). */
