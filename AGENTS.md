@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 9 implementado. Próximo passo operacional: Módulo 10A — Arquitetura de artefatos de leitura.**
+**Estado atual: Módulo 10A implementado. Próximo passo operacional: Módulo 10B — Redesign visual compartilhado / ajustes finos.**
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
@@ -31,7 +31,9 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 #### Próximos passos
 - Gate manual → declarar **MVP TEXTUAL ENTREGUE**
-- Próximo passo operacional: **Módulo 10A — Arquitetura de artefatos de leitura** (PRD v3, ver `prd-v3.md`)
+- Próximo passo operacional: **Módulo 10B — Redesign visual compartilhado / ajustes finos** (PRD v3, ver `prd-v3.md`)
+
+**Módulo 10A (Arquitetura de artefatos de leitura) implementado em 2026-05-30; `pnpm build` limpo; smoke em HOME/vault temporários confirmou geração canônica `artefatos/leitura-tecnica.html`, metadata `mode:"tecnico"`, fallback legado `artefatos/leitura.html` com `mode:"legado"` e `/api/zetels/:id/leitura` servindo o legado.** Entregou: `renderZetel` grava Documento Técnico em `leitura-tecnica.html`; `resolveLeituraHtmlArtifact` prioriza canônico e cai para legado; `/artifacts` expõe `mode`, `openArtifact`, `documentoTecnico` e placeholder `guiaEstudo.exists:false`; UI de Leitura ganhou seletor de modo com Documento Técnico ativo e Guia de Estudo desabilitado ("Em breve"); alternância de artefatos existe condicionada a dois artefatos; aba Artefatos exibe `leitura-tecnica.html` ou `leitura.html (legado)`. Sem migration SQLite; sem alteração em `lib/ingestao-service.ts`; Regra #1 e Regra #2 preservadas.
 
 **Módulo 9 (Qualidade visual da leitura) — etapa 9.2 implementada em 2026-05-30; `pnpm build` limpo; render verificado por harness (KaTeX/MathML, highlight, fontes woff2 inline, tema escuro escopado); gate visual manual em app pendente.** Entregou: `lib/sanitize.ts` estendido com subset MathML (+`annotation-xml`) e atributos do KaTeX (`style` só em `span`/`mstyle`, `ariaHidden` em `*`; `rehype-highlight` dispensa extensão); `remark-math` adicionado ao parser de segmentação em `processZetel` (`ingestao-service.ts`) **e** `renderZetel` (`render-service.ts`) — devem ficar IDÊNTICOS pela paridade `anchor`/`content_hash`; `pageNodesToHtml` agora `remark-rehype`→`rehype-katex`→`rehype-slug`→`rehype-highlight` (subset 7 linguagens, `detect:false`) — Regra #1 preservada no Documento Técnico (sem LLM); `leitura.html` com CSS inline (`katex.min.css` + 20 fontes woff2 como `data:` URIs → 100% offline, ~0,35 MB; `github.css` claro + `github-dark.css` escopado sob `[data-theme="dark"]`); template novo: corpo serif Georgia 65ch/1.7, UI system-ui, H1 display/H2 bold/H3 semibold, `text-wrap:pretty`, **capa para primeira página com H1 isolado (fecha dívida HTML-1)**, blockquote com borda+fundo itálico, tabelas com `.table-wrap` (`overflow-x`) e sticky header (>10 linhas), fallback de bloco mermaid via `:has()` (badge discreto, adiado p/ PRD v4); tema por `data-theme` com fallback `prefers-color-scheme` (script no `<head>`) + listener `postMessage` `zetel:theme`; mini-índice com seção ativa via `IntersectionObserver` + dropdown `<select>` < 768px; botões Anterior/Próxima ≥44px com "Página X de Y" e estados desabilitados. `components/LeituraPanel.tsx` envia o tema ao iframe no `onLoad` e via `MutationObserver` do `data-theme` no `<html>` (D13/Regra #2: o app NÃO injeta CSS, só `postMessage`). Deps adicionadas: `remark-math@^6`, `rehype-katex@^7`, `rehype-highlight@^7`, `katex@^0.16`, `highlight.js@^11`. Ver `spikes/lessons.md` (Módulo 9).
 
@@ -192,7 +194,7 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **7** | **Memória cooperativa** ✅ | Memória global em Markdown, leitura sob demanda | 6 |
 | **8** | **Polimento → MVP TEXTUAL ENTREGUE** ✅ (gate manual pendente) | Estados vazios, erros, tema, jornada completa | 1–7 |
 | **9** | **Qualidade visual da leitura e do app** ✅ | PRD v3 — tipografia, KaTeX, highlight.js, Mermaid (cond.), tema, HTML-1 | 8 |
-| **10A** | **Arquitetura de artefatos de leitura** | PRD v3 — separa Documento Técnico e Guia de Estudo | 9 |
+| **10A** | **Arquitetura de artefatos de leitura** ✅ | PRD v3 — separa Documento Técnico e Guia de Estudo | 9 |
 | **10B** | **Redesign visual compartilhado / ajustes finos** | PRD v3 — CSS compartilhado sem injeção pelo app | 10A |
 | **10C** | **Spike de guia de estudo com LLM** | PRD v3 — JSON estruturado e rastreável | 10B |
 | **10D** | **Implementação do guia de estudo** | PRD v3 — `guia-estudo.html` + metadados + source map | 10C |

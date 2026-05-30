@@ -40,6 +40,46 @@ import { sanitizeSchema } from './sanitize';
 const DEFAULT_MAX_WORDS = 1000;
 const IMG_BLOCKED = '__blocked__';
 const IMG_NOTFOUND = '__notfound__';
+const LEITURA_TECNICA_FILENAME = 'leitura-tecnica.html';
+const LEITURA_LEGADO_FILENAME = 'leitura.html';
+const GUIA_ESTUDO_FILENAME = 'guia-estudo.html';
+const GUIA_ESTUDO_META_FILENAME = 'guia-estudo.meta.json';
+const GUIA_ESTUDO_SOURCE_FILENAME = 'guia-estudo.source.json';
+
+export type LeituraArtifactMode = 'tecnico' | 'legado';
+
+export interface ResolvedLeituraArtifact {
+  kind: 'documento-tecnico';
+  mode: LeituraArtifactMode;
+  filename: string;
+  path: string;
+}
+
+interface ArtifactSummary {
+  exists: boolean;
+  mode: LeituraArtifactMode | null;
+  filename: string;
+  sizeBytes: number | null;
+  lastBuiltAt: string | null;
+  pagesCount: number;
+}
+
+interface StudyGuideArtifactSummary {
+  exists: false;
+  filename: typeof GUIA_ESTUDO_FILENAME;
+  metaExists: false;
+  metaFilename: typeof GUIA_ESTUDO_META_FILENAME;
+  sourceExists: false;
+  sourceFilename: typeof GUIA_ESTUDO_SOURCE_FILENAME;
+}
+
+export interface ArtifactsInfo {
+  mode: LeituraArtifactMode | null;
+  openArtifact: Omit<ResolvedLeituraArtifact, 'path'> | null;
+  leituraHtml: ArtifactSummary;
+  documentoTecnico: ArtifactSummary;
+  guiaEstudo: StudyGuideArtifactSummary;
+}
 
 /**
  * Subset de linguagens do highlight.js (Spike 9.1, decisão aprovada). `detect:false`
@@ -636,7 +676,7 @@ async function assembleHtml(
 }
 
 /**
- * Gera `artefatos/leitura.html` a partir de `zetel_pages` + mapa de imagens.
+ * Gera `artefatos/leitura-tecnica.html` a partir de `zetel_pages` + mapa de imagens.
  * Determinístico: mesmo input → mesmo arquivo, exceto `zetel-built` (Regra #1: sem LLM).
  */
 export async function renderZetel(
@@ -728,7 +768,7 @@ export async function renderZetel(
 
   const outDir = artefatosDir(vaultPath, slug);
   mkdirSync(outDir, { recursive: true });
-  const outputPath = join(outDir, 'leitura.html');
+  const outputPath = join(outDir, LEITURA_TECNICA_FILENAME);
   writeFileSync(outputPath, html, 'utf8');
   const sizeBytes = statSync(outputPath).size;
 
@@ -746,9 +786,47 @@ export async function renderZetel(
   return result;
 }
 
-/** Caminho absoluto de `leitura.html` para um slug (sem verificar existência). */
+/** Caminho absoluto canônico do Documento Técnico para um slug (sem verificar existência). */
 export function leituraHtmlPath(vaultPath: string, slug: string): string {
-  return join(artefatosDir(vaultPath, slug), 'leitura.html');
+  return leituraTecnicaHtmlPath(vaultPath, slug);
+}
+
+/** Caminho absoluto de `leitura-tecnica.html` para um slug (sem verificar existência). */
+export function leituraTecnicaHtmlPath(vaultPath: string, slug: string): string {
+  return join(artefatosDir(vaultPath, slug), LEITURA_TECNICA_FILENAME);
+}
+
+/** Caminho absoluto do `leitura.html` legado para um slug (sem verificar existência). */
+export function leituraLegadoHtmlPath(vaultPath: string, slug: string): string {
+  return join(artefatosDir(vaultPath, slug), LEITURA_LEGADO_FILENAME);
+}
+
+/** Resolve o HTML de leitura que deve ser aberto, priorizando o nome canônico. */
+export function resolveLeituraHtmlArtifact(
+  vaultPath: string,
+  slug: string,
+): ResolvedLeituraArtifact | null {
+  const tecnicaPath = leituraTecnicaHtmlPath(vaultPath, slug);
+  if (existsSync(tecnicaPath)) {
+    return {
+      kind: 'documento-tecnico',
+      mode: 'tecnico',
+      filename: LEITURA_TECNICA_FILENAME,
+      path: tecnicaPath,
+    };
+  }
+
+  const legadoPath = leituraLegadoHtmlPath(vaultPath, slug);
+  if (existsSync(legadoPath)) {
+    return {
+      kind: 'documento-tecnico',
+      mode: 'legado',
+      filename: LEITURA_LEGADO_FILENAME,
+      path: legadoPath,
+    };
+  }
+
+  return null;
 }
 
 /** Metadados dos artefatos sem ler o conteúdo do HTML. */
@@ -756,30 +834,44 @@ export function getArtifactsInfo(
   db: Database.Database,
   vaultPath: string,
   zetelId: string,
-): {
-  leituraHtml: {
-    exists: boolean;
-    sizeBytes: number | null;
-    lastBuiltAt: string | null;
-    pagesCount: number;
-  };
-} {
+): ArtifactsInfo {
   const slug = assertZetelAtivo(db, zetelId);
   const zetel = getZetelById(db, zetelId);
-  const path = leituraHtmlPath(vaultPath, slug);
-  const exists = existsSync(path);
+  const artifact = resolveLeituraHtmlArtifact(vaultPath, slug);
+  const exists = artifact !== null;
   const pagesCount = (
     db.prepare('SELECT COUNT(*) AS c FROM zetel_pages WHERE zetel_id = ?').get(zetelId) as {
       c: number;
     }
   ).c;
 
+  const documentoTecnico: ArtifactSummary = {
+    exists,
+    mode: artifact?.mode ?? null,
+    filename: artifact?.filename ?? LEITURA_TECNICA_FILENAME,
+    sizeBytes: artifact ? statSync(artifact.path).size : null,
+    lastBuiltAt: zetel?.lastBuiltAt ?? null,
+    pagesCount,
+  };
+
   return {
-    leituraHtml: {
-      exists,
-      sizeBytes: exists ? statSync(path).size : null,
-      lastBuiltAt: zetel?.lastBuiltAt ?? null,
-      pagesCount,
+    mode: artifact?.mode ?? null,
+    openArtifact: artifact
+      ? {
+          kind: artifact.kind,
+          mode: artifact.mode,
+          filename: artifact.filename,
+        }
+      : null,
+    leituraHtml: documentoTecnico,
+    documentoTecnico,
+    guiaEstudo: {
+      exists: false,
+      filename: GUIA_ESTUDO_FILENAME,
+      metaExists: false,
+      metaFilename: GUIA_ESTUDO_META_FILENAME,
+      sourceExists: false,
+      sourceFilename: GUIA_ESTUDO_SOURCE_FILENAME,
     },
   };
 }

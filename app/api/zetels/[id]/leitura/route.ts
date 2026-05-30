@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
-import { leituraHtmlPath } from '@/lib/render-service';
+import { resolveLeituraHtmlArtifact } from '@/lib/render-service';
 import { getZetelById } from '@/lib/zetel-service';
 import { logger } from '@/lib/logger';
 
@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** GET /api/zetels/[id]/leitura — serve artefatos/leitura.html para o iframe. */
+/** GET /api/zetels/[id]/leitura — serve o Documento Técnico para o iframe. */
 export async function GET(_request: Request, { params }: Ctx) {
   const { id } = await params;
 
@@ -30,17 +30,20 @@ export async function GET(_request: Request, { params }: Ctx) {
     );
   }
 
-  const path = leituraHtmlPath(vaultPath, zetel.slug);
-  if (!existsSync(path)) {
+  const artifact = resolveLeituraHtmlArtifact(vaultPath, zetel.slug);
+  if (!artifact || !existsSync(artifact.path)) {
     return NextResponse.json(
-      { error: 'Leitura não construída. Use "Preparar leitura" na aba Leitura.' },
+      {
+        error:
+          'Leitura técnica não construída. Use "Preparar leitura" na aba Leitura.',
+      },
       { status: 404 },
     );
   }
 
   let html: string;
   try {
-    html = readFileSync(path, 'utf8');
+    html = readFileSync(artifact.path, 'utf8');
   } catch (err) {
     logger.error('leitura read failed', { zetelId: id, error: (err as Error).message });
     return NextResponse.json(

@@ -10,7 +10,7 @@ const NO_VAULT = 'Caminho do vault não configurado. Configure-o em Configuraç�
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** POST /api/zetels/[id]/build — gera artefatos/leitura.html (determinístico, sem LLM). */
+/** POST /api/zetels/[id]/build — gera artefatos/leitura-tecnica.html (determinístico, sem LLM). */
 export async function POST(_request: Request, { params }: Ctx) {
   const { id } = await params;
 

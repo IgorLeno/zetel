@@ -228,6 +228,61 @@ body {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.mode-switch,
+.artifact-switch {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.mode-option,
+.artifact-option {
+  min-height: 34px;
+  padding: 7px 12px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  border-right: 1px solid var(--border);
+  transition: background .1s, color .1s;
+}
+
+.mode-option:last-child,
+.artifact-option:last-child {
+  border-right: 0;
+}
+
+.mode-option:hover,
+.artifact-option:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.mode-option.active,
+.artifact-option.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.mode-option:disabled {
+  cursor: not-allowed;
+  color: var(--text-3);
+  opacity: 0.65;
+}
+
+.mode-option:disabled:hover {
+  background: transparent;
+  color: var(--text-3);
+}
+
+.artifact-switch {
+  align-self: flex-start;
+  flex-shrink: 0;
 }
 
 .leitura-body {

@@ -5,11 +5,35 @@ import { formatRelative } from '@/lib/relative-time';
 import { formatBytes } from '@/lib/format-utils';
 
 interface ArtifactsInfo {
+  mode: 'tecnico' | 'legado' | null;
+  openArtifact: {
+    kind: 'documento-tecnico';
+    mode: 'tecnico' | 'legado';
+    filename: string;
+  } | null;
   leituraHtml: {
     exists: boolean;
+    mode: 'tecnico' | 'legado' | null;
+    filename: string;
     sizeBytes: number | null;
     lastBuiltAt: string | null;
     pagesCount: number;
+  };
+  documentoTecnico: {
+    exists: boolean;
+    mode: 'tecnico' | 'legado' | null;
+    filename: string;
+    sizeBytes: number | null;
+    lastBuiltAt: string | null;
+    pagesCount: number;
+  };
+  guiaEstudo: {
+    exists: false;
+    filename: 'guia-estudo.html';
+    metaExists: false;
+    metaFilename: 'guia-estudo.meta.json';
+    sourceExists: false;
+    sourceFilename: 'guia-estudo.source.json';
   };
 }
 
@@ -84,7 +108,10 @@ export function ArtefatosPanel({ zetelId }: { zetelId: string }) {
     <div className="artefatos-panel content-narrow">
       {error && <p className="feedback err">{error}</p>}
       <div className="artefato-card">
-        <div className="artefato-name">leitura.html</div>
+        <div className="artefato-name">
+          {html.filename}
+          {html.mode === 'legado' ? ' (legado)' : ''}
+        </div>
         <div className="file-meta">
           {html.lastBuiltAt ? formatRelative(html.lastBuiltAt) : '—'}
           {' · '}
