@@ -69,7 +69,7 @@ bundle e mantém determinismo. Tema escuro escopado convive com o claro via
 |----------|----------|
 | `@mermaid-js/mermaid-core` (nome especulativo) existe? | **Não** — não resolve; pacote inexistente. |
 | Render SVG server-side puro (sem Puppeteer/Chromium)? | **Não.** `mermaid.render()` lança `ReferenceError: document is not defined`. Mermaid depende do DOM do browser (medição de layout de texto via `getBBox`/`getComputedTextLength`) para dimensionar nós e arestas. `jsdom` não basta (faltam APIs de medição de SVG); só um Chromium headless resolveria — exatamente o que D19 quer evitar. |
-| Alternativa client-side (JS no `<iframe sandbox>`)? | Tecnicamente possível (iframe já é `sandbox="allow-scripts"`), mas **pesado**: `mermaid.min.js` ≈ **3.235 MB** (~3,2 MB) minificado, sem gzip. Os entrypoints ESM pequenos (`mermaid.esm.min.mjs` 28 KB) apenas fazem *dynamic import* do resto — embutir inline e autocontido exigiria o bundle completo (~3,2 MB) **em cada `leitura.html`**. |
+| Alternativa client-side (JS no `<iframe sandbox>`)? | Tecnicamente possível (iframe já é `sandbox="allow-scripts"`), mas **pesado** para `leitura.html` autocontido: bundle UMD **`mermaid.min.js` ≈ 3.235 MB** (~3,2 MB) minificado, sem gzip — **tamanho exigido** para embed inline sem imports externos. Entrypoint ESM **`mermaid.esm.min.mjs` ≈ 28 KB** (*só* ponto de entrada; faz *dynamic import* do runtime — **não** basta para autocontido). |
 
 ### Decisão: **ADIADO PARA PRD v4**
 

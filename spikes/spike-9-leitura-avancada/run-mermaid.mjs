@@ -78,11 +78,14 @@ try {
         };
       });
 
+    const isSelfContainedUmd = (f) => /^mermaid(\.min)?\.js$/.test(f);
+    const isEsmEntry = (f) => f.includes('esm') && f.endsWith('.mjs');
+
     const entryScore = (c) => {
       let score = 0;
+      if (isSelfContainedUmd(c.f)) score += 200;
       if (c.f.includes('.min.')) score += 100;
-      if (c.f.includes('esm')) score += 50;
-      if (c.f.endsWith('.min.mjs') || c.f.endsWith('.min.js')) score += 30;
+      if (isEsmEntry(c.f)) score += 10;
       if (!c.f.includes('.min') && c.rawKb > 500) score -= 80;
       return score;
     };
@@ -93,8 +96,13 @@ try {
     });
 
     if (ranked.length) {
-      const biggest = ranked[0];
-      bundleInfo = `${biggest.f} ≈ ${biggest.rawKb.toFixed(1)} KB raw, ${biggest.gzipKb.toFixed(1)} KB gzipped (entry minificado ESM preferido)`;
+      const topRanked = ranked[0];
+      const esmEntry = candidates.find((c) => c.f === 'mermaid.esm.min.mjs') ?? candidates.find(isEsmEntry);
+      const embedMb = (topRanked.rawKb / 1024).toFixed(2);
+      bundleInfo = `${topRanked.f} ≈ ${topRanked.rawKb.toFixed(1)} KB raw (${embedMb} MB), ${topRanked.gzipKb.toFixed(1)} KB gzipped — bundle autocontido UMD para embed inline`;
+      if (esmEntry && esmEntry.f !== topRanked.f) {
+        bundleInfo += `; entrypoint ESM ${esmEntry.f} ≈ ${esmEntry.rawKb.toFixed(1)} KB (dynamic import, não autocontido)`;
+      }
       say('3) Bundle client-side (mermaid dist):');
       const bySize = [...candidates].sort((a, b) => b.rawKb - a.rawKb);
       for (const c of bySize.slice(0, 6)) {
@@ -102,7 +110,12 @@ try {
           `   ${c.f.padEnd(34)} ${c.rawKb.toFixed(1).padStart(7)} KB raw  ${c.gzipKb.toFixed(1).padStart(6)} KB gzip`,
         );
       }
-      say(`   → referência: ${biggest.f} (minificado ESM, se disponível)`);
+      say(`   → referência embed: ${topRanked.f} (bundle autocontido UMD)`);
+      if (esmEntry && esmEntry.f !== topRanked.f) {
+        say(
+          `   → entrypoint ESM: ${esmEntry.f} ≈ ${esmEntry.rawKb.toFixed(1)} KB (só dynamic import; não basta para leitura.html autocontido)`,
+        );
+      }
     }
   }
 } catch (err) {

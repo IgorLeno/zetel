@@ -128,9 +128,7 @@ function inlineKatexFontUrls(css) {
 
 let katexCss = readFileSync(katexCssPath, 'utf8');
 katexCss = inlineKatexFontUrls(katexCss);
-const cssAutocontido =
-  !/url\([^)]*fonts\//.test(katexCss) && !/url\(fonts\//.test(katexCss);
-const fontsInlined = cssAutocontido;
+const fontsInlined = !/url\([^)]*fonts\//.test(katexCss);
 
 // Documento final autocontido (CSS inline). É o que iria para leitura.html.
 const buildDoc = (body, css) => `<!DOCTYPE html>
@@ -151,7 +149,7 @@ const deterministic = sha(finalDoc1) === sha(finalDoc2);
 console.log('═══ KaTeX ═══');
 console.log(
   'CSS+fontes autocontidos (sem CDN)?  ',
-  cssAutocontido && fontsInlined ? 'sim' : 'NÃO (fontes ou URLs relativas pendentes)',
+  fontsInlined ? 'sim' : 'NÃO (fontes ou URLs relativas pendentes)',
 );
 console.log('katex.min.css                       ', sizeKB(katexCss), 'KB');
 console.log('');
