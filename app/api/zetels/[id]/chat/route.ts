@@ -185,7 +185,7 @@ export async function POST(request: Request, { params }: Ctx) {
   let existingTitles: string[] | undefined;
   if (vaultPath) {
     try {
-      partnerPrompt = ensureParceiroPrompt(vaultPath);
+      partnerPrompt = await ensureParceiroPrompt(vaultPath);
       noteRubric = ensureSugestaoNotaPrompt(vaultPath);
       memoryRubric = ensureSugestaoMemoriaPrompt(vaultPath);
       existingTitles = listNoteTitles(vaultPath, zetel.slug);

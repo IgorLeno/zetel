@@ -13,7 +13,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const zetel = getZetelBySlug(getDb(), slug);
-  return { title: zetel?.displayName ?? 'Zetel' };
+  if (!zetel || zetel.trashedAt) {
+    return { title: 'Zetel não encontrado' };
+  }
+  return { title: zetel.displayName };
 }
 
 export default async function ZetelDetailPage({

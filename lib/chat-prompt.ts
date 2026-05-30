@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ChatMessage } from '@/types/chat-message';
 import type { NoteTipo } from './notes-service';
@@ -46,15 +46,17 @@ const PLACEHOLDER_MARKER = '<!-- Conteúdo a definir';
  * nunca sobrescreve edição do usuário (D10; prompts vivem no vault).
  * Lido sob demanda a cada turno (regra #5 — sem cache de processo).
  */
-export function ensureParceiroPrompt(vaultPath: string): string {
+export async function ensureParceiroPrompt(vaultPath: string): Promise<string> {
   const dir = join(vaultPath, 'config', 'prompts');
   const file = join(dir, 'parceiro.md');
-  if (existsSync(file)) {
-    const current = readFileSync(file, 'utf8');
+  try {
+    const current = await readFile(file, 'utf8');
     if (!current.includes(PLACEHOLDER_MARKER)) return current;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
   }
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(file, PARCEIRO_PROMPT);
+  await mkdir(dir, { recursive: true });
+  await writeFile(file, PARCEIRO_PROMPT);
   logger.info('parceiro prompt ensured');
   return PARCEIRO_PROMPT;
 }

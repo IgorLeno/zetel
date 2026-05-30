@@ -2,7 +2,36 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 8 (Polimento) concluído em 2026-05-30 — `pnpm build` limpo. Gate 8 → release: gate manual com orientador pendente. MVP TEXTUAL ENTREGUE (após gate).** Módulo 8 entregou: robustez de erros API (`leitura/route.ts` + reads de `notes/titles`, `memory` GET, `memory/titles` com try/catch + JSON estruturado); dívida **M6-1 fechada** (`config/prompts/parceiro.md` lido sob demanda via `ensureParceiroPrompt` em `lib/chat-prompt.ts`, self-heal sem clobber, seed real em `lib/vault.ts`, `partnerPrompt` em `buildOpenRouterMessages` — regra #5 mantida); dívida **M6-3 fechada** (`ChatPanel` sempre montado em `LeituraPanel`, visibilidade via CSS `display:none` — stream não se perde ao recolher); polish visível: `metadata`/`generateMetadata` por rota (4 rotas), loading em "Remover" (`ArquivosPanel`) e "Limpar" (`ChatPanel`), token `--memory`/`--memory-dim` com variante dark em `globals.css` (cor da memória agora responde ao tema); `docs/BACKUP.md` criado. Dívida M6-2 (saudação I1) mantida como pendência pós-MVP. Ver `spikes/lessons.md` (Módulo 8). **Próximo: Gate manual → MVP TEXTUAL ENTREGUE; pós-MVP: Módulo 9 — Prompts editáveis em runtime.**
+**Estado atual: Módulo 8 (Polimento)**
+
+#### Resumo
+MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
+
+#### Data de conclusão
+2026-05-30
+
+#### Build / Gate
+- `pnpm build` limpo
+- Gate 8 → release: validação manual com orientador pendente
+
+#### Entregáveis
+- Robustez de erros API: `leitura/route.ts`; reads de `notes/titles`, `memory` GET, `memory/titles` (try/catch + JSON estruturado)
+- **M6-1 fechada:** `config/prompts/parceiro.md` via `ensureParceiroPrompt` em `lib/chat-prompt.ts` (self-heal sem clobber); seed em `lib/vault.ts`; `partnerPrompt` em `buildOpenRouterMessages` (regra #5)
+- **M6-3 fechada:** `ChatPanel` sempre montado em `LeituraPanel`; visibilidade via CSS `display:none` (stream não se perde ao recolher)
+- Polish: `metadata`/`generateMetadata` (4 rotas); loading em "Remover" (`ArquivosPanel`) e "Limpar" (`ChatPanel`); tokens `--memory` / `--memory-dim` com variante dark em `globals.css`
+- `docs/BACKUP.md` criado
+- Ver `spikes/lessons.md` (Módulo 8)
+
+#### Dívidas fechadas
+- **M6-1** — prompt do parceiro lido do vault sob demanda
+- **M6-3** — chat recolhível sem perder stream
+
+#### Dívidas pendentes
+- **M6-2** — saudação automática quando histórico vazio (I1); pós-MVP
+
+#### Próximos passos
+- Gate manual → declarar **MVP TEXTUAL ENTREGUE**
+- Pós-MVP: Módulo 9 — Prompts editáveis em runtime
 
 **Módulo 7 (Memória cooperativa) concluído em 2026-05-29 — Gate 7 → 8 OK (validado 2026-05-30).** Módulo 7 entregou: `lib/memory-service.ts` (filesystem como fonte de verdade da memória global em `parceiro/memoria/`, frontmatter §13.4; sem tabela SQLite; escrita atômica `writeMemoryFile` com `flag:'wx'` + fallback `-2..-99`/timestamp; leitura sob demanda — regra #5; self-heal de `config/prompts/sugestao-memoria.md` sem clobber); injeção no chat via `buildMemoryContext(vaultPath)` chamado **a cada turno** dentro de `buildOpenRouterMessages` (ordem §8.7; truncagem a **40% do orçamento** = `MEMORY_TOKEN_BUDGET` 3200, corta arquivo inteiro priorizando recência; aviso "memória longa" acima de 10 KB sem corte automático); detecção de sugestão no stream via sentinela `<<<MEMORIA_SUGERIDA>>>…<<<FIM_MEMORIA>>>` com `earliestMark`/`HOLD = max(len marcadores)-1` retendo nota **e** memória (a `justificativa` nunca chega ao cliente) emitindo `data: [MEMORY_SUGGESTION]`; `MemoryCard` (Guardar/Editar/Discutir/Rejeitar; "Discutir" bounded em 1 rodada via `discussNextMemoryRef` — regra #10; "Discutir" mantido por fidelidade ao PRD §8 "mecanismo idêntico ao de notas", decidido no gate) + `MemoriaList` (aba `/memoria`, listagem + abertura externa em cascata D14); rotas `memory` (GET/POST), `memory/titles` (GET), `memory/reveal` (POST, anti path-traversal sob `parceiro/memoria/`) e `chat` PATCH (`kind:'memory'` → flag `memoryRejected`). `chat_messages.meta` ganha `suggestedMemory`/`memoryRejected`/`memoryLong`. Logs só contagens/`zetelOrigem` (regra #6). `pnpm build` limpo; fluxo de memória (salvar→frontmatter §13.4→listar→cascata→rejeitar) validado por inspeção; fluxo de sugestão/influência/truncagem com LLM real requer chave (teste manual). Ver `spikes/lessons.md` (Módulo 7).
 

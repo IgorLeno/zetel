@@ -6,7 +6,7 @@
 |-------|------|----------|
 | **Vault** (Markdown) | pasta configurada em Configurações | **fonte de verdade** — deve ser backupeado |
 | `~/.zetel/config` | arquivo com a chave OpenRouter | deve ser backupeado **fora do git** (permissão 600) |
-| `~/.zetel/zetel.db` | SQLite | **regenerável** — não precisa de backup |
+| `~/.zetel/zetel.db` | SQLite | **regenerável** — histórico de chat **perdido permanentemente** (ver cenário 1); não precisa de backup |
 | `<vault>/zetels/<slug>/artefatos/leitura.html` | HTML de leitura | **regenerável** via "Atualizar leitura" |
 
 ## O que está no vault
@@ -52,7 +52,7 @@ Se `~/.zetel/zetel.db` for apagado ou corrompido:
 
 1. Reabra o app — ele cria um novo banco automaticamente.
 2. Configure o vault em Configurações (o mesmo caminho de antes).
-3. Os Zetels aparecem ao recriar as entradas com os mesmos nomes/slugs, **ou** os arquivos `.md` podem ser reimportados via "Adicionar arquivos".
+3. Recrie cada Zetel **manualmente** na UI (mesmo nome/slug que antes) — o app **não** redescobre entradas só pelo vault. Depois, na aba **Arquivos** de cada Zetel, use **Adicionar arquivos** para reimportar os `.md` de `<vault>/zetels/<slug>/arquivos/` (ou copie-os de volta para essa pasta antes de importar).
 4. O histórico de chat **se perde** — isso é esperado (o histórico fica só no SQLite, D6).
 5. Notas e memórias **sobrevivem** — estão no vault em Markdown.
 
@@ -72,7 +72,7 @@ Adicione ao `.gitignore` do vault (ou do repo do app):
 # gerado automaticamente — não versionar
 */artefatos/
 */images/
-.lixeira/
+# .lixeira/  ← comentado: Zetels na lixeira ainda são conteúdo do usuário até purge explícito; versione se quiser preservá-los no git
 ```
 
-E nunca versionar a pasta `~/.zetel/` (db, config, logs).
+E nunca versionar a pasta `~/.zetel/` (db, config, logs). Se usar git no vault, considere **incluir** `.lixeira/` enquanto houver Zetels trashed-but-not-purged que você queira recuperar.
