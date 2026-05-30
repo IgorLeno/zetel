@@ -102,7 +102,7 @@ export function LeituraPanel({
             sandbox="allow-scripts"
             src={`/api/zetels/${zetelId}/leitura`}
           />
-          <div style={{ display: chatOpen ? undefined : 'none' }}>
+          <div style={{ display: chatOpen ? 'contents' : 'none' }}>
             <ChatPanel zetelId={zetelId} currentPageIndex={currentPageIndex} />
           </div>
         </div>
