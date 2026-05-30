@@ -5,7 +5,6 @@ import { createRequire } from 'node:module';
 import { basename, dirname, extname, join } from 'node:path';
 import { remark } from 'remark';
 import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
 import remarkRehype from 'remark-rehype';
 import rehypeSlug from 'rehype-slug';
 import rehypeKatex from 'rehype-katex';
@@ -31,6 +30,7 @@ import {
   assertZetelAtivo,
   listPages,
   makeAnchorFactory,
+  parseMarkdownForSegmentation,
   segmentFile,
   type SegmentedPage,
 } from './ingestao-service';
@@ -723,9 +723,6 @@ export async function renderZetel(
   const dir = arquivosDir(vaultPath, slug);
   const maxWords = Number(getSetting('max_words_per_page')) || DEFAULT_MAX_WORDS;
   const anchorOf = makeAnchorFactory(new Set<string>());
-  // Deve espelhar EXATAMENTE o parser de processZetel (lib/ingestao-service.ts):
-  // remark-math entra na segmentação, senão a paridade anchor/content_hash quebra.
-  const parser = remark().use(remarkGfm).use(remarkMath);
   const segmented: SegmentedPage[] = [];
 
   for (const row of fileRows) {
@@ -737,7 +734,7 @@ export async function renderZetel(
       );
     }
     const content = readFileSync(path, 'utf8');
-    const tree = parser.parse(content) as MdastRoot;
+    const tree = parseMarkdownForSegmentation(content);
     const stem = slugify(basename(row.filename, extname(row.filename)));
     segmented.push(...segmentFile(tree, stem, maxWords, segmented.length, anchorOf));
   }

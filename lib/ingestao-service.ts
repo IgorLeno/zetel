@@ -10,6 +10,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { remark } from 'remark';
+import remarkFrontmatter from 'remark-frontmatter';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { visit } from 'unist-util-visit';
@@ -381,6 +382,31 @@ export interface SegmentedPage {
 }
 
 /**
+ * Remove apenas frontmatter YAML no início do documento. O restante do Markdown
+ * permanece intacto para preservar anchors/content_hash determinísticos.
+ */
+export function stripInitialYamlFrontmatter(tree: Root): Root {
+  while (tree.children[0]?.type === 'yaml') {
+    tree.children.shift();
+  }
+  return tree;
+}
+
+/**
+ * Parser compartilhado por Processar e Preparar leitura. A paridade entre os
+ * dois caminhos depende desta ordem: GFM + frontmatter + math, depois strip.
+ */
+export function parseMarkdownForSegmentation(markdown: string): Root {
+  const tree = remark()
+    .use(remarkGfm)
+    .use(remarkFrontmatter, ['yaml'])
+    .use(remarkMath)
+    .parse(markdown) as Root;
+
+  return stripInitialYamlFrontmatter(tree);
+}
+
+/**
  * Gera anchors únicos dentro do Zetel. Headings recebem prefixo do stem do
  * arquivo (`stem--slug-do-heading`); colisões ganham sufixo `-2`, `-3`…
  */
@@ -559,16 +585,11 @@ export function processZetel(
   const imageMap: Record<string, string> = {};
   const counters = { copied: 0, blocked: 0, warned: 0 };
   const anchorOf = makeAnchorFactory(new Set<string>());
-  // remark-math converte `$…$`/`$$…$$` em nós math/inlineMath (Módulo 9). Deve
-  // espelhar EXATAMENTE o parser de renderZetel (lib/render-service.ts): a
-  // paridade anchor/content_hash compara as duas segmentações. Continua sem LLM
-  // (Regra #1) e determinístico. Zetels sem `$` ficam idênticos (mesmo hash).
-  const parser = remark().use(remarkGfm).use(remarkMath);
 
   // Passos 2–5 — parsear, processar imagens e segmentar por arquivo.
   const pages: SegmentedPage[] = [];
   for (const file of loaded) {
-    const tree = parser.parse(file.content) as Root;
+    const tree = parseMarkdownForSegmentation(file.content);
     processImages(tree, file.path, imgDir, imageMap, zetelId, counters);
 
     const stem = slugify(basename(file.row.filename, extname(file.row.filename)));

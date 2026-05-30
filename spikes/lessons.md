@@ -666,6 +666,11 @@ Etapa 9.2 (implementação). Decisões do spike 9.1 aplicadas a `lib/render-serv
 - Zetels SEM `$` produzem mdast idêntico → mesmo `content_hash` → zero regressão.
   Zetels com `$` precisam reprocessar (a paridade detecta e orienta).
 
+### Frontmatter também é extensão de PARSE e deve ser removido antes da segmentação
+[2026-05-30] Context: correção de página `[sem título]` gerada a partir de YAML frontmatter antes do H1.
+Mistake: parser sem `remark-frontmatter` tratava `--- ... ---` como nós Markdown comuns (`thematicBreak`, `paragraph`, `list`) e `segmentFile` persistia isso como a primeira página.
+Rule: qualquer sintaxe Markdown que muda a árvore usada por `segmentFile` deve entrar no parser compartilhado por `processZetel` e `renderZetel`; frontmatter inicial deve virar nó `yaml` e ser removido antes de segmentar.
+
 ### Sanitize: KaTeX some em silêncio sem o subset MathML
 - `appSanitizeSchema` (defaultSchema + className/id) remove `<math>`/`<mrow>`/`style`
   → equações desaparecem sem erro. Liberar: tags MathML (lista do spike +
