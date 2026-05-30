@@ -1,8 +1,8 @@
-# Zetel — PRD v3: Fase Visual e Gestão de Memória
+# Zetel — PRD v3: Fase Visual, Artefatos de Leitura e Gestão de Memória
 
 > Versão: v3.0 — 2026-05-30
 > Substitui todas as versões anteriores de rascunho do PRD v3.
-> Fonte autoritativa para os módulos 9 e 10.
+> Fonte autoritativa para o Módulo 9 já implementado, os Módulos 10A–10E e o Módulo 11.
 > Divergência entre este PRD e o CLAUDE.md → **este PRD vence**.
 > CLAUDE.md é resumo comportamental; este documento é a fonte de comportamento esperado.
 
@@ -11,35 +11,39 @@
 ## Como ler este arquivo
 
 - **Parte A — Visão da fase**: onde estamos, o que esta fase entrega e o que não muda.
-- **Parte B — Módulo 9**: qualidade visual da leitura e do app.
-- **Parte C — Módulo 10**: gestão completa de memória no app.
-- **Parte D — Novas decisões fundadoras D16–D24**: decisões que emergem desta fase.
-- **Parte E — Dívidas técnicas herdadas**: itens do MVP com módulo responsável.
-- **Parte F — Roadmap pós-v3**: PRD v4 (voz) e PRD v5 (prompts + internet), como visão sem spec executável.
+- **Parte B — Módulo 9**: qualidade visual da leitura e do app, já implementada.
+- **Parte C — Módulos 10A–10E**: arquitetura dos dois modos de geração de HTML por Zetel.
+- **Parte D — Módulo 11**: gestão completa de memória no app.
+- **Parte E — Novas decisões fundadoras D16–D28**: decisões que emergem desta fase.
+- **Parte F — Dívidas técnicas herdadas**: itens do MVP com módulo responsável.
+- **Parte G — Roadmap pós-v3**: PRD v4 (voz) e PRD v5 (prompts + internet), como visão sem spec executável.
 
 ***
 
-## Correção obrigatória no CLAUDE.md antes de iniciar
+## Correção obrigatória nas referências de agente
 
-O CLAUDE.md registra como próximo passo:
+Versões antigas de arquivos de agente registravam como próximo passo:
 
 > `Pós-MVP: Módulo 9 — Prompts editáveis em runtime`
 
-Isso precisa ser corrigido antes de qualquer implementação. A tabela de módulos pós-MVP do CLAUDE.md deve ser substituída por:
+Isso precisa permanecer corrigido antes de qualquer implementação. A tabela de módulos pós-MVP de `AGENTS.md` e `CLAUDE.md` deve refletir:
 
 | # | Módulo | Fase |
 |---|--------|------|
-| 9 | Qualidade visual da leitura e do app | PRD v3 |
-| 10 | Gestão completa de memória no app | PRD v3 |
-| 11 | Voz: TTS | PRD v4 |
-| 12 | Voz: STT | PRD v4 |
-| 13 | Prompts editáveis em runtime | PRD v5 |
-| 14 | Modo internet | PRD v5 |
-| 15 | Memória emergente automática | Fase futura |
+| 9 | Qualidade visual da leitura e do app — concluído | PRD v3 |
+| 10A | Arquitetura de artefatos de leitura | PRD v3 |
+| 10B | Redesign visual compartilhado / ajustes finos de CSS | PRD v3 |
+| 10C | Spike de guia de estudo com LLM | PRD v3 |
+| 10D | Implementação do guia de estudo | PRD v3 |
+| 10E | Configuração de modelos por tarefa | PRD v3 |
+| 11 | Gestão completa de memória no app | PRD v3 |
+| PRD v4 | Voz, TTS e STT | PRD v4 |
+| PRD v5 | Prompts editáveis e modo internet | PRD v5 |
+| Futuro | Memória emergente automática | Fase futura |
 
-E o campo "Próximos passos" do CLAUDE.md deve passar a:
+E o campo "Próximos passos" deve apontar para:
 
-> Próximo passo operacional: **Módulo 9 — Qualidade visual da leitura e do app**
+> Próximo passo operacional: **Módulo 10A — Arquitetura de artefatos de leitura**
 
 ***
 
@@ -62,7 +66,11 @@ O Zetel opera de ponta a ponta. As funcionalidades centrais estão funcionando:
 
 O HTML gerado é funcionalmente correto, mas visualmente genérico: tipografia sem hierarquia clara, LaTeX exibido como texto cru, Mermaid exibido como bloco de código sem renderização, ausência de syntax highlighting, primeira página vazia quando o conteúdo começa com H1 isolado, botões de navegação sem identidade visual consistente com o app. Material técnico e científico fica ilegível sem renderização de matemática.
 
-**Problema 2 — Gestão de memória dependente do Obsidian**
+**Problema 2 — Dois usos diferentes da leitura**
+
+O HTML técnico gerado pelo Zetel e o HTML de referência em formato de guia de estudo revelaram necessidades diferentes. O Zetel precisa manter um Documento Técnico fiel ao Markdown, sem LLM e com máxima rastreabilidade, mas também oferecer um Guia de Estudo editorial, didático e visual, usando LLM de forma controlada.
+
+**Problema 3 — Gestão de memória dependente do Obsidian**
 
 A aba Memória lista título e preview truncado, mas não permite ler o conteúdo completo, editar ou excluir dentro do app. Qualquer gestão real de memórias exige abrir o Obsidian manualmente, criando fricção no fluxo central do produto. 
 
@@ -75,13 +83,14 @@ Os cinco princípios do PRD v2 continuam válidos. Dois acréscimos para esta fa
 
 ## O que esta fase não muda
 
-- Pipeline de leitura permanece determinístico e sem LLM (regra #1).
+- O pipeline Documento Técnico permanece determinístico e sem LLM (regra #1).
+- O pipeline Guia de Estudo pode usar LLM, mas a LLM gera apenas JSON estruturado; o HTML final continua vindo de template determinístico (D26).
 - HTML permanece autocontido quanto a CSS, JS e bibliotecas de renderização. Imagens locais continuam como assets relativos em `../images/` — autocontido não significa sem assets locais (D23).
 - Prompts editáveis em runtime, modo internet e voz ficam para PRDs posteriores.
 
 ## Definição de HTML autocontido (D23)
 
-> O `leitura.html` deve abrir em browser sem conexão de rede e funcionar corretamente. CSS, JS e bibliotecas de renderização (KaTeX, highlight.js, Mermaid se client-side) devem ser embutidos no arquivo HTML. Imagens locais do Zetel continuam em `../images/` por caminho relativo — essa dependência local é aceita e não viola a definição de autocontido.
+> Os artefatos HTML de leitura devem abrir em browser sem conexão de rede e funcionar corretamente. CSS, JS e bibliotecas de renderização (KaTeX, highlight.js, Mermaid se client-side) devem ser embutidos no arquivo HTML. Imagens locais do Zetel continuam em `../images/` por caminho relativo — essa dependência local é aceita e não viola a definição de autocontido.
 
 ## Definição de determinismo (D24)
 
@@ -94,6 +103,10 @@ Os cinco princípios do PRD v2 continuam válidos. Dois acréscimos para esta fa
 ## Objetivo
 
 Transformar a experiência de leitura do Zetel em algo visualmente coeso, agradável e adequado para material técnico. Ao final do Módulo 9, o HTML de leitura deve ter tipografia de qualidade, renderização de equações matemáticas, syntax highlighting em blocos de código, suporte a diagramas Mermaid (condicional ao spike), e navegação visualmente consistente com o app.
+
+## Status
+
+O Módulo 9 foi implementado em 2026-05-30 como **Qualidade visual da leitura e do app**. A etapa 9.2 foi concluída com build limpo e verificação por harness; o gate visual manual em app permanece pendente. Novos módulos não devem ser renumerados como 9A–9E para não conflitar com esse histórico já commitado.
 
 ## Estrutura interna do Módulo 9
 
@@ -188,18 +201,63 @@ Com o spike aprovado e as decisões registradas, o Claude Code implementa tudo e
 - [ ] Se Mermaid aprovado: diagrama renderiza com fallback
 - [ ] HTML sem CDN externo, sem chamada de rede em runtime
 - [ ] Determinismo preservado (mesma estrutura de conteúdo para mesmo input, exceto `zetel-built`)
-- [ ] Regras #1 (sem LLM no pipeline) e #2 (sem CSS injetado no iframe) preservadas
+- [ ] Regras #1 (sem LLM no pipeline Documento Técnico) e #2 (sem CSS injetado no iframe) preservadas
 - [ ] `pnpm build` limpo
 
-**Gate 9 → 10:** Igor valida visualmente o template em um Zetel real com material técnico (equações e código), em modo claro e escuro.
+**Gate 9 → 10A:** Igor valida visualmente o template em um Zetel real com material técnico (equações e código), em modo claro e escuro.
 
 ***
 
-# Parte C — Módulo 10: Gestão completa de memória no app
+# Parte C — Módulos 10A–10E: Dois modos de leitura
 
 ## Objetivo
 
-Eliminar a dependência do Obsidian para visualizar, editar e excluir memórias. Ao final do Módulo 10, o usuário gerencia todo o ciclo de vida de uma memória sem sair do app. Encerra a dívida M8-1.
+Introduzir dois modos de geração de HTML por Zetel sem quebrar o Módulo 9 já implementado:
+
+- **Documento Técnico:** evolução do pipeline atual, determinístico, sem LLM, fiel ao Markdown.
+- **Guia de Estudo:** pipeline editorial com LLM, não determinístico, renderizado por template determinístico a partir de JSON estruturado.
+
+## Módulo 10A — Arquitetura de artefatos de leitura
+
+Separar explicitamente os artefatos dentro de `artefatos/`:
+
+- Documento Técnico: `artefatos/leitura-tecnica.html`.
+- Guia de Estudo: `artefatos/guia-estudo.html`, `artefatos/guia-estudo.meta.json` e `artefatos/guia-estudo.source.json`.
+
+O antigo `artefatos/leitura.html` deve ser tratado como legado do Documento Técnico e migrado/renomeado para `artefatos/leitura-tecnica.html` quando o módulo for implementado.
+
+## Módulo 10B — Redesign visual compartilhado / ajustes finos de CSS
+
+Consolidar o visual compartilhado entre Documento Técnico e Guia de Estudo, preservando a autonomia dos artefatos HTML. O app continua sem injetar CSS no iframe; cada HTML carrega seu próprio CSS inline.
+
+## Módulo 10C — Spike de guia de estudo com LLM
+
+Validar formato de prompt, modelo e JSON estruturado para transformar Markdown em guia didático. O spike deve provar rastreabilidade suficiente para mapear blocos do guia de volta ao Markdown original.
+
+## Módulo 10D — Implementação do guia de estudo
+
+Implementar geração do Guia de Estudo: Markdown original → LLM gera JSON estruturado → template determinístico renderiza `guia-estudo.html`. A LLM nunca gera HTML final diretamente.
+
+## Módulo 10E — Configuração de modelos por tarefa
+
+Adicionar seleção de modelos por tarefa: `chat_model`, `note_model`, `memory_model`, `study_guide_model` e `study_guide_review_model` opcional. Todos usam a chave OpenRouter já configurada e fazem fallback para o modelo padrão global.
+
+## UI de geração e leitura
+
+Em "Preparar leitura", a UI deve oferecer escolha explícita:
+
+- **Documento Técnico:** padrão, sem LLM, gratuito, fiel ao Markdown.
+- **Guia de Estudo:** usa LLM, pode ter custo, visual/didático.
+
+Quando os dois artefatos existirem, a aba Leitura deve oferecer toggle de alternância entre Documento Técnico e Guia de Estudo.
+
+***
+
+# Parte D — Módulo 11: Gestão completa de memória no app
+
+## Objetivo
+
+Eliminar a dependência do Obsidian para visualizar, editar e excluir memórias. Ao final do Módulo 11, o usuário gerencia todo o ciclo de vida de uma memória sem sair do app. Encerra a dívida M8-1.
 
 ## Estado atual das rotas de memória 
 
@@ -210,7 +268,7 @@ Eliminar a dependência do Obsidian para visualizar, editar e excluir memórias.
 | `/api/memory/reveal` | POST | Retorna conteúdo completo por slug |
 | `/api/memory/titles` | GET | Lista apenas os títulos |
 
-O Módulo 10 adiciona três novos endpoints, sob a rota dinâmica `/api/memory/[slug]`:
+O Módulo 11 adiciona três novos endpoints, sob a rota dinâmica `/api/memory/[slug]`:
 
 ```
 GET    /api/memory/[slug]   → detalhe completo
@@ -271,7 +329,7 @@ Path safety idêntico ao GET. Apagar com `fs.unlink`. Responder `204 No Content`
 
 > **Nota de filtro:** memórias criadas externamente no Obsidian podem não ter frontmatter, resultando em `origem = null` (`memory-service.ts` retorna `null` quando ausente). Essas não casam com "sugerida" nem "manual" — aparecem apenas em "todas". O filtro deve tratar `null` graciosamente, sem escondê-las do usuário em "todas".
 
-## Critérios de conclusão do Módulo 10
+## Critérios de conclusão do Módulo 11
 
 **API:**
 - [ ] GET retorna conteúdo completo, frontmatter (camelCase flat, incl. `modelo`), `contentHash` (do arquivo inteiro) e `bytes`
@@ -293,11 +351,11 @@ Path safety idêntico ao GET. Apagar com `fs.unlink`. Responder `204 No Content`
 - [ ] Dívida M8-1 encerrada
 - [ ] `pnpm build` limpo
 
-**Gate 10 → PRD v4:** Igor valida fluxo completo — abrir, editar com conflito, excluir — com memórias reais do vault.
+**Gate 11 → PRD v4:** Igor valida fluxo completo — abrir, editar com conflito, excluir — com memórias reais do vault.
 
 ***
 
-# Parte D — Novas decisões fundadoras D16–D24
+# Parte E — Novas decisões fundadoras D16–D28
 
 | ID | Decisão | Módulo |
 |----|---------|--------|
@@ -305,19 +363,23 @@ Path safety idêntico ao GET. Apagar com `fs.unlink`. Responder `204 No Content`
 | D17 | Modo internet com confirmação por busca: PRD v5 | PRD v5 |
 | D18 | KaTeX via `remark-math` + `rehype-katex`. CSS embutido de `katex/dist/katex.min.css`. Gera HTML/MathML, não SVG. Condicional ao spike 9.1. | 9 |
 | D19 | Mermaid: preferencial SVG server-side sem Puppeteer; alternativa JS client-side. Se inviável, adiado para PRD v4. | 9 |
-| D20 | Edição de memória em `<textarea>` com Markdown bruto. `atualizada_em` atualizado pelo backend. Conflito via `content_hash`. | 10 |
-| D21 | Exclusão de memória permanente, sem lixeira. Lixeira de memórias: pós-PRD v3. | 10 |
+| D20 | Edição de memória em `<textarea>` com Markdown bruto. `atualizada_em` atualizado pelo backend. Conflito via `content_hash`. | 11 |
+| D21 | Exclusão de memória permanente, sem lixeira. Lixeira de memórias: pós-PRD v3. | 11 |
 | D22 | Chave do provedor de voz: mesma política da chave OpenRouter — `~/.zetel/config`, permissão `600`, fora do vault e do git. | PRD v4 |
 | D23 | HTML autocontido = sem dependência de rede. Imagens em `../images/` são dependência local aceita. | 9 |
 | D24 | Determinismo no gate: comparar estrutura de conteúdo, não HTML byte a byte. Excluir `zetel-built` da comparação. | 9 |
+| D25 | Dois modos de geração de HTML por Zetel: Documento Técnico determinístico, sem LLM, fiel ao Markdown, em `artefatos/leitura-tecnica.html`; Guia de Estudo editorial com LLM, não determinístico, em `artefatos/guia-estudo.html`, `artefatos/guia-estudo.meta.json` e `artefatos/guia-estudo.source.json`. O antigo `leitura.html` deve ser migrado/renomeado para o papel técnico. | 10A–10D |
+| D26 | Pipeline editorial do Guia de Estudo: Markdown original → LLM gera JSON estruturado → template determinístico renderiza HTML. A LLM nunca gera HTML final diretamente. O JSON inclui título, subtítulo, resumo, cards, seções, glossário, quiz e perguntas Zettelkasten; cada item inclui rastreabilidade ao Markdown (`source_headings`, `source_file`, `source_block_hashes` ou equivalente). | 10C–10D |
+| D27 | Fonte de conhecimento do parceiro permanece o Markdown. O HTML visível informa localização do usuário, não limite do conhecimento do parceiro. O parceiro usa Markdown original ou `zetel_pages.content_text`; em modo Guia de Estudo, usa `guia-estudo.source.json` para mapear `guide_block_id` → origem no Markdown. D8 deve ser estendido, não substituído. | 10D |
+| D28 | Configuração de modelos por tarefa: `chat_model`, `note_model`, `memory_model`, `study_guide_model` e `study_guide_review_model` opcional. Todos usam a chave OpenRouter já configurada, com fallback para o modelo padrão global. TTS/STT ficam para PRD v4. | 10E |
 
 ***
 
-# Parte E — Dívidas técnicas herdadas
+# Parte F — Dívidas técnicas herdadas
 
 | ID | Dívida | Módulo responsável |
 |----|--------|--------------------|
-| M8-1 | Aba Memória sem leitura completa, edição ou exclusão no app | Módulo 10 |
+| M8-1 | Aba Memória sem leitura completa, edição ou exclusão no app | Módulo 11 |
 | HTML-1 | Primeira página vazia quando H1 isolado | Módulo 9 |
 | HTML-2 | LaTeX exibido como texto cru | Módulo 9 |
 | HTML-3 | Botões de navegação sem design consistente | Módulo 9 |
@@ -326,7 +388,7 @@ Path safety idêntico ao GET. Apagar com `fs.unlink`. Responder `204 No Content`
 
 ***
 
-# Parte F — Roadmap pós-v3
+# Parte G — Roadmap pós-v3
 
 ## PRD v4 — Voz (TTS + STT)
 
@@ -350,17 +412,23 @@ Perguntas que o PRD v5 precisará responder:
 ```
 CLAUDE.md atualizado (correção de numeração e próximo passo)
          ↓
-Módulo 9 — Spike 9.1 (sem alterar produção)
+Módulo 9 — Qualidade visual da leitura e do app (implementado)
          ↓
-Igor aprova decisões do spike
+Gate visual manual do Módulo 9
          ↓
-Módulo 9 — Implementação 9.2
+Módulo 10A — Arquitetura de artefatos de leitura
          ↓
-Gate 9 → 10 (Igor valida visualmente)
+Módulo 10B — Redesign visual compartilhado / ajustes finos de CSS
          ↓
-Módulo 10
+Módulo 10C — Spike de guia de estudo com LLM
          ↓
-Gate 10 → PRD v4
+Módulo 10D — Implementação do guia de estudo
+         ↓
+Módulo 10E — Configuração de modelos por tarefa
+         ↓
+Módulo 11 — Gestão completa de memória no app
+         ↓
+Gate 11 → PRD v4
 ```
 
 Nenhum módulo começa antes do gate do anterior ser aprovado por Igor.
