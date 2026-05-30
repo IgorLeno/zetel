@@ -17,6 +17,7 @@ import type { Root as MdastRoot } from 'mdast';
 import type { Element, Root as HastRoot, RootContent as HastContent } from 'hast';
 import type { Parent } from 'unist';
 import type { LanguageFn } from 'highlight.js';
+import postcss, { type Rule } from 'postcss';
 import javascript from 'highlight.js/lib/languages/javascript';
 import typescript from 'highlight.js/lib/languages/typescript';
 import python from 'highlight.js/lib/languages/python';
@@ -131,28 +132,12 @@ function inlineKatexWoff2(css: string, fontsDir: string): string {
  */
 function scopeDarkSelectors(css: string): string {
   const scope = '[data-theme="dark"]';
-  const commentRe = /\/\*[\s\S]*?\*\//g;
-
-  const scopeChunk = (chunk: string): string =>
-    chunk.replace(/(?:^|})\s*([^{}@][^{}]*?)\s*\{/g, (match, sel: string) => {
-      const brace = match.startsWith('}') ? '}' : '';
-      const scoped = sel
-        .split(',')
-        .map((s) => `${scope} ${s.trim()}`)
-        .join(', ');
-      return `${brace}\n${scoped} {`;
-    });
-
-  let out = '';
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = commentRe.exec(css)) !== null) {
-    out += scopeChunk(css.slice(last, m.index));
-    out += m[0];
-    last = m.index + m[0].length;
-  }
-  out += scopeChunk(css.slice(last));
-  return out;
+  const root = postcss.parse(css);
+  root.walkRules((rule: Rule) => {
+    if (rule.parent?.type === 'atrule' && rule.parent.name === 'keyframes') return;
+    rule.selectors = rule.selectors.map((sel: string) => `${scope} ${sel.trim()}`);
+  });
+  return root.toString();
 }
 
 /** CSS do KaTeX (com fontes woff2 inline) + highlight.js claro + escuro escopado. */
@@ -188,6 +173,19 @@ function countTr(node: HastContent): number {
     if (el.tagName === 'tr') n++;
   });
   return n;
+}
+
+type SegmentedNode = SegmentedPage['nodes'][number];
+
+function mdastPlainText(node: SegmentedNode): string {
+  const n = node as { value?: unknown; children?: SegmentedNode[] };
+  if (typeof n.value === 'string') return n.value;
+  if (Array.isArray(n.children)) return n.children.map(mdastPlainText).join('');
+  return '';
+}
+
+function isWhitespaceOnlyMdastNode(node: SegmentedNode): boolean {
+  return mdastPlainText(node).trim().length === 0;
 }
 
 /** Converte nós MDAST de uma página em HTML sanitizado (KaTeX + highlight.js). */
@@ -573,8 +571,11 @@ export async function renderZetel(
 
   // Dívida HTML-1: primeira página só com um heading isolado vira capa.
   const first = segmented[0];
+  const filteredNodes = first
+    ? first.nodes.filter((node) => !isWhitespaceOnlyMdastNode(node))
+    : [];
   const coverIndex =
-    first && first.nodes.length === 1 && first.nodes[0].type === 'heading' ? 0 : -1;
+    filteredNodes.length === 1 && filteredNodes[0].type === 'heading' ? 0 : -1;
 
   const pageHtmlParts: string[] = [];
   for (const page of segmented) {
