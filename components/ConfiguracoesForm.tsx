@@ -8,12 +8,18 @@ export function ConfiguracoesForm({
   initialVaultPath,
   hasKey,
   initialModel,
+  initialStudyGuideModel,
   initialHistoryWindow,
+  initialStudyGuideMaxTokens,
+  initialStudyGuideTimeoutS,
 }: {
   initialVaultPath: string;
   hasKey: boolean;
   initialModel: string;
+  initialStudyGuideModel: string;
   initialHistoryWindow: number;
+  initialStudyGuideMaxTokens: number;
+  initialStudyGuideTimeoutS: number;
 }) {
   // ── Vault ──
   const [vaultPath, setVaultPath] = useState(initialVaultPath);
@@ -32,9 +38,16 @@ export function ConfiguracoesForm({
 
   // ── Modelo e chat ──
   const [model, setModel] = useState(initialModel);
+  const [studyGuideModel, setStudyGuideModel] = useState(initialStudyGuideModel);
   const [historyWindow, setHistoryWindow] = useState(String(initialHistoryWindow));
   const [modelFeedback, setModelFeedback] = useState<Feedback>(null);
   const [savingModel, setSavingModel] = useState(false);
+
+  // ── Limites de geração (LLM) ──
+  const [maxTokens, setMaxTokens] = useState(String(initialStudyGuideMaxTokens));
+  const [timeoutS, setTimeoutS] = useState(String(initialStudyGuideTimeoutS));
+  const [limitsFeedback, setLimitsFeedback] = useState<Feedback>(null);
+  const [savingLimits, setSavingLimits] = useState(false);
 
   async function saveVault() {
     setSavingVault(true);
@@ -122,12 +135,13 @@ export function ConfiguracoesForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           default_model: model.trim(),
+          study_guide_model: studyGuideModel.trim(),
           chat_history_window: windowNum,
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        setModelFeedback({ kind: 'ok', text: 'Modelo e janela de histórico salvos.' });
+        setModelFeedback({ kind: 'ok', text: 'Modelos e janela de histórico salvos.' });
       } else {
         setModelFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar.' });
       }
@@ -135,6 +149,41 @@ export function ConfiguracoesForm({
       setModelFeedback({ kind: 'err', text: 'Erro de rede ao salvar.' });
     } finally {
       setSavingModel(false);
+    }
+  }
+
+  async function saveLimits() {
+    const tokensNum = Number.parseInt(maxTokens, 10);
+    if (!Number.isFinite(tokensNum) || tokensNum < 4000 || tokensNum > 32000) {
+      setLimitsFeedback({ kind: 'err', text: 'Máximo de tokens deve ser entre 4000 e 32000.' });
+      return;
+    }
+    const timeoutNum = Number.parseInt(timeoutS, 10);
+    if (!Number.isFinite(timeoutNum) || timeoutNum < 30 || timeoutNum > 300) {
+      setLimitsFeedback({ kind: 'err', text: 'Timeout deve ser entre 30 e 300 segundos.' });
+      return;
+    }
+    setSavingLimits(true);
+    setLimitsFeedback(null);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          study_guide_max_tokens: tokensNum,
+          study_guide_timeout_s: timeoutNum,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLimitsFeedback({ kind: 'ok', text: 'Limites de geração salvos.' });
+      } else {
+        setLimitsFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar.' });
+      }
+    } catch {
+      setLimitsFeedback({ kind: 'err', text: 'Erro de rede ao salvar.' });
+    } finally {
+      setSavingLimits(false);
     }
   }
 
@@ -223,6 +272,26 @@ export function ConfiguracoesForm({
       </div>
 
       <div className="field">
+        <label className="field-label" htmlFor="study-guide-model">
+          Modelo do Guia de Estudo
+        </label>
+        <div className="field-row">
+          <input
+            id="study-guide-model"
+            className="input"
+            type="text"
+            placeholder="Mesmo que o modelo padrão"
+            value={studyGuideModel}
+            onChange={(e) => setStudyGuideModel(e.target.value)}
+          />
+        </div>
+        <p className="field-hint">
+          Modelo usado exclusivamente para gerar o Guia de Estudo. Deixe em branco para usar o
+          modelo padrão.
+        </p>
+      </div>
+
+      <div className="field">
         <label className="field-label" htmlFor="history-window">
           Janela de histórico
         </label>
@@ -241,6 +310,54 @@ export function ConfiguracoesForm({
           Quantas mensagens anteriores enviar ao parceiro em cada turno (1–50, padrão 10).
         </p>
         {modelFeedback && <p className={`feedback ${modelFeedback.kind}`}>{modelFeedback.text}</p>}
+      </div>
+
+      {/* ── Limites de Geração (LLM) ── */}
+      <div className="section-title">Limites de Geração (LLM)</div>
+      <div className="field">
+        <label className="field-label" htmlFor="study-guide-max-tokens">
+          Máximo de tokens (guia)
+        </label>
+        <div className="field-row">
+          <input
+            id="study-guide-max-tokens"
+            className="input"
+            type="number"
+            min={4000}
+            max={32000}
+            value={maxTokens}
+            onChange={(e) => setMaxTokens(e.target.value)}
+          />
+        </div>
+        <p className="field-hint">
+          Limite de tokens da resposta do modelo ao gerar o Guia de Estudo (4000–32000).
+        </p>
+      </div>
+
+      <div className="field">
+        <label className="field-label" htmlFor="study-guide-timeout">
+          Timeout de resposta (segundos)
+        </label>
+        <div className="field-row">
+          <input
+            id="study-guide-timeout"
+            className="input"
+            type="number"
+            min={30}
+            max={300}
+            value={timeoutS}
+            onChange={(e) => setTimeoutS(e.target.value)}
+          />
+          <button className="btn" onClick={saveLimits} disabled={savingLimits} type="button">
+            {savingLimits ? 'Salvando…' : 'Salvar'}
+          </button>
+        </div>
+        <p className="field-hint">
+          Tempo máximo para a resposta do modelo ao gerar o Guia de Estudo (30–300s).
+        </p>
+        {limitsFeedback && (
+          <p className={`feedback ${limitsFeedback.kind}`}>{limitsFeedback.text}</p>
+        )}
       </div>
     </div>
   );

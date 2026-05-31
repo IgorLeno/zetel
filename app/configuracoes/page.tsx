@@ -11,10 +11,19 @@ export default function ConfiguracoesPage() {
   const vaultPath = getSetting('vault_path') ?? '';
   const hasKey = getOpenRouterKey() !== null;
   const model = getSetting('default_model') ?? getOpenRouterModel();
+  const studyGuideModel = getSetting('study_guide_model') ?? '';
   const rawWindow = getSetting('chat_history_window');
   const historyWindow = rawWindow
     ? Math.min(50, Math.max(1, Number.parseInt(rawWindow, 10) || 10))
     : 10;
+  const rawMaxTokens = getSetting('study_guide_max_tokens');
+  const studyGuideMaxTokens = rawMaxTokens
+    ? Math.min(32000, Math.max(4000, Number.parseInt(rawMaxTokens, 10) || 16000))
+    : 16000;
+  const rawTimeout = getSetting('study_guide_timeout_s');
+  const studyGuideTimeoutS = rawTimeout
+    ? Math.min(300, Math.max(30, Number.parseInt(rawTimeout, 10) || 120))
+    : 120;
 
   return (
     <>
@@ -27,7 +36,10 @@ export default function ConfiguracoesPage() {
             initialVaultPath={vaultPath}
             hasKey={hasKey}
             initialModel={model}
+            initialStudyGuideModel={studyGuideModel}
             initialHistoryWindow={historyWindow}
+            initialStudyGuideMaxTokens={studyGuideMaxTokens}
+            initialStudyGuideTimeoutS={studyGuideTimeoutS}
           />
         </div>
       </div>

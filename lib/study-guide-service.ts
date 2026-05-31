@@ -796,10 +796,43 @@ function resolveStudyGuideModel(explicit?: string): string {
   return getOpenRouterModel();
 }
 
-/** max_tokens dimensionado pelo tamanho do catálogo (Spike 10C: ~4k consumidos). */
-function sizeMaxTokens(blockCount: number): number {
+// Limites de geração (configuráveis em Configurações → Limites de Geração).
+const STUDY_GUIDE_MAX_TOKENS_FLOOR = 4000;
+const STUDY_GUIDE_MAX_TOKENS_MAX = 32000;
+const DEFAULT_STUDY_GUIDE_MAX_TOKENS = 16000;
+const STUDY_GUIDE_TIMEOUT_S_MIN = 30;
+const STUDY_GUIDE_TIMEOUT_S_MAX = 300;
+const DEFAULT_STUDY_GUIDE_TIMEOUT_S = 120;
+
+/**
+ * max_tokens dimensionado pelo tamanho do catálogo (Spike 10C: ~4k consumidos),
+ * limitado pelo teto configurado (`study_guide_max_tokens`).
+ */
+function sizeMaxTokens(blockCount: number, ceiling: number): number {
   const sized = 4000 + blockCount * 120;
-  return Math.max(4000, Math.min(16000, sized));
+  return Math.max(STUDY_GUIDE_MAX_TOKENS_FLOOR, Math.min(ceiling, sized));
+}
+
+/** Lê e limita o teto de tokens configurado (default 16000, faixa 4000–32000). */
+function resolveStudyGuideMaxTokensCeiling(): number {
+  const raw = getSetting('study_guide_max_tokens');
+  if (!raw) return DEFAULT_STUDY_GUIDE_MAX_TOKENS;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n)) return DEFAULT_STUDY_GUIDE_MAX_TOKENS;
+  return Math.min(STUDY_GUIDE_MAX_TOKENS_MAX, Math.max(STUDY_GUIDE_MAX_TOKENS_FLOOR, n));
+}
+
+/** Lê e limita o timeout configurado em ms (default 120s, faixa 30–300s). */
+function resolveStudyGuideTimeoutMs(): number {
+  const raw = getSetting('study_guide_timeout_s');
+  let s = DEFAULT_STUDY_GUIDE_TIMEOUT_S;
+  if (raw) {
+    const n = Number.parseInt(raw, 10);
+    if (Number.isFinite(n)) {
+      s = Math.min(STUDY_GUIDE_TIMEOUT_S_MAX, Math.max(STUDY_GUIDE_TIMEOUT_S_MIN, n));
+    }
+  }
+  return s * 1000;
 }
 
 const CATALOG_SNIPPET_CHARS = 220;
@@ -869,7 +902,8 @@ export async function generateStudyGuide(
 
   const index = buildSourceIndex(files);
   const model = resolveStudyGuideModel(explicitModel);
-  const maxTokens = sizeMaxTokens(index.blocks.length);
+  const maxTokens = sizeMaxTokens(index.blocks.length, resolveStudyGuideMaxTokensCeiling());
+  const timeoutMs = resolveStudyGuideTimeoutMs();
   const catalogBudget = catalogPromptCharBudget(index.blocks.length, maxTokens);
   const { blocks: catalogBlocks, omitted: catalogOmitted } = selectBlocksForCatalog(
     index.blocks,
@@ -894,9 +928,17 @@ export async function generateStudyGuide(
     model,
     blocks: index.blocks.length,
     maxTokens,
+    timeoutMs,
   });
 
-  const { content, usage } = await requestJson({ apiKey, model, system, user, maxTokens });
+  const { content, usage } = await requestJson({
+    apiKey,
+    model,
+    system,
+    user,
+    maxTokens,
+    timeoutMs,
+  });
 
   let parsed: unknown;
   try {

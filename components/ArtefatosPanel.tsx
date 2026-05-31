@@ -28,12 +28,21 @@ interface ArtifactsInfo {
     pagesCount: number;
   };
   guiaEstudo: {
-    exists: false;
+    exists: boolean;
     filename: 'guia-estudo.html';
-    metaExists: false;
+    metaExists: boolean;
     metaFilename: 'guia-estudo.meta.json';
-    sourceExists: false;
+    sourceExists: boolean;
     sourceFilename: 'guia-estudo.source.json';
+    model: string | null;
+    generatedAt: string | null;
+    counts: {
+      cards: number;
+      secoes: number;
+      glossario: number;
+      quiz: number;
+      zettelkasten: number;
+    } | null;
   };
 }
 
@@ -87,6 +96,10 @@ export function ArtefatosPanel({ zetelId }: { zetelId: string }) {
     window.open(`/api/zetels/${zetelId}/leitura`, '_blank', 'noopener,noreferrer');
   }
 
+  function onOpenGuide() {
+    window.open(`/api/zetels/${zetelId}/guia-estudo`, '_blank', 'noopener,noreferrer');
+  }
+
   if (loading) {
     return <div className="empty-state"><div>Carregando artefatos…</div></div>;
   }
@@ -96,6 +109,7 @@ export function ArtefatosPanel({ zetelId }: { zetelId: string }) {
   }
 
   const html = info?.leituraHtml;
+  const guia = info?.guiaEstudo;
   if (!html?.exists) {
     return (
       <div className="empty-state">
@@ -128,6 +142,34 @@ export function ArtefatosPanel({ zetelId }: { zetelId: string }) {
           </button>
         </div>
       </div>
+      {guia?.exists && (
+        <div className="artefato-card">
+          <div className="artefato-name">{guia.filename}</div>
+          <div className="file-meta">
+            {guia.generatedAt ? formatRelative(guia.generatedAt) : '—'}
+            {' · '}
+            {guia.model ?? '—'}
+          </div>
+          {guia.counts && (
+            <div className="file-meta">
+              {guia.counts.cards} cards
+              {' · '}
+              {guia.counts.secoes} seções
+              {' · '}
+              {guia.counts.glossario} glossário
+              {' · '}
+              {guia.counts.quiz} quiz
+              {' · '}
+              {guia.counts.zettelkasten} zettelkasten
+            </div>
+          )}
+          <div className="artefato-actions">
+            <button type="button" className="btn" onClick={onOpenGuide}>
+              Abrir Guia
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
