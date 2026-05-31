@@ -671,6 +671,11 @@ Etapa 9.2 (implementação). Decisões do spike 9.1 aplicadas a `lib/render-serv
 Mistake: parser sem `remark-frontmatter` tratava `--- ... ---` como nós Markdown comuns (`thematicBreak`, `paragraph`, `list`) e `segmentFile` persistia isso como a primeira página.
 Rule: qualquer sintaxe Markdown que muda a árvore usada por `segmentFile` deve entrar no parser compartilhado por `processZetel` e `renderZetel`; frontmatter inicial deve virar nó `yaml` e ser removido antes de segmentar.
 
+### Backticks são código, não matemática inline
+[2026-05-30] Context: nota DFT renderizava expressões como `\hat{H}`, `\Psi`, `\rho(r)`, `E[\rho]`, `N`, `3N` e `U` em caixas cinza.
+Mistake: o Markdown usava backticks para variáveis/fórmulas físicas; isso cria nós `inlineCode`, que o `rehype-katex` não processa.
+Rule: em notas técnicas, símbolos, operadores e fórmulas matemáticas inline devem usar `$...$`; backticks ficam reservados para código real, comandos, APIs e nomes técnicos que devem aparecer como código (ex.: família de métodos `3c`).
+
 ### Sanitize: KaTeX some em silêncio sem o subset MathML
 - `appSanitizeSchema` (defaultSchema + className/id) remove `<math>`/`<mrow>`/`style`
   → equações desaparecem sem erro. Liberar: tags MathML (lista do spike +

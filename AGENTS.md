@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 10A implementado. Próximo passo operacional: Módulo 10B — Redesign visual compartilhado / ajustes finos.**
+**Estado atual: Módulo 10B implementado. Próximo passo operacional: Módulo 10C — Spike de guia de estudo com LLM.**
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
@@ -30,8 +30,10 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 - **M6-2** — saudação automática quando histórico vazio (I1); pós-MVP
 
 #### Próximos passos
-- Gate manual → declarar **MVP TEXTUAL ENTREGUE**
-- Próximo passo operacional: **Módulo 10B — Redesign visual compartilhado / ajustes finos** (PRD v3, ver `prd-v3.md`)
+- Gate visual/manual do Documento Técnico refinado, se necessário.
+- Próximo passo operacional: **Módulo 10C — Spike de guia de estudo com LLM** (PRD v3, ver `prd-v3.md`)
+
+**Módulo 10B (Redesign visual compartilhado / ajustes finos) implementado em 2026-05-30; `pnpm build` limpo; smoke com Zetel DFT real confirmou KaTeX inline renderizado, sem caixas `<code>` para expressões matemáticas, mantendo `3c` como código.** Entregou: refinamento visual do Documento Técnico em `lib/render-service.ts` (tokens semânticos de tema, capa com marca/metadados, tipografia, KaTeX com fundo/borda/scroll, blockquotes, listas aninhadas, tabelas, mini-índice com scroll/ativo e navegação); ajuste dos controles 10A em `app/globals.css`; `remark-frontmatter` + `parseMarkdownForSegmentation` compartilhado em `lib/ingestao-service.ts` para remover YAML inicial antes da segmentação e preservar paridade `processZetel`/`renderZetel`; correção de conteúdo no vault ativo `zetels/dft2/arquivos/dft_teoria_funcional_densidade.md`, trocando backticks matemáticos por `$...$`. Sem migration SQLite; sem alteração de contratos de API; Regra #1 e Regra #2 preservadas. Ver `spikes/lessons.md` (Módulos 9/10B).
 
 **Módulo 10A (Arquitetura de artefatos de leitura) implementado em 2026-05-30; `pnpm build` limpo; smoke em HOME/vault temporários confirmou geração canônica `artefatos/leitura-tecnica.html`, metadata `mode:"tecnico"`, fallback legado `artefatos/leitura.html` com `mode:"legado"` e `/api/zetels/:id/leitura` servindo o legado.** Entregou: `renderZetel` grava Documento Técnico em `leitura-tecnica.html`; `resolveLeituraHtmlArtifact` prioriza canônico e cai para legado; `/artifacts` expõe `mode`, `openArtifact`, `documentoTecnico` e placeholder `guiaEstudo.exists:false`; UI de Leitura ganhou seletor de modo com Documento Técnico ativo e Guia de Estudo desabilitado ("Em breve"); alternância de artefatos existe condicionada a dois artefatos; aba Artefatos exibe `leitura-tecnica.html` ou `leitura.html (legado)`. Sem migration SQLite; sem alteração em `lib/ingestao-service.ts`; Regra #1 e Regra #2 preservadas.
 
