@@ -70,6 +70,8 @@ export function LeituraPanel({
   const [currentGuideBlockId, setCurrentGuideBlockId] = useState<string | null>(null);
   const [currentGuideSectionId, setCurrentGuideSectionId] = useState<string | null>(null);
   const [currentGuideBlockTitle, setCurrentGuideBlockTitle] = useState<string | null>(null);
+  const [currentGuideBlockIndex, setCurrentGuideBlockIndex] = useState<number | null>(null);
+  const [currentGuideBlockTotal, setCurrentGuideBlockTotal] = useState<number | null>(null);
   // Força recarregar o iframe após gerar/atualizar (mesmo quando o src não muda).
   const [reloadNonce, setReloadNonce] = useState(0);
 
@@ -135,10 +137,18 @@ export function LeituraPanel({
           setCurrentGuideBlockTitle(
             typeof e.data.guideBlockTitle === 'string' ? e.data.guideBlockTitle : null,
           );
+          setCurrentGuideBlockIndex(
+            typeof e.data.guideBlockIndex === 'number' ? e.data.guideBlockIndex : null,
+          );
+          setCurrentGuideBlockTotal(
+            typeof e.data.guideBlockTotal === 'number' ? e.data.guideBlockTotal : null,
+          );
         } else {
           setCurrentGuideBlockId(null);
           setCurrentGuideSectionId(null);
           setCurrentGuideBlockTitle(null);
+          setCurrentGuideBlockIndex(null);
+          setCurrentGuideBlockTotal(null);
         }
       }
     };
@@ -152,6 +162,8 @@ export function LeituraPanel({
     setCurrentGuideBlockId(null);
     setCurrentGuideSectionId(null);
     setCurrentGuideBlockTitle(null);
+    setCurrentGuideBlockIndex(null);
+    setCurrentGuideBlockTotal(null);
   }, [viewArtifact]);
 
   useEffect(() => {
@@ -292,6 +304,8 @@ export function LeituraPanel({
               currentGuideBlockId={currentGuideBlockId}
               currentGuideSectionId={currentGuideSectionId}
               currentGuideBlockTitle={currentGuideBlockTitle}
+              currentGuideBlockIndex={currentGuideBlockIndex}
+              currentGuideBlockTotal={currentGuideBlockTotal}
             />
           </div>
         </div>

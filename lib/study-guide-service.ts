@@ -746,6 +746,31 @@ function computeTraceability(guia: StudyGuide, index: SourceIndex): Traceability
 // Template determinístico (R1/R2: HTML do template, CSS inline, sem CDN)
 // ---------------------------------------------------------------------------
 
+type BlockIndexMap = Map<string, { index: number; total: number }>;
+
+/**
+ * Mapeia cada guide_block_id → posição global na sequência visual do Guia.
+ * Ordem: resumo/capa → cards → seções → blocos v2 (comp, acc, time, table)
+ * → glossário → quiz → zettelkasten.
+ * Não usa pageIndex — é numeração exclusiva do Guia, para localização visual.
+ */
+function buildBlockIndexMap(guia: StudyGuide): BlockIndexMap {
+  const ids: string[] = ['resumo'];
+  for (const c of guia.cards) ids.push(c.guide_block_id);
+  for (const s of guia.secoes) ids.push(s.guide_block_id);
+  for (const c of guia.comparison_tabs ?? []) ids.push(c.guide_block_id);
+  for (const a of guia.accordions ?? []) ids.push(a.guide_block_id);
+  for (const t of guia.timelines ?? []) ids.push(t.guide_block_id);
+  for (const t of guia.tables ?? []) ids.push(t.guide_block_id);
+  for (const g of guia.glossario) ids.push(g.guide_block_id);
+  for (const q of guia.quiz) ids.push(q.guide_block_id);
+  for (const p of guia.perguntas_zettelkasten) ids.push(p.guide_block_id);
+  const total = ids.length;
+  const map: BlockIndexMap = new Map();
+  ids.forEach((id, i) => map.set(id, { index: i + 1, total }));
+  return map;
+}
+
 function esc(text: unknown): string {
   return String(text ?? '')
     .replace(/&/g, '&amp;')
@@ -775,10 +800,15 @@ function guideBlockAttrs(
   sectionId: string,
   title: string,
   sourceMap: StudyGuideSourceMap,
+  blockIndexMap?: BlockIndexMap,
 ): string {
+  const entry = blockIndexMap?.get(id);
+  const idxAttrs = entry
+    ? ` data-guide-block-index="${entry.index}" data-guide-block-total="${entry.total}"`
+    : '';
   return `${pageAttr(id, sourceMap)} data-guide-block-id="${esc(id)}" data-guide-section-id="${esc(
     sectionId,
-  )}" data-guide-block-title="${esc(title)}"`;
+  )}" data-guide-block-title="${esc(title)}"${idxAttrs}`;
 }
 
 /** Badge discreto de rastreabilidade (trilha de headings + nº de blocos válidos). */
@@ -845,6 +875,7 @@ function renderTable(table: Pick<EditorialTableItem, 'colunas' | 'linhas'>): str
 function renderComparisonTabs(
   items: ComparisonTabsItem[],
   sourceMap: StudyGuideSourceMap,
+  blockIndexMap?: BlockIndexMap,
 ): string {
   return items
     .map((item, i) => {
@@ -875,6 +906,7 @@ function renderComparisonTabs(
         'comparison_tabs',
         item.titulo,
         sourceMap,
+        blockIndexMap,
       )}>
         <h3>${esc(item.titulo)}</h3>
         ${tabButtons}
@@ -885,7 +917,7 @@ function renderComparisonTabs(
     .join('\n');
 }
 
-function renderAccordions(items: AccordionItem[], sourceMap: StudyGuideSourceMap): string {
+function renderAccordions(items: AccordionItem[], sourceMap: StudyGuideSourceMap, blockIndexMap?: BlockIndexMap): string {
   if (items.length === 0) return '';
   const rendered = items
     .map((item, i) => {
@@ -895,6 +927,7 @@ function renderAccordions(items: AccordionItem[], sourceMap: StudyGuideSourceMap
         'accordions',
         item.titulo,
         sourceMap,
+        blockIndexMap,
       )}>
         <details>
           <summary>${esc(item.titulo)}</summary>
@@ -907,7 +940,7 @@ function renderAccordions(items: AccordionItem[], sourceMap: StudyGuideSourceMap
   return `<div class="accordion-list">${rendered}</div>`;
 }
 
-function renderTimelines(items: TimelineItem[], sourceMap: StudyGuideSourceMap): string {
+function renderTimelines(items: TimelineItem[], sourceMap: StudyGuideSourceMap, blockIndexMap?: BlockIndexMap): string {
   return items
     .map((item, i) => {
       const id = `timeline-${i + 1}`;
@@ -924,6 +957,7 @@ function renderTimelines(items: TimelineItem[], sourceMap: StudyGuideSourceMap):
         'timelines',
         item.titulo,
         sourceMap,
+        blockIndexMap,
       )}>
         <h3>${esc(item.titulo)}</h3>
         <ol>${steps}</ol>
@@ -936,6 +970,7 @@ function renderTimelines(items: TimelineItem[], sourceMap: StudyGuideSourceMap):
 function renderEditorialTables(
   items: EditorialTableItem[],
   sourceMap: StudyGuideSourceMap,
+  blockIndexMap?: BlockIndexMap,
 ): string {
   return items
     .map((item, i) => {
@@ -945,6 +980,7 @@ function renderEditorialTables(
         'tables',
         item.titulo,
         sourceMap,
+        blockIndexMap,
       )}>
         <h3>${esc(item.titulo)}</h3>
         ${renderTable(item)}
@@ -954,16 +990,16 @@ function renderEditorialTables(
     .join('\n');
 }
 
-function renderV2Blocks(guia: StudyGuide, sourceMap: StudyGuideSourceMap): string {
-  const comparison = renderComparisonTabs(guia.comparison_tabs ?? [], sourceMap);
-  const accordions = renderAccordions(guia.accordions ?? [], sourceMap);
-  const timelines = renderTimelines(guia.timelines ?? [], sourceMap);
-  const tables = renderEditorialTables(guia.tables ?? [], sourceMap);
+function renderV2Blocks(guia: StudyGuide, sourceMap: StudyGuideSourceMap, blockIndexMap?: BlockIndexMap): string {
+  const comparison = renderComparisonTabs(guia.comparison_tabs ?? [], sourceMap, blockIndexMap);
+  const accordions = renderAccordions(guia.accordions ?? [], sourceMap, blockIndexMap);
+  const timelines = renderTimelines(guia.timelines ?? [], sourceMap, blockIndexMap);
+  const tables = renderEditorialTables(guia.tables ?? [], sourceMap, blockIndexMap);
   const content = [comparison, accordions, timelines, tables].filter(Boolean).join('\n');
   return content ? `<section class="v2-blocks" aria-label="Blocos editoriais">${content}</section>` : '';
 }
 
-function renderCards(cards: CardItem[], sourceMap: StudyGuideSourceMap): string {
+function renderCards(cards: CardItem[], sourceMap: StudyGuideSourceMap, blockIndexMap?: BlockIndexMap): string {
   const items = cards
     .map(
       (c) => `<div class="card"${guideBlockAttrs(
@@ -971,6 +1007,7 @@ function renderCards(cards: CardItem[], sourceMap: StudyGuideSourceMap): string 
         'conceitos-chave',
         c.titulo,
         sourceMap,
+        blockIndexMap,
       )}>
       <h3>${esc(c.titulo)}</h3>
       <p>${esc(c.conteudo)}</p>
@@ -981,7 +1018,7 @@ function renderCards(cards: CardItem[], sourceMap: StudyGuideSourceMap): string 
   return `<section id="conceitos-chave" data-nav-section="conceitos-chave"><h2>Conceitos-chave</h2><div class="card-grid">${items}</div></section>`;
 }
 
-function renderSecoes(secoes: SecaoItem[], sourceMap: StudyGuideSourceMap): string {
+function renderSecoes(secoes: SecaoItem[], sourceMap: StudyGuideSourceMap, blockIndexMap?: BlockIndexMap): string {
   const items = secoes
     .map(
       (s, i) => `<article id="secao-${i + 1}" class="secao" data-nav-section="secao-${i + 1}"${guideBlockAttrs(
@@ -989,6 +1026,7 @@ function renderSecoes(secoes: SecaoItem[], sourceMap: StudyGuideSourceMap): stri
         'secoes',
         s.titulo,
         sourceMap,
+        blockIndexMap,
       )}>
       <h3>${esc(s.titulo)}</h3>
       ${paragraphs(s.conteudo)}
@@ -999,7 +1037,7 @@ function renderSecoes(secoes: SecaoItem[], sourceMap: StudyGuideSourceMap): stri
   return `<section id="secoes" class="secoes" data-nav-section="secoes"><h2>Seções</h2>${items}</section>`;
 }
 
-function renderGlossario(glossario: GlossarioItem[], sourceMap: StudyGuideSourceMap): string {
+function renderGlossario(glossario: GlossarioItem[], sourceMap: StudyGuideSourceMap, blockIndexMap?: BlockIndexMap): string {
   const items = glossario
     .map(
       (g) => `<div class="termo"${guideBlockAttrs(
@@ -1007,6 +1045,7 @@ function renderGlossario(glossario: GlossarioItem[], sourceMap: StudyGuideSource
         'glossario',
         g.termo,
         sourceMap,
+        blockIndexMap,
       )} data-search-text="${esc(
         `${g.termo} ${g.definicao}`.toLocaleLowerCase('pt-BR'),
       )}">
@@ -1022,7 +1061,7 @@ function renderGlossario(glossario: GlossarioItem[], sourceMap: StudyGuideSource
   </section>`;
 }
 
-function renderQuiz(quiz: QuizItem[], sourceMap: StudyGuideSourceMap): string {
+function renderQuiz(quiz: QuizItem[], sourceMap: StudyGuideSourceMap, blockIndexMap?: BlockIndexMap): string {
   const items = quiz
     .map((q, i) => {
       const correctIndex = Math.max(0, q.opcoes.findIndex((o) => o === q.resposta_correta));
@@ -1037,6 +1076,7 @@ function renderQuiz(quiz: QuizItem[], sourceMap: StudyGuideSourceMap): string {
         'quiz',
         q.pergunta,
         sourceMap,
+        blockIndexMap,
       )}>
       <p class="quiz-q"><strong>${i + 1}.</strong> ${esc(q.pergunta)}</p>
       <div class="quiz-opts">${opts}</div>
@@ -1049,7 +1089,7 @@ function renderQuiz(quiz: QuizItem[], sourceMap: StudyGuideSourceMap): string {
   return `<section id="quiz" data-nav-section="quiz"><div class="quiz-head"><h2>Quiz</h2><div class="quiz-score" id="quiz-score">Pontuação: 0 / 0</div><button type="button" id="quiz-reset" class="quiz-reset">Reiniciar quiz</button></div>${items}</section>`;
 }
 
-function renderZettelkasten(perguntas: ZkItem[], sourceMap: StudyGuideSourceMap): string {
+function renderZettelkasten(perguntas: ZkItem[], sourceMap: StudyGuideSourceMap, blockIndexMap?: BlockIndexMap): string {
   const items = perguntas
     .map(
       (p) =>
@@ -1058,6 +1098,7 @@ function renderZettelkasten(perguntas: ZkItem[], sourceMap: StudyGuideSourceMap)
           'zettelkasten',
           p.pergunta,
           sourceMap,
+          blockIndexMap,
         )}>${esc(p.pergunta)} ${traceBadge(p.guide_block_id, sourceMap)}</li>`,
     )
     .join('\n');
@@ -1325,6 +1366,12 @@ function guideNavScript(): string {
     if (blockId) payload.guideBlockId = blockId;
     if (sectionId) payload.guideSectionId = sectionId;
     if (title) payload.guideBlockTitle = title;
+    var blockIndexRaw = el.getAttribute('data-guide-block-index');
+    var blockTotalRaw = el.getAttribute('data-guide-block-total');
+    var blockIndex = blockIndexRaw != null ? Number(blockIndexRaw) : NaN;
+    var blockTotal = blockTotalRaw != null ? Number(blockTotalRaw) : NaN;
+    if (!isNaN(blockIndex)) payload.guideBlockIndex = blockIndex;
+    if (!isNaN(blockTotal)) payload.guideBlockTotal = blockTotal;
     return payload;
   }
   var lastLocation = '';
@@ -1450,6 +1497,8 @@ export function renderStudyGuideHtml(
     buildDate = builtAt.slice(0, 10);
   }
 
+  const blockIndexMap = buildBlockIndexMap(guia);
+
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1468,15 +1517,15 @@ export function renderStudyGuideHtml(
         <span class="brand">⚡ Zetel · Guia de Estudo</span>
         <h1>${esc(guia.titulo)}</h1>
         <p class="sub">${esc(guia.subtitulo)}</p>
-        <div class="resumo"${guideBlockAttrs('resumo', 'capa', 'Resumo', sourceMap)}>${paragraphs(guia.resumo.texto)}${traceBadge('resumo', sourceMap)}</div>
+        <div class="resumo"${guideBlockAttrs('resumo', 'capa', 'Resumo', sourceMap, blockIndexMap)}>${paragraphs(guia.resumo.texto)}${traceBadge('resumo', sourceMap)}</div>
         <p class="sub" style="font-size:13px;margin-top:18px">${esc(displayName)} · Gerado em ${esc(buildDate)}</p>
       </header>
-      ${renderCards(guia.cards, sourceMap)}
-      ${renderSecoes(guia.secoes, sourceMap)}
-      ${renderV2Blocks(guia, sourceMap)}
-      ${renderGlossario(guia.glossario, sourceMap)}
-      ${renderQuiz(guia.quiz, sourceMap)}
-      ${renderZettelkasten(guia.perguntas_zettelkasten, sourceMap)}
+      ${renderCards(guia.cards, sourceMap, blockIndexMap)}
+      ${renderSecoes(guia.secoes, sourceMap, blockIndexMap)}
+      ${renderV2Blocks(guia, sourceMap, blockIndexMap)}
+      ${renderGlossario(guia.glossario, sourceMap, blockIndexMap)}
+      ${renderQuiz(guia.quiz, sourceMap, blockIndexMap)}
+      ${renderZettelkasten(guia.perguntas_zettelkasten, sourceMap, blockIndexMap)}
       <footer>Renderizado por template determinístico (sem LLM). O conteúdo editorial foi gerado por IA a partir do material; verifique a origem nos selos de rastreabilidade.</footer>
     </main>
   </div>

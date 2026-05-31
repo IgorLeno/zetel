@@ -52,7 +52,11 @@ assert.match(source, /class="timeline"/, 'timelines deve renderizar fluxo sequen
 assert.match(source, /class="editorial-table-wrap"/, 'tables deve renderizar wrapper com scroll horizontal');
 assert.match(source, /data-tab-target/, 'script inline deve alternar abas de comparison_tabs');
 assert.match(source, /data-guide-block-id/, 'template deve marcar blocos com guide_block_id');
+assert.match(source, /data-guide-block-index/, 'template deve incluir numeracao global do bloco');
+assert.match(source, /data-guide-block-total/, 'template deve incluir total de blocos');
 assert.match(source, /readingMode:'guia-estudo'/, 'postMessage do guia deve informar readingMode guia-estudo');
+assert.match(source, /guideBlockIndex/, 'postMessage deve incluir guideBlockIndex');
+assert.match(source, /guideBlockTotal/, 'postMessage deve incluir guideBlockTotal');
 assert.equal(
   source.match(/new IntersectionObserver/g)?.length,
   1,
@@ -114,6 +118,9 @@ assert.doesNotMatch(v1Html, /class="v2-blocks"/, 'guia v1 nao deve renderizar se
 assert.match(v1Html, /data-guide-block-id="card1"/, 'cards devem expor guide_block_id no HTML');
 assert.match(v1Html, /data-guide-section-id="conceitos-chave"/, 'cards devem expor secao visual no HTML');
 assert.match(v1Html, /data-guide-block-title="Card"/, 'cards devem expor titulo simples no HTML');
+// Base guide: resumo(1)+card1(2)+sec1(3)+glo1(4)+quiz1(5)+zk1(6) = 6 total
+assert.match(v1Html, /data-guide-block-index="1" data-guide-block-total="6"/, 'resumo deve ter index 1 de 6');
+assert.match(v1Html, /data-guide-block-index="2" data-guide-block-total="6"/, 'card deve ter index 2 de 6');
 
 const v2SourceMap = {
   ...sourceMap,
@@ -150,5 +157,8 @@ assert.match(v2Html, /class="timeline-marker">1<\/span>/, 'timelines devem rende
 assert.match(v2Html, /id="editorial-table-1" class="editorial-table" data-nav-section="editorial-table-1" data-page="9"/, 'tables devem ter ancora, nav-section e data-page');
 assert.match(v2Html, /id="comparison-1"[^>]+data-guide-block-id="comp1"[^>]+data-guide-section-id="comparison_tabs"/, 'blocos v2 devem expor localizacao visual');
 assert.match(v2Html, /↳ Tabela · 1 bloco\(s\) de origem/, 'blocos v2 devem exibir traceBadge');
+// V2 guide: resumo(1)+card1(2)+sec1(3)+comp1(4)+acc1(5)+time1(6)+table1(7)+glo1(8)+quiz1(9)+zk1(10) = 10 total
+assert.match(v2Html, /data-guide-block-index="4" data-guide-block-total="10"/, 'comparison_tabs deve ter index 4 de 10');
+assert.match(v2Html, /data-guide-block-index="1" data-guide-block-total="10"/, 'resumo deve ter index 1 de 10 no guia v2');
 
 console.log('study-guide template checks passed');

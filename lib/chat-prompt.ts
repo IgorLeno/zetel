@@ -89,6 +89,10 @@ export interface ReadingLocationContext {
   guideBlockId?: string | null;
   guideSectionId?: string | null;
   guideBlockTitle?: string | null;
+  /** Posição global do bloco na sequência visual do Guia (1-based). */
+  guideBlockIndex?: number | null;
+  /** Total de blocos visuais do Guia. */
+  guideBlockTotal?: number | null;
   sourceHeadings?: string[];
   sourceBlockHashes?: string[];
   sourceFiles?: string[];
@@ -200,17 +204,25 @@ export function buildOpenRouterMessages(opts: {
 
   if (opts.readingLocation) {
     const loc = opts.readingLocation;
+    const isGuia = loc.readingMode === 'guia-estudo';
     const lines = [
       'Localização visual atual do usuário:',
-      `- Modo de leitura: ${loc.readingMode === 'guia-estudo' ? 'Guia de Estudo' : 'Documento Técnico'}`,
-      `- Página atual: ${typeof loc.pageIndex === 'number' ? loc.pageIndex : 'desconhecida'}`,
+      `- Modo de leitura: ${isGuia ? 'Guia de Estudo' : 'Documento Técnico'}`,
     ];
-    if (loc.readingMode === 'guia-estudo') {
+
+    if (isGuia) {
+      // Localização principal: bloco visual do Guia
+      if (typeof loc.guideBlockIndex === 'number' && typeof loc.guideBlockTotal === 'number') {
+        lines.push(`- Bloco visual atual do Guia: ${loc.guideBlockIndex} de ${loc.guideBlockTotal}`);
+      } else if (loc.guideBlockId) {
+        lines.push(`- Bloco visual do Guia: ${loc.guideBlockId}`);
+      }
       if (loc.guideSectionId) lines.push(`- Seção visual do Guia: ${loc.guideSectionId}`);
-      if (loc.guideBlockId) lines.push(`- Bloco visual do Guia: ${loc.guideBlockId}`);
       if (loc.guideBlockTitle) lines.push(`- Título do bloco visual: ${loc.guideBlockTitle}`);
+      if (loc.guideBlockId) lines.push(`- ID interno do bloco: ${loc.guideBlockId}`);
+      // Localização secundária: origem no Markdown
       if (loc.sourceHeadings?.length) {
-        lines.push(`- Origem no Markdown: ${loc.sourceHeadings.join(' > ')}`);
+        lines.push(`- Headings de origem no Markdown: ${loc.sourceHeadings.join(' > ')}`);
       }
       if (loc.sourceFiles?.length) {
         lines.push(`- Arquivo(s) de origem: ${loc.sourceFiles.join(', ')}`);
@@ -221,14 +233,28 @@ export function buildOpenRouterMessages(opts: {
       if (loc.sourceBlockHashes?.length) {
         lines.push(`- Hash(es) de origem validado(s): ${loc.sourceBlockHashes.join(', ')}`);
       }
+      lines.push(
+        'INSTRUÇÃO DE LOCALIZAÇÃO: Quando o usuário perguntar "em que página estou?", "em que bloco estou?" ou "onde estou?", responda primeiro com o bloco visual atual do Guia (ex: "Você está no bloco X de Y, seção Z, intitulado W"). NÃO chame o pageIndex de "página atual do Guia" — o pageIndex é apenas a página de origem no Markdown e deve ser mencionado só como informação secundária.',
+      );
+      lines.push(
+        'INSTRUÇÃO DE SUGESTÃO: Para perguntas de localização, navegação, página, seção ou bloco atual, responda com texto visível normal e NÃO proponha nota nem memória nesse turno.',
+      );
+    } else {
+      // Documento Técnico
+      lines.push(
+        `- Página atual do Documento Técnico: ${typeof loc.pageIndex === 'number' ? loc.pageIndex : 'desconhecida'}`,
+      );
+      lines.push(
+        'Use esta localização para responder perguntas como "onde estou?" ou "qual página estou vendo"; use o Markdown como fonte principal de conhecimento.',
+      );
     }
-    lines.push(
-      'Use esta localização para responder perguntas como "onde estou?" ou "qual bloco estou vendo"; use o Markdown como fonte principal de conhecimento.',
-    );
+
     messages.push({ role: 'user', content: lines.join('\n') });
     messages.push({
       role: 'assistant',
-      content: 'Entendido. Vou usar a localização visual apenas como orientação de navegação.',
+      content: isGuia
+        ? 'Entendido. Vou usar o bloco visual do Guia como referência principal de localização. Para perguntas de localização, responderei com o número do bloco e seção sem propor notas ou memórias.'
+        : 'Entendido. Vou usar a localização visual apenas como orientação de navegação.',
     });
   }
 
@@ -244,6 +270,8 @@ export function buildOpenRouterMessages(opts: {
   }
 
   for (const m of opts.history) {
+    // Filtra mensagens vazias — podem existir no SQLite por bugs anteriores (Tarefa 7).
+    if (!m.content.trim()) continue;
     messages.push({
       role: m.role,
       content: m.content,

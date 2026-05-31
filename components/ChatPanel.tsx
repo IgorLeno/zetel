@@ -70,6 +70,8 @@ export function ChatPanel({
   currentGuideBlockId,
   currentGuideSectionId,
   currentGuideBlockTitle,
+  currentGuideBlockIndex,
+  currentGuideBlockTotal,
 }: {
   zetelId: string;
   currentReadingMode: ReadingMode;
@@ -77,6 +79,8 @@ export function ChatPanel({
   currentGuideBlockId: string | null;
   currentGuideSectionId: string | null;
   currentGuideBlockTitle: string | null;
+  currentGuideBlockIndex: number | null;
+  currentGuideBlockTotal: number | null;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState('');
@@ -181,6 +185,8 @@ export function ChatPanel({
           guideBlockId: currentGuideBlockId,
           guideSectionId: currentGuideSectionId,
           guideBlockTitle: currentGuideBlockTitle,
+          guideBlockIndex: currentGuideBlockIndex,
+          guideBlockTotal: currentGuideBlockTotal,
         }),
       });
 

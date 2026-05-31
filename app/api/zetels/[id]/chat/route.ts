@@ -127,6 +127,8 @@ export async function POST(request: Request, { params }: Ctx) {
     guideBlockId?: unknown;
     guideSectionId?: unknown;
     guideBlockTitle?: unknown;
+    guideBlockIndex?: unknown;
+    guideBlockTotal?: unknown;
   };
   try {
     body = await request.json();
@@ -163,6 +165,14 @@ export async function POST(request: Request, { params }: Ctx) {
   const guideBlockId = optionalShortString(body.guideBlockId, 120);
   const guideSectionId = optionalShortString(body.guideSectionId, 120);
   const guideBlockTitle = optionalShortString(body.guideBlockTitle, 300);
+
+  function optionalPositiveInt(value: unknown): number | null {
+    if (value === undefined || value === null) return null;
+    const n = typeof value === 'number' ? value : Number.parseInt(String(value), 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  const guideBlockIndex = readingMode === 'guia-estudo' ? optionalPositiveInt(body.guideBlockIndex) : null;
+  const guideBlockTotal = readingMode === 'guia-estudo' ? optionalPositiveInt(body.guideBlockTotal) : null;
 
   let guideSourceEntry: SourceMapEntry | null = null;
   const vaultPath = getSetting('vault_path');
@@ -237,6 +247,8 @@ export async function POST(request: Request, { params }: Ctx) {
     guideBlockId,
     guideSectionId,
     guideBlockTitle,
+    guideBlockIndex,
+    guideBlockTotal,
     sourceHeadings: guideSourceEntry?.source_headings,
     sourceBlockHashes: guideSourceEntry?.source_block_hashes,
     sourceFiles: guideSourceEntry?.source_files,
@@ -346,6 +358,7 @@ export async function POST(request: Request, { params }: Ctx) {
         const cut = earliestMark(fullContent);
         const finalNarrative = cut !== -1 ? fullContent.slice(0, cut).trim() : narrative;
         const hasSuggestion = Boolean(suggestion || memorySuggestion);
+        const rawHadContent = fullContent.trim().length > 0;
         const assistantContent =
           finalNarrative ||
           (hasSuggestion
@@ -353,12 +366,44 @@ export async function POST(request: Request, { params }: Ctx) {
             : '');
 
         if (!assistantContent) {
-          logger.warn('chat stream ended without visible content', { zetelId, model });
-          controller.enqueue(
-            encoder.encode(
-              'data: [ERROR] O parceiro encerrou a resposta sem conteúdo visível. Tente novamente.\n\n',
-            ),
-          );
+          if (rawHadContent) {
+            // Conteúdo bruto chegou mas a narrativa ficou vazia após o corte dos
+            // marcadores (sentinela malformada ou incompleta sem sugestão válida).
+            logger.warn('chat stream: narrative cut without parseable suggestion', {
+              zetelId,
+              model,
+              rawLength: fullContent.length,
+              markerFound: markerFound ? 1 : 0,
+              suggestionParsed: suggestion ? 1 : 0,
+              memorySuggestionParsed: memorySuggestion ? 1 : 0,
+            });
+            const fallback =
+              'Não consegui formar uma resposta textual completa neste turno. Tente reformular a pergunta ou pergunte diretamente pelo bloco atual do Guia.';
+            emit(fallback);
+            saveMessage(db, {
+              zetelId,
+              role: 'assistant',
+              content: fallback,
+              pageIndex,
+              model,
+              meta: {
+                pageAnchor,
+                pageHashMatch,
+                tokensIn: usageSink.tokensIn,
+                tokensOut: usageSink.tokensOut,
+                readingMode,
+                guideBlockId: guideBlockId ?? undefined,
+                guideSectionId: guideSectionId ?? undefined,
+              },
+            });
+          } else {
+            logger.warn('chat stream ended without visible content', { zetelId, model });
+            controller.enqueue(
+              encoder.encode(
+                'data: [ERROR] O parceiro encerrou a resposta sem conteúdo visível. Tente novamente.\n\n',
+              ),
+            );
+          }
           controller.close();
           return;
         }
