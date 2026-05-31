@@ -281,16 +281,16 @@ export function ConfiguracoesForm({
 
   async function testModelField(
     modelValue: string,
-    setTesting: (v: boolean) => void,
-    setTestFeedback: (f: Feedback) => void,
+    setIsTesting: (v: boolean) => void,
+    setFeedback: (f: Feedback) => void,
   ) {
     const trimmed = modelValue.trim();
     if (!trimmed) {
-      setTestFeedback({ kind: 'err', text: 'Informe o identificador do modelo.' });
+      setFeedback({ kind: 'err', text: 'Informe o identificador do modelo.' });
       return;
     }
-    setTesting(true);
-    setTestFeedback(null);
+    setIsTesting(true);
+    setFeedback(null);
     try {
       const res = await fetch('/api/openrouter/test-model', {
         method: 'POST',
@@ -299,17 +299,17 @@ export function ConfiguracoesForm({
       });
       const data = await res.json();
       if (res.ok && data.ok) {
-        setTestFeedback({
+        setFeedback({
           kind: 'ok',
           text: `✓ Conectado (modelo: ${data.model ?? trimmed})`,
         });
       } else {
-        setTestFeedback({ kind: 'err', text: data.error ?? 'Falha na conexão.' });
+        setFeedback({ kind: 'err', text: data.error ?? 'Falha na conexão.' });
       }
     } catch {
-      setTestFeedback({ kind: 'err', text: 'Erro de rede ao testar o modelo.' });
+      setFeedback({ kind: 'err', text: 'Erro de rede ao testar o modelo.' });
     } finally {
-      setTesting(false);
+      setIsTesting(false);
     }
   }
 

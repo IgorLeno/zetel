@@ -26,11 +26,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, model });
   } catch (err) {
     const message =
-      err instanceof Error && err.message.includes('não configurada')
+      err instanceof Error
         ? err.message
-        : err instanceof Error
-          ? err.message
-          : 'Não foi possível conectar ao OpenRouter. Verifique a chave e o modelo.';
+        : 'Não foi possível conectar ao OpenRouter. Verifique a chave e o modelo.';
     logger.warn('openrouter test-model failed', {
       error: err instanceof Error ? err.message : 'unknown',
     });

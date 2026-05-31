@@ -248,7 +248,6 @@ export async function pingChat(apiKey: string, model: string): Promise<void> {
       signal: controller.signal,
     });
   } catch (err) {
-    clearTimeout(timer);
     if ((err as Error)?.name === 'AbortError') {
       throw new Error(`OpenRouter: timeout após ${Math.round(PING_CHAT_TIMEOUT_MS / 1000)}s`);
     }
