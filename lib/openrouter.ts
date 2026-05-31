@@ -150,10 +150,10 @@ export interface RequestJsonResult {
 const REQUEST_JSON_TIMEOUT_MS = 120_000;
 
 /**
- * Chamada NÃO-streaming pedindo JSON estruturado (Módulo 10D / Guia de Estudo).
+ * Chamada NÃO-streaming para resposta JSON (Módulo 10D / Guia de Estudo).
  * Espelha o padrão de `streamChat` (fetch, mesmos headers, sem SDK) e do spike
- * `run-guia.mjs`. Pede `response_format: json_object`; modelos que o ignoram ainda
- * funcionam pelo parser tolerante a montante (R6). Não loga conteúdo (regra #6).
+ * `run-guia.mjs`. O prompt instrui retorno JSON; parser tolerante downstream (R6).
+ * Não loga conteúdo (regra #6).
  */
 export async function requestJson(params: RequestJsonParams): Promise<RequestJsonResult> {
   const { apiKey, model, system, user, maxTokens, temperature = 0.3 } = params;
@@ -180,7 +180,6 @@ export async function requestJson(params: RequestJsonParams): Promise<RequestJso
         stream: false,
         max_tokens: maxTokens,
         temperature,
-        response_format: { type: 'json_object' },
       }),
       signal: controller.signal,
     });
@@ -225,21 +224,39 @@ export async function requestJson(params: RequestJsonParams): Promise<RequestJso
   return { content, usage };
 }
 
+const PING_CHAT_TIMEOUT_MS = 15_000;
+
 /** Chamada mínima para validar chave + modelo (Configurações). */
 export async function pingChat(apiKey: string, model: string): Promise<void> {
-  const res = await fetch(OPENROUTER_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'http://localhost',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: 'ok' }],
-      max_tokens: 1,
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PING_CHAT_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'http://localhost',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: 'ok' }],
+        max_tokens: 1,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if ((err as Error)?.name === 'AbortError') {
+      throw new Error(`OpenRouter: timeout após ${Math.round(PING_CHAT_TIMEOUT_MS / 1000)}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+
   if (!res.ok) {
     throw new Error(`OpenRouter: ${res.status}`);
   }

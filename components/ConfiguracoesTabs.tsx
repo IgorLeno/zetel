@@ -11,21 +11,25 @@ export function ConfiguracoesTabs({
   hasKey,
   initialModel,
   initialStudyGuideModel,
+  initialTechDocModel,
   initialHistoryWindow,
   initialStudyGuideMaxTokens,
   initialStudyGuideTimeoutS,
   initialModelHistory,
   initialStudyGuideModelHistory,
+  initialTechDocModelHistory,
 }: {
   initialVaultPath: string;
   hasKey: boolean;
   initialModel: string;
   initialStudyGuideModel: string;
+  initialTechDocModel: string;
   initialHistoryWindow: number;
   initialStudyGuideMaxTokens: number;
   initialStudyGuideTimeoutS: number;
   initialModelHistory: string[];
   initialStudyGuideModelHistory: string[];
+  initialTechDocModelHistory: string[];
 }) {
   const [tab, setTab] = useState<Tab>('geral');
 
@@ -54,11 +58,13 @@ export function ConfiguracoesTabs({
           hasKey={hasKey}
           initialModel={initialModel}
           initialStudyGuideModel={initialStudyGuideModel}
+          initialTechDocModel={initialTechDocModel}
           initialHistoryWindow={initialHistoryWindow}
           initialStudyGuideMaxTokens={initialStudyGuideMaxTokens}
           initialStudyGuideTimeoutS={initialStudyGuideTimeoutS}
           initialModelHistory={initialModelHistory}
           initialStudyGuideModelHistory={initialStudyGuideModelHistory}
+          initialTechDocModelHistory={initialTechDocModelHistory}
         />
       ) : (
         <LixeiraPanel />

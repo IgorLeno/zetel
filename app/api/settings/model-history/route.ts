@@ -5,7 +5,7 @@ import { parseModelHistory } from '@/lib/model-history';
 
 export const runtime = 'nodejs';
 
-const VALID_KEYS = ['model_history', 'study_guide_model_history'] as const;
+const VALID_KEYS = ['model_history', 'study_guide_model_history', 'tech_doc_model_history'] as const;
 type HistoryKey = (typeof VALID_KEYS)[number];
 
 function isHistoryKey(value: unknown): value is HistoryKey {

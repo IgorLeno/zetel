@@ -33,6 +33,8 @@ export default function ConfiguracoesPage() {
     : DEFAULT_STUDY_GUIDE_TIMEOUT_S;
   const modelHistory = parseModelHistory(getSetting('model_history'));
   const studyGuideModelHistory = parseModelHistory(getSetting('study_guide_model_history'));
+  const techDocModelHistory = parseModelHistory(getSetting('tech_doc_model_history'));
+  const techDocModel = getSetting('tech_doc_model') ?? '';
 
   return (
     <>
@@ -46,11 +48,13 @@ export default function ConfiguracoesPage() {
             hasKey={hasKey}
             initialModel={model}
             initialStudyGuideModel={studyGuideModel}
+            initialTechDocModel={techDocModel}
             initialHistoryWindow={historyWindow}
             initialStudyGuideMaxTokens={studyGuideMaxTokens}
             initialStudyGuideTimeoutS={studyGuideTimeoutS}
             initialModelHistory={modelHistory}
             initialStudyGuideModelHistory={studyGuideModelHistory}
+            initialTechDocModelHistory={techDocModelHistory}
           />
         </div>
       </div>

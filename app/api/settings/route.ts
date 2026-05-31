@@ -35,6 +35,7 @@ function readSettingsPayload() {
   return {
     default_model: defaultModel,
     study_guide_model: getSetting('study_guide_model'),
+    tech_doc_model: getSetting('tech_doc_model'),
     chat_history_window: chatHistoryWindow,
     max_words_per_page: maxWords ? Number.parseInt(maxWords, 10) : null,
     study_guide_max_tokens: clampInt(
@@ -51,6 +52,7 @@ function readSettingsPayload() {
     ),
     model_history: parseModelHistory(getSetting('model_history')),
     study_guide_model_history: parseModelHistory(getSetting('study_guide_model_history')),
+    tech_doc_model_history: parseModelHistory(getSetting('tech_doc_model_history')),
   };
 }
 
@@ -64,6 +66,7 @@ export async function PUT(request: Request) {
   let body: {
     default_model?: unknown;
     study_guide_model?: unknown;
+    tech_doc_model?: unknown;
     chat_history_window?: unknown;
     max_words_per_page?: unknown;
     study_guide_max_tokens?: unknown;
@@ -107,6 +110,26 @@ export async function PUT(request: Request) {
     } else {
       deleteSetting('study_guide_model');
       updated.push('study_guide_model');
+    }
+  }
+
+  // Modelo dedicado do Documento Técnico: vazio = limpar (volta ao modelo padrão).
+  if (body.tech_doc_model !== undefined) {
+    if (typeof body.tech_doc_model !== 'string') {
+      return NextResponse.json({ error: 'Modelo do Documento Técnico inválido.' }, { status: 400 });
+    }
+    const tdModel = body.tech_doc_model.trim();
+    if (tdModel) {
+      setSetting('tech_doc_model', tdModel);
+      const tdHistory = prependModelHistory(
+        parseModelHistory(getSetting('tech_doc_model_history')),
+        tdModel,
+      );
+      setSetting('tech_doc_model_history', JSON.stringify(tdHistory));
+      updated.push('tech_doc_model', 'tech_doc_model_history');
+    } else {
+      deleteSetting('tech_doc_model');
+      updated.push('tech_doc_model');
     }
   }
 

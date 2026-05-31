@@ -9,11 +9,12 @@ import {
 } from '@/lib/study-guide-constants';
 
 type Feedback = { kind: 'ok' | 'err'; text: string } | null;
-type HistoryKey = 'model_history' | 'study_guide_model_history';
+type HistoryKey = 'model_history' | 'study_guide_model_history' | 'tech_doc_model_history';
 
 type SettingsResponse = {
   model_history?: unknown;
   study_guide_model_history?: unknown;
+  tech_doc_model_history?: unknown;
   history?: unknown;
   error?: string;
 };
@@ -125,21 +126,25 @@ export function ConfiguracoesForm({
   hasKey,
   initialModel,
   initialStudyGuideModel,
+  initialTechDocModel,
   initialHistoryWindow,
   initialStudyGuideMaxTokens,
   initialStudyGuideTimeoutS,
   initialModelHistory,
   initialStudyGuideModelHistory,
+  initialTechDocModelHistory,
 }: {
   initialVaultPath: string;
   hasKey: boolean;
   initialModel: string;
   initialStudyGuideModel: string;
+  initialTechDocModel: string;
   initialHistoryWindow: number;
   initialStudyGuideMaxTokens: number;
   initialStudyGuideTimeoutS: number;
   initialModelHistory: string[];
   initialStudyGuideModelHistory: string[];
+  initialTechDocModelHistory: string[];
 }) {
   // ── Vault ──
   const [vaultPath, setVaultPath] = useState(initialVaultPath);
@@ -160,7 +165,9 @@ export function ConfiguracoesForm({
   const [model, setModel] = useState(initialModel);
   const [modelHistory, setModelHistory] = useState(initialModelHistory);
   const [defaultModelFeedback, setDefaultModelFeedback] = useState<Feedback>(null);
+  const [defaultModelTestFeedback, setDefaultModelTestFeedback] = useState<Feedback>(null);
   const [savingDefaultModel, setSavingDefaultModel] = useState(false);
+  const [testingDefaultModel, setTestingDefaultModel] = useState(false);
 
   // ── Modelo do Guia de Estudo ──
   const [studyGuideModel, setStudyGuideModel] = useState(initialStudyGuideModel);
@@ -168,7 +175,17 @@ export function ConfiguracoesForm({
     initialStudyGuideModelHistory,
   );
   const [studyGuideModelFeedback, setStudyGuideModelFeedback] = useState<Feedback>(null);
+  const [studyGuideModelTestFeedback, setStudyGuideModelTestFeedback] = useState<Feedback>(null);
   const [savingStudyGuideModel, setSavingStudyGuideModel] = useState(false);
+  const [testingStudyGuideModel, setTestingStudyGuideModel] = useState(false);
+
+  // ── Modelo do Documento Técnico ──
+  const [techDocModel, setTechDocModel] = useState(initialTechDocModel);
+  const [techDocModelHistory, setTechDocModelHistory] = useState(initialTechDocModelHistory);
+  const [techDocModelFeedback, setTechDocModelFeedback] = useState<Feedback>(null);
+  const [techDocModelTestFeedback, setTechDocModelTestFeedback] = useState<Feedback>(null);
+  const [savingTechDocModel, setSavingTechDocModel] = useState(false);
+  const [testingTechDocModel, setTestingTechDocModel] = useState(false);
 
   // ── Janela de histórico ──
   const [historyWindow, setHistoryWindow] = useState(String(initialHistoryWindow));
@@ -188,6 +205,7 @@ export function ConfiguracoesForm({
   const [historyFeedback, setHistoryFeedback] = useState<Record<HistoryKey, Feedback>>({
     model_history: null,
     study_guide_model_history: null,
+    tech_doc_model_history: null,
   });
 
   async function saveVault() {
@@ -261,6 +279,40 @@ export function ConfiguracoesForm({
     }
   }
 
+  async function testModelField(
+    modelValue: string,
+    setTesting: (v: boolean) => void,
+    setTestFeedback: (f: Feedback) => void,
+  ) {
+    const trimmed = modelValue.trim();
+    if (!trimmed) {
+      setTestFeedback({ kind: 'err', text: 'Informe o identificador do modelo.' });
+      return;
+    }
+    setTesting(true);
+    setTestFeedback(null);
+    try {
+      const res = await fetch('/api/openrouter/test-model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: trimmed }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setTestFeedback({
+          kind: 'ok',
+          text: `✓ Conectado (modelo: ${data.model ?? trimmed})`,
+        });
+      } else {
+        setTestFeedback({ kind: 'err', text: data.error ?? 'Falha na conexão.' });
+      }
+    } catch {
+      setTestFeedback({ kind: 'err', text: 'Erro de rede ao testar o modelo.' });
+    } finally {
+      setTesting(false);
+    }
+  }
+
   async function saveDefaultModel() {
     const trimmed = model.trim();
     if (!trimmed) {
@@ -288,6 +340,21 @@ export function ConfiguracoesForm({
       (data) => {
         if (Array.isArray(data.study_guide_model_history)) {
           setStudyGuideModelHistory(data.study_guide_model_history);
+        }
+      },
+    );
+  }
+
+  async function saveTechDocModelField() {
+    const trimmed = techDocModel.trim();
+    await persistSetting(
+      { tech_doc_model: trimmed },
+      setSavingTechDocModel,
+      setTechDocModelFeedback,
+      trimmed ? 'Modelo do Documento Técnico salvo.' : 'Modelo do Documento Técnico removido.',
+      (data) => {
+        if (Array.isArray(data.tech_doc_model_history)) {
+          setTechDocModelHistory(data.tech_doc_model_history);
         }
       },
     );
@@ -370,8 +437,10 @@ export function ConfiguracoesForm({
       }
       if (key === 'model_history') {
         setModelHistory(data.history);
-      } else {
+      } else if (key === 'study_guide_model_history') {
         setStudyGuideModelHistory(data.history);
+      } else {
+        setTechDocModelHistory(data.history);
       }
     } catch (err) {
       const message =
@@ -445,9 +514,12 @@ export function ConfiguracoesForm({
         {testFeedback && <p className={`feedback ${testFeedback.kind}`}>{testFeedback.text}</p>}
       </div>
 
+      {/* ── Configuração de Modelos ── */}
+      <div className="section-title">Configuração de Modelos</div>
+
       <div className="field">
         <label className="field-label" htmlFor="model">
-          Modelo padrão
+          Modelo padrão (parceiro de estudo)
         </label>
         <div className="field-row">
           <input
@@ -466,10 +538,25 @@ export function ConfiguracoesForm({
           >
             {savingDefaultModel ? 'Salvando…' : 'Salvar'}
           </button>
+          <button
+            className="btn"
+            onClick={() =>
+              testModelField(model, setTestingDefaultModel, setDefaultModelTestFeedback)
+            }
+            disabled={testingDefaultModel}
+            type="button"
+          >
+            {testingDefaultModel ? 'Testando…' : 'Testar'}
+          </button>
         </div>
         <p className="field-hint">Identificador do modelo no OpenRouter usado pelo parceiro.</p>
         {defaultModelFeedback && (
           <p className={`feedback ${defaultModelFeedback.kind}`}>{defaultModelFeedback.text}</p>
+        )}
+        {defaultModelTestFeedback && (
+          <p className={`feedback ${defaultModelTestFeedback.kind}`}>
+            {defaultModelTestFeedback.text}
+          </p>
         )}
         <ModelHistoryDropdown
           history={modelHistory}
@@ -504,6 +591,20 @@ export function ConfiguracoesForm({
           >
             {savingStudyGuideModel ? 'Salvando…' : 'Salvar'}
           </button>
+          <button
+            className="btn"
+            onClick={() =>
+              testModelField(
+                studyGuideModel,
+                setTestingStudyGuideModel,
+                setStudyGuideModelTestFeedback,
+              )
+            }
+            disabled={testingStudyGuideModel}
+            type="button"
+          >
+            {testingStudyGuideModel ? 'Testando…' : 'Testar'}
+          </button>
         </div>
         <p className="field-hint">
           Modelo usado exclusivamente para gerar o Guia de Estudo. Deixe em branco para usar o
@@ -514,6 +615,11 @@ export function ConfiguracoesForm({
             {studyGuideModelFeedback.text}
           </p>
         )}
+        {studyGuideModelTestFeedback && (
+          <p className={`feedback ${studyGuideModelTestFeedback.kind}`}>
+            {studyGuideModelTestFeedback.text}
+          </p>
+        )}
         <ModelHistoryDropdown
           history={studyGuideModelHistory}
           onUse={setStudyGuideModel}
@@ -522,6 +628,62 @@ export function ConfiguracoesForm({
         {historyFeedback.study_guide_model_history && (
           <p className={`feedback ${historyFeedback.study_guide_model_history.kind}`}>
             {historyFeedback.study_guide_model_history.text}
+          </p>
+        )}
+      </div>
+
+      <div className="field">
+        <label className="field-label" htmlFor="tech-doc-model">
+          Modelo do Documento Técnico
+        </label>
+        <div className="field-row">
+          <input
+            id="tech-doc-model"
+            className="input"
+            type="text"
+            placeholder="Mesmo que o modelo padrão"
+            value={techDocModel}
+            onChange={(e) => setTechDocModel(e.target.value)}
+          />
+          <button
+            className="btn"
+            onClick={saveTechDocModelField}
+            disabled={savingTechDocModel}
+            type="button"
+          >
+            {savingTechDocModel ? 'Salvando…' : 'Salvar'}
+          </button>
+          <button
+            className="btn"
+            onClick={() =>
+              testModelField(techDocModel, setTestingTechDocModel, setTechDocModelTestFeedback)
+            }
+            disabled={testingTechDocModel}
+            type="button"
+          >
+            {testingTechDocModel ? 'Testando…' : 'Testar'}
+          </button>
+        </div>
+        <p className="field-hint">
+          Modelo reservado para tarefas do Documento Técnico. Deixe em branco para usar o modelo
+          padrão.
+        </p>
+        {techDocModelFeedback && (
+          <p className={`feedback ${techDocModelFeedback.kind}`}>{techDocModelFeedback.text}</p>
+        )}
+        {techDocModelTestFeedback && (
+          <p className={`feedback ${techDocModelTestFeedback.kind}`}>
+            {techDocModelTestFeedback.text}
+          </p>
+        )}
+        <ModelHistoryDropdown
+          history={techDocModelHistory}
+          onUse={setTechDocModel}
+          onRemove={(entry) => removeFromHistory('tech_doc_model_history', entry)}
+        />
+        {historyFeedback.tech_doc_model_history && (
+          <p className={`feedback ${historyFeedback.tech_doc_model_history.kind}`}>
+            {historyFeedback.tech_doc_model_history.text}
           </p>
         )}
       </div>
