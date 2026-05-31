@@ -15,10 +15,24 @@ export function sha256(data) {
   return createHash('sha256').update(data).digest('hex');
 }
 
+/** Separadores ao achatar filhos de nós de bloco MDAST (legibilidade de snippets). */
+const BLOCK_CHILD_SEP = {
+  table: '\n',
+  tableRow: ' ',
+  tableCell: ' ',
+  list: '\n',
+  listItem: ' ',
+  paragraph: ' ',
+  heading: ' ',
+};
+
 /** Texto plano de um nó MDAST (concatena `value` recursivamente). */
 function toPlainText(node) {
   if (typeof node?.value === 'string') return node.value;
-  if (Array.isArray(node?.children)) return node.children.map(toPlainText).join('');
+  if (Array.isArray(node?.children)) {
+    const sep = BLOCK_CHILD_SEP[node.type] ?? '';
+    return node.children.map(toPlainText).join(sep);
+  }
   return '';
 }
 
@@ -41,7 +55,7 @@ export function parseMarkdownForSegmentation(markdown) {
 
 /**
  * Segmenta o Markdown em blocos de topo, anexando a trilha de headings ativa.
- * Retorna: { blocks: [{ block_id, type, depth, heading_path, text, sha256 }], byHash: Map }.
+ * Retorna: { blocks: [{ block_id, type, depth, heading_path, text, sha256 }], byHash: Map<hash, block[]> }.
  *
  * Headings entram no catálogo como blocos próprios E atualizam o contexto de
  * heading_path dos blocos seguintes — assim cada parágrafo/tabela/equação sabe
@@ -84,7 +98,9 @@ export function buildSourceIndex(markdown, sourceFile) {
       sha256: hash,
     };
     blocks.push(block);
-    if (!byHash.has(hash)) byHash.set(hash, block);
+    const existing = byHash.get(hash);
+    if (existing) existing.push(block);
+    else byHash.set(hash, [block]);
   }
 
   return { sourceFile, blocks, byHash };

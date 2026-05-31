@@ -12,6 +12,7 @@ import { buildSourceIndex, catalogForPrompt } from './lib-source-index.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_TIMEOUT_MS = 120_000;
 const SOURCE_FILE = 'input.md';
 
 // ---------------------------------------------------------------------------
@@ -235,25 +236,38 @@ async function main() {
   console.log(`[spike-10c] prompt: ~${promptChars} chars (~${Math.round(promptChars / 4)} tokens estimados)`);
   console.log('[spike-10c] chamando OpenRouter (não-streaming)…');
 
-  const res = await fetch(OPENROUTER_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'http://localhost',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      stream: false,
-      max_tokens: 8000,
-      temperature: 0.4,
-      response_format: { type: 'json_object' },
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'http://localhost',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        stream: false,
+        max_tokens: 8000,
+        temperature: 0.4,
+        response_format: { type: 'json_object' },
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error(`OpenRouter: timeout após ${OPENROUTER_TIMEOUT_MS / 1000}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
