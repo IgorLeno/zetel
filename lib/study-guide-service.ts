@@ -927,28 +927,34 @@ function guideNavScript(): string {
     }, { threshold: 0.15 });
     blocks.forEach(function(b){ io.observe(b); });
   } else if (blocks.length) {
-    var fallbackTimer = null;
-    function fallbackUpdate(){
+    var pollInterval = 250;
+    function checkViewport(){
       var focusLine = window.innerHeight * 0.35;
-      for (var n = 0; n < blocks.length; n += 1) {
-        var el = blocks[n];
-        if (!el.hasAttribute('data-page')) continue;
-        var r = el.getBoundingClientRect();
-        if (r.top <= focusLine && r.bottom >= focusLine) {
-          var i = Number(el.getAttribute('data-page'));
-          if (!isNaN(i) && i !== last) { last = i; post(i); }
+      for (var b = 0; b < blocks.length; b += 1) {
+        var block = blocks[b];
+        var rect = block.getBoundingClientRect();
+        if (rect.top <= focusLine && rect.bottom >= focusLine) {
+          if (block.hasAttribute('data-page')) {
+            var idx = Number(block.getAttribute('data-page'));
+            if (!isNaN(idx) && idx !== last) { last = idx; post(idx); }
+          }
           break;
         }
       }
       updateActiveFromViewport();
     }
-    function throttledFallback(){
-      if (fallbackTimer) return;
-      fallbackTimer = setTimeout(function(){ fallbackTimer = null; fallbackUpdate(); }, 200);
+    var throttleTimer = null;
+    function onScroll(){
+      if (!throttleTimer) {
+        throttleTimer = setTimeout(function(){
+          checkViewport();
+          throttleTimer = null;
+        }, pollInterval);
+      }
     }
-    window.addEventListener('scroll', throttledFallback);
-    window.addEventListener('resize', throttledFallback);
-    fallbackUpdate();
+    window.addEventListener('scroll', onScroll);
+    window.addEventListener('resize', onScroll);
+    checkViewport();
   }
   updateActiveFromViewport();
 })();
