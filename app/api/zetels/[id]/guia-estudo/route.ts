@@ -1,12 +1,15 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
+import { artifactHtmlResponseHeaders } from '@/lib/artifact-html-headers';
 import { resolveStudyGuideArtifact } from '@/lib/study-guide-service';
 import { getZetelById } from '@/lib/zetel-service';
 import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
+
+const NO_VAULT = 'Caminho do vault não configurado. Configure-o em Configurações → Vault.';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -19,10 +22,7 @@ export async function GET(_request: Request, { params }: Ctx) {
 
   const vaultPath = getSetting('vault_path');
   if (!vaultPath) {
-    return NextResponse.json(
-      { error: 'Guia de Estudo não gerado. Use "Gerar Guia de Estudo" na aba Leitura.' },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: NO_VAULT }, { status: 400 });
   }
 
   const zetel = getZetelById(getDb(), id);
@@ -34,16 +34,16 @@ export async function GET(_request: Request, { params }: Ctx) {
   }
 
   const guide = resolveStudyGuideArtifact(vaultPath, zetel.slug);
-  if (!guide || !existsSync(guide.path)) {
+  if (!guide) {
     return NextResponse.json(
       { error: 'Guia de Estudo não gerado. Use "Gerar Guia de Estudo" na aba Leitura.' },
       { status: 404 },
     );
   }
 
-  let html: string;
   try {
-    html = readFileSync(guide.path, 'utf8');
+    const html = await readFile(guide.path, 'utf8');
+    return new NextResponse(html, { headers: artifactHtmlResponseHeaders() });
   } catch (err) {
     logger.error('guia read failed', { zetelId: id, error: (err as Error).message });
     return NextResponse.json(
@@ -51,8 +51,4 @@ export async function GET(_request: Request, { params }: Ctx) {
       { status: 500 },
     );
   }
-
-  return new NextResponse(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8' },
-  });
 }

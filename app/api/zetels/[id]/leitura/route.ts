@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
+import { artifactHtmlResponseHeaders } from '@/lib/artifact-html-headers';
 import { resolveLeituraHtmlArtifact } from '@/lib/render-service';
 import { resolveStudyGuideArtifact } from '@/lib/study-guide-service';
 import { getZetelById } from '@/lib/zetel-service';
@@ -55,9 +56,7 @@ export async function GET(request: Request, { params }: Ctx) {
         { status: 500 },
       );
     }
-    return new NextResponse(guideHtml, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
-    });
+    return new NextResponse(guideHtml, { headers: artifactHtmlResponseHeaders() });
   }
 
   const artifact = resolveLeituraHtmlArtifact(vaultPath, zetel.slug);
@@ -81,7 +80,5 @@ export async function GET(request: Request, { params }: Ctx) {
       { status: 500 },
     );
   }
-  return new NextResponse(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8' },
-  });
+  return new NextResponse(html, { headers: artifactHtmlResponseHeaders() });
 }

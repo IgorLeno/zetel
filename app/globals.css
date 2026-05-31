@@ -560,6 +560,49 @@ body {
 }
 .section-title:first-child { margin-top: 0; }
 
+/* ── Histórico de modelos (Configurações) ── */
+.model-history { margin-top: 8px; }
+.model-history-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: 12.5px var(--font-ui);
+  color: var(--text-3);
+  cursor: pointer;
+}
+.model-history-toggle:hover { color: var(--text-2); }
+.model-history-icon { font-size: 11px; line-height: 1; }
+.model-history-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.model-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12.5px;
+}
+.model-history-item:last-child { border-bottom: none; }
+.model-history-id {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--text-2);
+}
+.model-history-remove { padding: 4px 8px; min-width: 32px; }
+
 /* ── Botão de perigo (variante de .btn — usa o token --danger existente) ── */
 .btn.danger { color: var(--danger); border-color: var(--danger); background: var(--bg); }
 .btn.danger:hover { background: var(--danger); color: var(--text-inv); border-color: var(--danger); }

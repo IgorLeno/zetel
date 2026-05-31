@@ -21,6 +21,14 @@ import {
   type SourceBlock,
   type SourceIndex,
 } from './source-index';
+import {
+  DEFAULT_STUDY_GUIDE_MAX_TOKENS,
+  DEFAULT_STUDY_GUIDE_TIMEOUT_S,
+  STUDY_GUIDE_MAX_TOKENS_MAX,
+  STUDY_GUIDE_MAX_TOKENS_MIN,
+  STUDY_GUIDE_TIMEOUT_S_MAX,
+  STUDY_GUIDE_TIMEOUT_S_MIN,
+} from './study-guide-constants';
 
 /**
  * Pipeline editorial do Guia de Estudo (Módulo 10D, D26/D27). Porta a estratégia
@@ -797,20 +805,14 @@ function resolveStudyGuideModel(explicit?: string): string {
 }
 
 // Limites de geração (configuráveis em Configurações → Limites de Geração).
-const STUDY_GUIDE_MAX_TOKENS_FLOOR = 4000;
-const STUDY_GUIDE_MAX_TOKENS_MAX = 32000;
-const DEFAULT_STUDY_GUIDE_MAX_TOKENS = 16000;
-const STUDY_GUIDE_TIMEOUT_S_MIN = 30;
-const STUDY_GUIDE_TIMEOUT_S_MAX = 300;
-const DEFAULT_STUDY_GUIDE_TIMEOUT_S = 120;
 
 /**
  * max_tokens dimensionado pelo tamanho do catálogo (Spike 10C: ~4k consumidos),
  * limitado pelo teto configurado (`study_guide_max_tokens`).
  */
 function sizeMaxTokens(blockCount: number, ceiling: number): number {
-  const sized = 4000 + blockCount * 120;
-  return Math.max(STUDY_GUIDE_MAX_TOKENS_FLOOR, Math.min(ceiling, sized));
+  const sized = STUDY_GUIDE_MAX_TOKENS_MIN + blockCount * 120;
+  return Math.max(STUDY_GUIDE_MAX_TOKENS_MIN, Math.min(ceiling, sized));
 }
 
 /** Lê e limita o teto de tokens configurado (default 16000, faixa 4000–32000). */
@@ -819,7 +821,7 @@ function resolveStudyGuideMaxTokensCeiling(): number {
   if (!raw) return DEFAULT_STUDY_GUIDE_MAX_TOKENS;
   const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n)) return DEFAULT_STUDY_GUIDE_MAX_TOKENS;
-  return Math.min(STUDY_GUIDE_MAX_TOKENS_MAX, Math.max(STUDY_GUIDE_MAX_TOKENS_FLOOR, n));
+  return Math.min(STUDY_GUIDE_MAX_TOKENS_MAX, Math.max(STUDY_GUIDE_MAX_TOKENS_MIN, n));
 }
 
 /** Lê e limita o timeout configurado em ms (default 120s, faixa 30–300s). */

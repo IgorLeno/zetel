@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getOpenRouterModel, writeConfig } from '@/lib/config';
 import { deleteSetting, getSetting, setSetting } from '@/lib/settings';
+import {
+  DEFAULT_STUDY_GUIDE_MAX_TOKENS,
+  DEFAULT_STUDY_GUIDE_TIMEOUT_S,
+  STUDY_GUIDE_MAX_TOKENS_MAX,
+  STUDY_GUIDE_MAX_TOKENS_MIN,
+  STUDY_GUIDE_TIMEOUT_S_MAX,
+  STUDY_GUIDE_TIMEOUT_S_MIN,
+} from '@/lib/study-guide-constants';
 import { logger } from '@/lib/logger';
+import { parseModelHistory, prependModelHistory } from '@/lib/model-history';
 
 export const runtime = 'nodejs';
 
 const DEFAULT_HISTORY_WINDOW = 10;
-
-// Limites de geração do Guia de Estudo (espelham study-guide-service.ts).
-const DEFAULT_STUDY_GUIDE_MAX_TOKENS = 16000;
-const STUDY_GUIDE_MAX_TOKENS_MIN = 4000;
-const STUDY_GUIDE_MAX_TOKENS_MAX = 32000;
-const DEFAULT_STUDY_GUIDE_TIMEOUT_S = 120;
-const STUDY_GUIDE_TIMEOUT_S_MIN = 30;
-const STUDY_GUIDE_TIMEOUT_S_MAX = 300;
 
 function clampInt(raw: string | null, min: number, max: number, fallback: number): number {
   if (!raw) return fallback;
@@ -48,6 +49,8 @@ function readSettingsPayload() {
       STUDY_GUIDE_TIMEOUT_S_MAX,
       DEFAULT_STUDY_GUIDE_TIMEOUT_S,
     ),
+    model_history: parseModelHistory(getSetting('model_history')),
+    study_guide_model_history: parseModelHistory(getSetting('study_guide_model_history')),
   };
 }
 
@@ -81,7 +84,9 @@ export async function PUT(request: Request) {
     const model = body.default_model.trim();
     setSetting('default_model', model);
     writeConfig('OPENROUTER_MODEL', model);
-    updated.push('default_model');
+    const history = prependModelHistory(parseModelHistory(getSetting('model_history')), model);
+    setSetting('model_history', JSON.stringify(history));
+    updated.push('default_model', 'model_history');
   }
 
   // Modelo dedicado do Guia de Estudo: vazio = limpar (volta ao modelo padrão).
@@ -93,10 +98,16 @@ export async function PUT(request: Request) {
     const sgModel = body.study_guide_model.trim();
     if (sgModel) {
       setSetting('study_guide_model', sgModel);
+      const sgHistory = prependModelHistory(
+        parseModelHistory(getSetting('study_guide_model_history')),
+        sgModel,
+      );
+      setSetting('study_guide_model_history', JSON.stringify(sgHistory));
+      updated.push('study_guide_model', 'study_guide_model_history');
     } else {
       deleteSetting('study_guide_model');
+      updated.push('study_guide_model');
     }
-    updated.push('study_guide_model');
   }
 
   if (body.chat_history_window !== undefined) {
