@@ -378,7 +378,9 @@ export async function POST(request: Request, { params }: Ctx) {
               memorySuggestionParsed: memorySuggestion ? 1 : 0,
             });
             const fallback =
-              'Não consegui formar uma resposta textual completa neste turno. Tente reformular a pergunta ou pergunte diretamente pelo bloco atual do Guia.';
+              readingMode === 'guia-estudo'
+                ? 'Não consegui formar uma resposta textual completa neste turno. Tente reformular a pergunta ou pergunte diretamente pelo bloco atual do Guia.'
+                : 'Não consegui formar uma resposta textual completa neste turno. Tente reformular a pergunta ou consulte o documento atual.';
             emit(fallback);
             saveMessage(db, {
               zetelId,

@@ -38,19 +38,7 @@ test('sentinela malformada com conteudo bruto gera fallback visivel, nao bolha v
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          messages: [
-            {
-              id: 'fallback-1',
-              zetelId: 'zetel-test',
-              role: 'assistant',
-              content: 'Não consegui formar uma resposta textual completa neste turno. Tente reformular a pergunta ou pergunte diretamente pelo bloco atual do Guia.',
-              pageIndex: 0,
-              model: 'test-model',
-              createdAt: new Date().toISOString(),
-            },
-          ],
-        }),
+        body: JSON.stringify({ messages: [] }),
       });
       return;
     }
