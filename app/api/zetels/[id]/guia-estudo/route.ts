@@ -21,7 +21,10 @@ export async function GET(_request: Request, { params }: Ctx) {
   const vaultPath = getSetting('vault_path');
   if (!vaultPath) {
     return NextResponse.json(
-      { error: 'Leitura não construída. Use "Preparar leitura" na aba Leitura.' },
+      {
+        error:
+          'Guia de Estudo não disponível. Configure o vault na aba Leitura primeiro.',
+      },
       { status: 404 },
     );
   }

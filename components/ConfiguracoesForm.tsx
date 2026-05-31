@@ -14,8 +14,24 @@ type HistoryKey = 'model_history' | 'study_guide_model_history';
 type SettingsResponse = {
   model_history?: unknown;
   study_guide_model_history?: unknown;
+  history?: unknown;
   error?: string;
 };
+
+async function parseSettingsResponse(
+  res: Response,
+): Promise<{ data: SettingsResponse | null; rawText: string }> {
+  const rawText = await res.text();
+  const contentType = res.headers.get('content-type') ?? '';
+  if (contentType.includes('application/json') || rawText.trim().startsWith('{')) {
+    try {
+      return { data: JSON.parse(rawText) as SettingsResponse, rawText };
+    } catch {
+      return { data: null, rawText };
+    }
+  }
+  return { data: null, rawText };
+}
 
 async function persistSetting(
   payload: Record<string, unknown>,
@@ -32,12 +48,20 @@ async function persistSetting(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    const data = (await res.json()) as SettingsResponse;
+    const { data, rawText } = await parseSettingsResponse(res);
     if (res.ok) {
-      setFeedback({ kind: 'ok', text: okText });
-      onData?.(data);
+      if (data) {
+        setFeedback({ kind: 'ok', text: okText });
+        onData?.(data);
+      } else {
+        setFeedback({ kind: 'err', text: 'Resposta inválida do servidor.' });
+      }
     } else {
-      setFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar.' });
+      const errText =
+        data?.error?.trim() ||
+        rawText.trim().slice(0, 200) ||
+        `Falha ao salvar (${res.status}${res.statusText ? ` ${res.statusText}` : ''}).`;
+      setFeedback({ kind: 'err', text: errText });
     }
   } catch {
     setFeedback({ kind: 'err', text: 'Erro de rede ao salvar.' });
@@ -161,7 +185,10 @@ export function ConfiguracoesForm({
   const [timeoutFeedback, setTimeoutFeedback] = useState<Feedback>(null);
   const [savingTimeout, setSavingTimeout] = useState(false);
 
-  const [historyFeedback, setHistoryFeedback] = useState<Feedback>(null);
+  const [historyFeedback, setHistoryFeedback] = useState<Record<HistoryKey, Feedback>>({
+    model_history: null,
+    study_guide_model_history: null,
+  });
 
   async function saveVault() {
     setSavingVault(true);
@@ -323,18 +350,22 @@ export function ConfiguracoesForm({
   }
 
   async function removeFromHistory(key: HistoryKey, entry: string) {
-    setHistoryFeedback(null);
+    setHistoryFeedback((prev) => ({ ...prev, [key]: null }));
     try {
       const res = await fetch('/api/settings/model-history', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, model: entry }),
       });
-      const data = (await res.json()) as { history?: unknown; error?: string };
+      const { data, rawText } = await parseSettingsResponse(res);
       if (!res.ok) {
-        throw new Error(data.error ?? `Falha ao remover do histórico (${res.status}).`);
+        const errText =
+          data?.error?.trim() ||
+          rawText.trim().slice(0, 200) ||
+          `Falha ao remover do histórico (${res.status}).`;
+        throw new Error(errText);
       }
-      if (!Array.isArray(data.history)) {
+      if (!data || !Array.isArray(data.history)) {
         throw new Error('Resposta inválida do servidor.');
       }
       if (key === 'model_history') {
@@ -346,7 +377,7 @@ export function ConfiguracoesForm({
       const message =
         err instanceof Error ? err.message : 'Erro de rede ao remover do histórico.';
       console.error('removeFromHistory failed', { key, entry, error: message });
-      setHistoryFeedback({ kind: 'err', text: message });
+      setHistoryFeedback((prev) => ({ ...prev, [key]: { kind: 'err', text: message } }));
     }
   }
 
@@ -445,6 +476,11 @@ export function ConfiguracoesForm({
           onUse={setModel}
           onRemove={(entry) => removeFromHistory('model_history', entry)}
         />
+        {historyFeedback.model_history && (
+          <p className={`feedback ${historyFeedback.model_history.kind}`}>
+            {historyFeedback.model_history.text}
+          </p>
+        )}
       </div>
 
       <div className="field">
@@ -483,8 +519,10 @@ export function ConfiguracoesForm({
           onUse={setStudyGuideModel}
           onRemove={(entry) => removeFromHistory('study_guide_model_history', entry)}
         />
-        {historyFeedback && (
-          <p className={`feedback ${historyFeedback.kind}`}>{historyFeedback.text}</p>
+        {historyFeedback.study_guide_model_history && (
+          <p className={`feedback ${historyFeedback.study_guide_model_history.kind}`}>
+            {historyFeedback.study_guide_model_history.text}
+          </p>
         )}
       </div>
 
