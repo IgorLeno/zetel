@@ -927,28 +927,22 @@ function guideNavScript(): string {
     }, { threshold: 0.15 });
     blocks.forEach(function(b){ io.observe(b); });
   } else if (blocks.length) {
-    var fallbackTimer = null;
-    function fallbackUpdate(){
-      var focusLine = window.innerHeight * 0.35;
-      for (var n = 0; n < blocks.length; n += 1) {
-        var el = blocks[n];
+    var checkPageAndNav = function(){
+      for (var b = 0; b < blocks.length; b += 1) {
+        var el = blocks[b];
         if (!el.hasAttribute('data-page')) continue;
         var r = el.getBoundingClientRect();
-        if (r.top <= focusLine && r.bottom >= focusLine) {
+        if (r.top <= window.innerHeight * 0.5 && r.bottom >= window.innerHeight * 0.5) {
           var i = Number(el.getAttribute('data-page'));
           if (!isNaN(i) && i !== last) { last = i; post(i); }
           break;
         }
       }
       updateActiveFromViewport();
-    }
-    function throttledFallback(){
-      if (fallbackTimer) return;
-      fallbackTimer = setTimeout(function(){ fallbackTimer = null; fallbackUpdate(); }, 200);
-    }
-    window.addEventListener('scroll', throttledFallback);
-    window.addEventListener('resize', throttledFallback);
-    fallbackUpdate();
+    };
+    var pollInterval = setInterval(checkPageAndNav, 800);
+    window.addEventListener('scroll', checkPageAndNav);
+    window.addEventListener('resize', checkPageAndNav);
   }
   updateActiveFromViewport();
 })();
