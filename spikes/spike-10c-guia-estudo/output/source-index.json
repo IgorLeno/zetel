@@ -1,0 +1,505 @@
+{
+  "sourceFile": "input.md",
+  "blocks": [
+    {
+      "block_id": "b0001",
+      "type": "heading",
+      "depth": 1,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações"
+      ],
+      "text": "Transformada de Fourier: Fundamentos e Aplicações",
+      "sha256": "0bc72dccdfcaac7880b6def2dec8fd551d69bd2693bcd630b4ce0ac2e1b29b56"
+    },
+    {
+      "block_id": "b0002",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações"
+      ],
+      "text": "A Transformada de Fourier é uma das ferramentas matemáticas mais influentes da\nciência e da engenharia modernas. Ela permite decompor um sinal arbitrário em\numa soma (ou integral) de componentes senoidais, revelando o conteúdo de\nfrequência de fenômenos que, no domínio do tempo, parecem opacos. Este\ndocumento apresenta os fundamentos, as propriedades essenciais e algumas\naplicações práticas, com ênfase na intuição e na rastreabilidade dos conceitos.",
+      "sha256": "cdcbc67782ee9732ba8e0192dece1cf02da00e0f1ca17e89d2995c062817108e"
+    },
+    {
+      "block_id": "b0003",
+      "type": "blockquote",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações"
+      ],
+      "text": "A análise de Fourier não cria informação nova; ela apenas reorganiza a\ninformação já presente no sinal, trocando o eixo do tempo pelo eixo da\nfrequência. Nenhuma das duas representações é mais \"verdadeira\" que a outra.",
+      "sha256": "045819c0f7d7792c72729ac3c94eb2328d96dc0359168384ac2c42a40310cfd4"
+    },
+    {
+      "block_id": "b0004",
+      "type": "heading",
+      "depth": 2,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada"
+      ],
+      "text": "1. Da Série à Transformada",
+      "sha256": "458080d3e2134259b800d60469cbb0b91c830dc573276a07e4017aaa723cd53b"
+    },
+    {
+      "block_id": "b0005",
+      "type": "heading",
+      "depth": 3,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.1 Séries de Fourier"
+      ],
+      "text": "1.1 Séries de Fourier",
+      "sha256": "a10cd12631b3d2be768393dbf0ff73fb91ed4f947a8ca504efcb75af5ac8f3e7"
+    },
+    {
+      "block_id": "b0006",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.1 Séries de Fourier"
+      ],
+      "text": "Toda função periódica f(t) de período T, sob condições brandas de\nregularidade (condições de Dirichlet), pode ser escrita como uma soma infinita\nde senos e cossenos. Na forma complexa, a série de Fourier é:",
+      "sha256": "9673aabe7a62a28cbd4cd9fb53e20df58c72f26a3db68e7949083c7f9aa2a5d2"
+    },
+    {
+      "block_id": "b0007",
+      "type": "math",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.1 Séries de Fourier"
+      ],
+      "text": "f(t) = \\sum_{n=-\\infty}^{\\infty} c_n \\, e^{\\,i \\frac{2\\pi n}{T} t}",
+      "sha256": "66b17e509be16e2ef2c52447343d32cae0bb3c61e5f9393dd4782755b67ef4e4"
+    },
+    {
+      "block_id": "b0008",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.1 Séries de Fourier"
+      ],
+      "text": "onde os coeficientes c_n medem a contribuição de cada harmônico e são obtidos\npor projeção da função sobre a base exponencial:",
+      "sha256": "9aab0c69614c67d9a1211df619ece451148093edc2016e3122ad778c7500e579"
+    },
+    {
+      "block_id": "b0009",
+      "type": "math",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.1 Séries de Fourier"
+      ],
+      "text": "c_n = \\frac{1}{T} \\int_{0}^{T} f(t)\\, e^{-i \\frac{2\\pi n}{T} t}\\, dt",
+      "sha256": "3bf7cc1fa1101e178f287e089f2f62526a9629ddd2a99a6832ecbe9356d39a31"
+    },
+    {
+      "block_id": "b0010",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.1 Séries de Fourier"
+      ],
+      "text": "A frequência fundamental é f_0 = 1/T, e os harmônicos ocorrem em múltiplos\ninteiros n f_0. O caso n = 0 recupera o valor médio do sinal, muitas\nvezes chamado de componente DC por analogia com circuitos.",
+      "sha256": "167b9463eefdaf239b9a3fec725f2d98cb99e8859e7d78690022c9f08d64cf41"
+    },
+    {
+      "block_id": "b0011",
+      "type": "heading",
+      "depth": 3,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.2 O limite contínuo"
+      ],
+      "text": "1.2 O limite contínuo",
+      "sha256": "677e26cd2e911dbbeafd22922349ca2b860d13894817efe5b5b5c2900a4f45c8"
+    },
+    {
+      "block_id": "b0012",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.2 O limite contínuo"
+      ],
+      "text": "Quando o período T cresce sem limite, o espaçamento entre harmônicos\n\\Delta f = 1/T tende a zero e o somatório discreto se transforma em uma\nintegral. Esse limite define a Transformada de Fourier de um sinal não\nperiódico f(t):",
+      "sha256": "91d9d56ef76d806d2e6f036dd7da78ddef9ea20f1e5476cd51236c1b3f35ad7a"
+    },
+    {
+      "block_id": "b0013",
+      "type": "math",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.2 O limite contínuo"
+      ],
+      "text": "\\hat{f}(\\omega) = \\int_{-\\infty}^{\\infty} f(t)\\, e^{-i\\omega t}\\, dt",
+      "sha256": "38dc5bbfc05d9302edeb967da2aa7055043790deb7f5ff44f23ac24248e8861c"
+    },
+    {
+      "block_id": "b0014",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.2 O limite contínuo"
+      ],
+      "text": "A transformada inversa reconstrói o sinal original a partir do seu espectro:",
+      "sha256": "c3fd0a4e40d7918607b5f68b57ba0bba836212f693e5dbddad926737f174f991"
+    },
+    {
+      "block_id": "b0015",
+      "type": "math",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.2 O limite contínuo"
+      ],
+      "text": "f(t) = \\frac{1}{2\\pi} \\int_{-\\infty}^{\\infty} \\hat{f}(\\omega)\\, e^{\\,i\\omega t}\\, d\\omega",
+      "sha256": "41e1218c5173ece3cf67dcfa66c9e4f6c240b97951a6b309ee9e47744f88a443"
+    },
+    {
+      "block_id": "b0016",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "1. Da Série à Transformada",
+        "1.2 O limite contínuo"
+      ],
+      "text": "O par \\big(f(t), \\hat{f}(\\omega)\\big) codifica exatamente a mesma informação\nem domínios distintos. A escolha da convenção de 2\\pi (em \\omega versus f)\nvaria entre disciplinas, mas não altera o conteúdo físico.",
+      "sha256": "852d8c692ca07e7b3fff606b9fbc66ce6835fef12c28e9c62882606be916b99e"
+    },
+    {
+      "block_id": "b0017",
+      "type": "heading",
+      "depth": 2,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "2. Propriedades Fundamentais"
+      ],
+      "text": "2. Propriedades Fundamentais",
+      "sha256": "f2c8b061f9036d5cafacea4d626f822cd8036c2a39d06c78a8b1c90c41e1ca67"
+    },
+    {
+      "block_id": "b0018",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "2. Propriedades Fundamentais"
+      ],
+      "text": "A utilidade prática da transformada vem de um pequeno conjunto de propriedades\nque convertem operações difíceis no domínio do tempo em operações simples no\ndomínio da frequência. As mais usadas estão resumidas abaixo.",
+      "sha256": "f548bc2a37a9f2c3a8dbc7e2ff8b9093b160eaf6c551b1de969af9867e48588e"
+    },
+    {
+      "block_id": "b0019",
+      "type": "table",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "2. Propriedades Fundamentais"
+      ],
+      "text": "PropriedadeDomínio do tempoDomínio da frequênciaLinearidadea f(t) + b g(t)a \\hat{f}(\\omega) + b \\hat{g}(\\omega)Deslocamentof(t - t_0)e^{-i\\omega t_0}\\,\\hat{f}(\\omega)Modulaçãoe^{\\,i\\omega_0 t} f(t)\\hat{f}(\\omega - \\omega_0)Derivadaf'(t)i\\omega\\,\\hat{f}(\\omega)Convolução(f * g)(t)\\hat{f}(\\omega)\\,\\hat{g}(\\omega)",
+      "sha256": "468c544394d596f526b2cd2d02378f1eab195f4eac564875a3028d91fa67783c"
+    },
+    {
+      "block_id": "b0020",
+      "type": "heading",
+      "depth": 3,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "2. Propriedades Fundamentais",
+        "2.1 O teorema da convolução"
+      ],
+      "text": "2.1 O teorema da convolução",
+      "sha256": "9c2db732dd083f44e03234e1a10a22bc96701c6cc7e4ba438215a7096f214383"
+    },
+    {
+      "block_id": "b0021",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "2. Propriedades Fundamentais",
+        "2.1 O teorema da convolução"
+      ],
+      "text": "A propriedade mais consequente é a da convolução: uma convolução no tempo\nvira uma multiplicação ponto a ponto na frequência. Isto é o que torna filtros\nlineares tão tratáveis — projetar um filtro passa-baixa significa apenas\nmultiplicar o espectro do sinal por uma janela que atenua frequências altas.",
+      "sha256": "85acaa1de51e792c31bcbe32c0bb32f72b8cfa4de05b930dc0a753826139ae0b"
+    },
+    {
+      "block_id": "b0022",
+      "type": "blockquote",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "2. Propriedades Fundamentais",
+        "2.1 O teorema da convolução"
+      ],
+      "text": "Sem o teorema da convolução, o processamento digital de sinais como o\nconhecemos seria computacionalmente proibitivo. Ele é a ponte entre a teoria\ne o algoritmo.",
+      "sha256": "0f97ee08d4867404e27442a7cd73d85560e435ec373b12af4c598ad60d0aefc8"
+    },
+    {
+      "block_id": "b0023",
+      "type": "heading",
+      "depth": 3,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "2. Propriedades Fundamentais",
+        "2.2 Dualidade e o princípio da incerteza"
+      ],
+      "text": "2.2 Dualidade e o princípio da incerteza",
+      "sha256": "77bf98d3dd8405198cde52eeba06d91bde44f0ba4ce0f3c75d79d9c154535206"
+    },
+    {
+      "block_id": "b0024",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "2. Propriedades Fundamentais",
+        "2.2 Dualidade e o princípio da incerteza"
+      ],
+      "text": "Existe uma tensão fundamental entre localização no tempo e localização na\nfrequência: um pulso muito estreito no tempo tem um espectro muito largo, e\nvice-versa. Formalmente, o produto das larguras (variâncias) satisfaz:",
+      "sha256": "83c7752bf399b93243ac76504ca39464db62bb366d8a8ad5a50a8f4de5c70c47"
+    },
+    {
+      "block_id": "b0025",
+      "type": "math",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "2. Propriedades Fundamentais",
+        "2.2 Dualidade e o princípio da incerteza"
+      ],
+      "text": "\\sigma_t \\cdot \\sigma_\\omega \\geq \\frac{1}{2}",
+      "sha256": "c36162a093453028ea2e082d08ab7a2fd50dce512fe3563830aafec97fc37871"
+    },
+    {
+      "block_id": "b0026",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "2. Propriedades Fundamentais",
+        "2.2 Dualidade e o princípio da incerteza"
+      ],
+      "text": "Essa desigualdade é a versão de processamento de sinais do princípio da\nincerteza de Heisenberg, e impõe um limite intransponível à resolução conjunta\ntempo–frequência de qualquer análise.",
+      "sha256": "2d81c6fcae131e75fb18e3877ddfdf9696fbd471805fc8c2a3049357abf7afb9"
+    },
+    {
+      "block_id": "b0027",
+      "type": "heading",
+      "depth": 2,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT"
+      ],
+      "text": "3. A Transformada Discreta e a FFT",
+      "sha256": "7105d68603f73f8f368f46adec78c87abd16c725b14b5eb188686fd3ece9cb7b"
+    },
+    {
+      "block_id": "b0028",
+      "type": "heading",
+      "depth": 3,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.1 DFT"
+      ],
+      "text": "3.1 DFT",
+      "sha256": "46f5f2da66ba8aa78b038d3d787f33f09b028cd5be8e486f7e27e2cf23b94aca"
+    },
+    {
+      "block_id": "b0029",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.1 DFT"
+      ],
+      "text": "Computadores não lidam com integrais contínuas; trabalham com amostras. A\nTransformada Discreta de Fourier (DFT) opera sobre uma sequência finita de\nN amostras x_0, x_1, \\dots, x_{N-1}:",
+      "sha256": "8e5a5eb5035f3afa47b0b9e6181df9879713ef3de737cb4b2b2c90d4400fa69c"
+    },
+    {
+      "block_id": "b0030",
+      "type": "math",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.1 DFT"
+      ],
+      "text": "X_k = \\sum_{n=0}^{N-1} x_n \\, e^{-i \\frac{2\\pi}{N} k n}, \\qquad k = 0, 1, \\dots, N-1",
+      "sha256": "3f9f6c232f0da31638961146dec7a10e763106efe69e58ef1ad6ea3aa6801b51"
+    },
+    {
+      "block_id": "b0031",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.1 DFT"
+      ],
+      "text": "Cada X_k representa a amplitude e a fase da componente de frequência\nk/(N\\,\\Delta t), onde \\Delta t é o intervalo de amostragem. A DFT é\ninversível e exata para sinais de banda limitada amostrados acima da taxa de\nNyquist.",
+      "sha256": "7d274dfbe548d2c2fe3278379b60dd143c3d7e875d86320dcf2f0df133cbfe9a"
+    },
+    {
+      "block_id": "b0032",
+      "type": "heading",
+      "depth": 3,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.2 O custo computacional e a FFT"
+      ],
+      "text": "3.2 O custo computacional e a FFT",
+      "sha256": "57725375771b1bafe01682cda113c25f4bc02d78ea93164ceae273e9a2f23551"
+    },
+    {
+      "block_id": "b0033",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.2 O custo computacional e a FFT"
+      ],
+      "text": "Calcular a DFT diretamente pela definição exige O(N^2) multiplicações\ncomplexas — proibitivo para sinais grandes. A Transformada Rápida de Fourier\n(FFT), popularizada por Cooley e Tukey em 1965, explora a simetria e a\nperiodicidade das raízes da unidade para reduzir o custo a O(N \\log N).",
+      "sha256": "519547d900f7f16937c711faf8e42d568239c0f9385820caa8b98018145deca9"
+    },
+    {
+      "block_id": "b0034",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.2 O custo computacional e a FFT"
+      ],
+      "text": "A tabela a seguir ilustra por que essa diferença importa na prática:",
+      "sha256": "0861074c30b12de7ab433d4dfb6000a96edc1e2a370b5b9bc800656eba6d6a49"
+    },
+    {
+      "block_id": "b0035",
+      "type": "table",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.2 O custo computacional e a FFT"
+      ],
+      "text": "Tamanho NDFT direta (N^2)FFT (N \\log_2 N)Ganho aproximado1.024~1,0 milhão~10 mil100×1.048.576~1,1 trilhão~21 milhões~52.000×",
+      "sha256": "2c11b7f83cf727fbcdf9c5b8a385476be63c3782bd43a4176fa9e896830b72c8"
+    },
+    {
+      "block_id": "b0036",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.2 O custo computacional e a FFT"
+      ],
+      "text": "O algoritmo procede dividindo recursivamente a sequência em amostras de índice\npar e ímpar:",
+      "sha256": "9d48b985be3255d09057319e3183473500556045a65b260737962a16bc4d3681"
+    },
+    {
+      "block_id": "b0037",
+      "type": "list",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.2 O custo computacional e a FFT"
+      ],
+      "text": "Separe a sequência em duas subsequências de tamanho N/2.Calcule a FFT de cada metade recursivamente.Combine os resultados usando os fatores de rotação e^{-i 2\\pi k / N}\n(os chamados twiddle factors).",
+      "sha256": "2fbfc0d65da819b66dbec04dc098e3a59cfeecb5cbae75a9d48ed8dfc34aef1a"
+    },
+    {
+      "block_id": "b0038",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "3. A Transformada Discreta e a FFT",
+        "3.2 O custo computacional e a FFT"
+      ],
+      "text": "Esse padrão divide-e-conquista é a razão pela qual a FFT é frequentemente citada\ncomo um dos algoritmos mais importantes do século XX.",
+      "sha256": "6a0db052c2b22ca9d0bef8b30355127a7e52437ec90eb35cdfde34dcaf48788e"
+    },
+    {
+      "block_id": "b0039",
+      "type": "heading",
+      "depth": 2,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "4. Aplicações Práticas"
+      ],
+      "text": "4. Aplicações Práticas",
+      "sha256": "bf4e2c126f3821320701a3e8ba9c86a2b8d53393643570be310eb3a9f74f0a7e"
+    },
+    {
+      "block_id": "b0040",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "4. Aplicações Práticas"
+      ],
+      "text": "A análise de Fourier sustenta tecnologias cotidianas. Alguns exemplos\nrepresentativos:",
+      "sha256": "ae6e750761ea32323d832d9f732093b03977439ca960e01cb17c3d7959d7b38e"
+    },
+    {
+      "block_id": "b0041",
+      "type": "list",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "4. Aplicações Práticas"
+      ],
+      "text": "Compressão de áudio e imagem: formatos como MP3 e JPEG descartam\ncomponentes de frequência pouco perceptíveis, reduzindo drasticamente o\ntamanho dos arquivos.Telecomunicações: a modulação por divisão de frequência (OFDM), base do\nWi-Fi e do 4G/5G, aloca dados em subportadoras ortogonais no domínio da\nfrequência.Imagem médica: a ressonância magnética (MRI) reconstrói imagens\ndiretamente a partir de dados adquiridos no domínio da frequência (o\nk-space).Astronomia e sismologia: identificação de periodicidades em séries\ntemporais ruidosas, da rotação de pulsares à análise de ondas sísmicas.",
+      "sha256": "5be60fc0c68053ceb1447145092d3af30a238e0d58fd5083a74b52ab582e3868"
+    },
+    {
+      "block_id": "b0042",
+      "type": "blockquote",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "4. Aplicações Práticas"
+      ],
+      "text": "O fato de uma única ideia matemática — decompor sinais em frequências —\naparecer em campos tão distintos sugere que a frequência não é apenas uma\nconveniência de cálculo, mas uma dimensão genuína da realidade física.",
+      "sha256": "7e9c8e4c5ebe17058612a2f7f563c599dc6b8477e04eafa4aed1f1e6f4b69e06"
+    },
+    {
+      "block_id": "b0043",
+      "type": "paragraph",
+      "depth": null,
+      "heading_path": [
+        "Transformada de Fourier: Fundamentos e Aplicações",
+        "4. Aplicações Práticas"
+      ],
+      "text": "A Transformada de Fourier permanece, quase dois séculos após Joseph Fourier\nintroduzi-la no estudo da condução de calor, uma lente indispensável para\nenxergar a estrutura oculta dos sinais.",
+      "sha256": "719c8b41fe4fea6404193b29915cac31977c61cd27423ed6bbc6c7169a0cd6aa"
+    }
+  ]
+}

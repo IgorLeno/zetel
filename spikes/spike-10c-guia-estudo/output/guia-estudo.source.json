@@ -1,0 +1,176 @@
+{
+  "resumo": {
+    "source_file": "input.md",
+    "source_headings": [
+      "Transformada de Fourier: Fundamentos e Aplicações"
+    ],
+    "source_block_hashes": [
+      "0bc72dccdfcaac7880b6def2dec8fd551d69bd2693bcd630b4ce0ac2e1b29b56",
+      "cdcbc67782ee9732ba8e0192dece1cf02da00e0f1ca17e89d2995c062817108e"
+    ]
+  },
+  "card-1": {
+    "source_file": "input.md",
+    "source_headings": [
+      "Transformada de Fourier: Fundamentos e Aplicações"
+    ],
+    "source_block_hashes": [
+      "0bc72dccdfcaac7880b6def2dec8fd551d69bd2693bcd630b4ce0ac2e1b29b56"
+    ]
+  },
+  "card-2": {
+    "source_file": "input.md",
+    "source_headings": [
+      "1. Da Série à Transformada",
+      "1.1 Séries de Fourier"
+    ],
+    "source_block_hashes": [
+      "a10cd12631b3d2be768393dbf0ff73fb91ed4f947a8ca504efcb75af5ac8f3e7",
+      "9673aabe7a62a28cbd4cd9fb53e20df58c72f26a3db68e7949083c7f9aa2a5d2"
+    ]
+  },
+  "card-3": {
+    "source_file": "input.md",
+    "source_headings": [
+      "2. Propriedades Fundamentais",
+      "2.1 O teorema da convolução"
+    ],
+    "source_block_hashes": [
+      "f2c8b061f9036d5cafacea4d626f822cd8036c2a39d06c78a8b1c90c41e1ca67",
+      "85acaa1de51e792c31bcbe32c0bb32f72b8cfa4de05b930dc0a753826139ae0b"
+    ]
+  },
+  "card-4": {
+    "source_file": "input.md",
+    "source_headings": [
+      "3. A Transformada Discreta e a FFT",
+      "3.1 DFT"
+    ],
+    "source_block_hashes": [
+      "46f5f2da66ba8aa78b038d3d787f33f09b028cd5be8e486f7e27e2cf23b94aca",
+      "8e5a5eb5035f3afa47b0b9e6181df9879713ef3de737cb4b2b2c90d4400fa69c"
+    ]
+  },
+  "sec-1": {
+    "source_file": "input.md",
+    "source_headings": [
+      "1. Da Série à Transformada",
+      "1.2 O limite contínuo"
+    ],
+    "source_block_hashes": [
+      "458080d3e2134259b800d60469cbb0b91c830dc573276a07e4017aaa723cd53b",
+      "91d9d56ef76d806d2e6f036dd7da78ddef9ea20f1e5476cd51236c1b3f35ad7a"
+    ]
+  },
+  "sec-2": {
+    "source_file": "input.md",
+    "source_headings": [
+      "2. Propriedades Fundamentais",
+      "2.2 Dualidade e o princípio da incerteza"
+    ],
+    "source_block_hashes": [
+      "f2c8b061f9036d5cafacea4d626f822cd8036c2a39d06c78a8b1c90c41e1ca67",
+      "83c7752bf399b93243ac76504ca39464db62bb366d8a8ad5a50a8f4de5c70c47"
+    ]
+  },
+  "sec-3": {
+    "source_file": "input.md",
+    "source_headings": [
+      "4. Aplicações Práticas"
+    ],
+    "source_block_hashes": [
+      "bf4e2c126f3821320701a3e8ba9c86a2b8d53393643570be310eb3a9f74f0a7e",
+      "ae6e750761ea32323d832d9f732093b03977439ca960e01cb17c3d7959d7b38e"
+    ]
+  },
+  "glo-1": {
+    "source_file": "input.md",
+    "source_headings": [
+      "Transformada de Fourier: Fundamentos e Aplicações"
+    ],
+    "source_block_hashes": [
+      "0bc72dccdfcaac7880b6def2dec8fd551d69bd2693bcd630b4ce0ac2e1b29b56"
+    ]
+  },
+  "glo-2": {
+    "source_file": "input.md",
+    "source_headings": [
+      "1.1 Séries de Fourier"
+    ],
+    "source_block_hashes": [
+      "a10cd12631b3d2be768393dbf0ff73fb91ed4f947a8ca504efcb75af5ac8f3e7"
+    ]
+  },
+  "glo-3": {
+    "source_file": "input.md",
+    "source_headings": [
+      "3.1 DFT"
+    ],
+    "source_block_hashes": [
+      "46f5f2da66ba8aa78b038d3d787f33f09b028cd5be8e486f7e27e2cf23b94aca"
+    ]
+  },
+  "glo-4": {
+    "source_file": "input.md",
+    "source_headings": [
+      "3.2 O custo computacional e a FFT"
+    ],
+    "source_block_hashes": [
+      "57725375771b1bafe01682cda113c25f4bc02d78ea93164ceae273e9a2f23551"
+    ]
+  },
+  "quiz-1": {
+    "source_file": "input.md",
+    "source_headings": [
+      "Transformada de Fourier: Fundamentos e Aplicações"
+    ],
+    "source_block_hashes": [
+      "0bc72dccdfcaac7880b6def2dec8fd551d69bd2693bcd630b4ce0ac2e1b29b56"
+    ]
+  },
+  "quiz-2": {
+    "source_file": "input.md",
+    "source_headings": [
+      "3.2 O custo computacional e a FFT"
+    ],
+    "source_block_hashes": [
+      "57725375771b1bafe01682cda113c25f4bc02d78ea93164ceae273e9a2f23551"
+    ]
+  },
+  "quiz-3": {
+    "source_file": "input.md",
+    "source_headings": [
+      "2.2 Dualidade e o princípio da incerteza"
+    ],
+    "source_block_hashes": [
+      "77bf98d3dd8405198cde52eeba06d91bde44f0ba4ce0f3c75d79d9c154535206"
+    ]
+  },
+  "zk-1": {
+    "source_file": "input.md",
+    "source_headings": [
+      "Transformada de Fourier: Fundamentos e Aplicações"
+    ],
+    "source_block_hashes": [
+      "0bc72dccdfcaac7880b6def2dec8fd551d69bd2693bcd630b4ce0ac2e1b29b56"
+    ]
+  },
+  "zk-2": {
+    "source_file": "input.md",
+    "source_headings": [
+      "2.2 Dualidade e o princípio da incerteza"
+    ],
+    "source_block_hashes": [
+      "77bf98d3dd8405198cde52eeba06d91bde44f0ba4ce0f3c75d79d9c154535206"
+    ]
+  },
+  "zk-3": {
+    "source_file": "input.md",
+    "source_headings": [
+      "4. Aplicações Práticas"
+    ],
+    "source_block_hashes": [
+      "bf4e2c126f3821320701a3e8ba9c86a2b8d53393643570be310eb3a9f74f0a7e"
+    ]
+  }
+}

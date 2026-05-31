@@ -1,0 +1,18 @@
+{
+  "name": "spike-10c-guia-estudo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Spike 10C — Markdown → LLM (JSON estruturado D26) → template determinístico (guia-estudo.html). Descartável, isolado do app.",
+  "scripts": {
+    "guia": "node run-guia.mjs",
+    "render": "node run-render.mjs",
+    "all": "node run-guia.mjs && node run-render.mjs"
+  },
+  "dependencies": {
+    "remark": "^15.0.1",
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
+  }
+}

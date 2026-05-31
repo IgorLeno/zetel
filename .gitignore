@@ -41,3 +41,4 @@ next-env.d.ts
 # Artefatos temporários de análise/spike
 dft_reference.html
 *_reference.html
+spikes/plan-disable-unneeded-codex-plugins.md
