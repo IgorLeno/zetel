@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
@@ -40,15 +40,15 @@ export async function GET(request: Request, { params }: Ctx) {
 
   if (wantsGuide) {
     const guide = resolveStudyGuideArtifact(vaultPath, zetel.slug);
-    if (!guide || !existsSync(guide.path)) {
+    if (!guide) {
       return NextResponse.json(
         { error: 'Guia de Estudo não gerado. Use "Preparar leitura → Guia de Estudo".' },
         { status: 404 },
       );
     }
-    let guideHtml: string;
     try {
-      guideHtml = readFileSync(guide.path, 'utf8');
+      const guideHtml = await readFile(guide.path, 'utf8');
+      return new NextResponse(guideHtml, { headers: artifactHtmlResponseHeaders() });
     } catch (err) {
       logger.error('guia read failed', { zetelId: id, error: (err as Error).message });
       return NextResponse.json(
@@ -56,23 +56,21 @@ export async function GET(request: Request, { params }: Ctx) {
         { status: 500 },
       );
     }
-    return new NextResponse(guideHtml, { headers: artifactHtmlResponseHeaders() });
   }
 
   const artifact = resolveLeituraHtmlArtifact(vaultPath, zetel.slug);
-  if (!artifact || !existsSync(artifact.path)) {
+  if (!artifact) {
     return NextResponse.json(
       {
-        error:
-          'Leitura técnica não construída. Use "Preparar leitura" na aba Leitura.',
+        error: 'Leitura técnica não construída. Use "Preparar leitura" na aba Leitura.',
       },
       { status: 404 },
     );
   }
 
-  let html: string;
   try {
-    html = readFileSync(artifact.path, 'utf8');
+    const html = await readFile(artifact.path, 'utf8');
+    return new NextResponse(html, { headers: artifactHtmlResponseHeaders() });
   } catch (err) {
     logger.error('leitura read failed', { zetelId: id, error: (err as Error).message });
     return NextResponse.json(
@@ -80,5 +78,4 @@ export async function GET(request: Request, { params }: Ctx) {
       { status: 500 },
     );
   }
-  return new NextResponse(html, { headers: artifactHtmlResponseHeaders() });
 }

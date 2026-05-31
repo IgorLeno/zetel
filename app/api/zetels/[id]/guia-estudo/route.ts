@@ -9,8 +9,6 @@ import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
-const NO_VAULT = 'Caminho do vault não configurado. Configure-o em Configurações → Vault.';
-
 type Ctx = { params: Promise<{ id: string }> };
 
 /**
@@ -22,7 +20,10 @@ export async function GET(_request: Request, { params }: Ctx) {
 
   const vaultPath = getSetting('vault_path');
   if (!vaultPath) {
-    return NextResponse.json({ error: NO_VAULT }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Leitura não construída. Use "Preparar leitura" na aba Leitura.' },
+      { status: 404 },
+    );
   }
 
   const zetel = getZetelById(getDb(), id);

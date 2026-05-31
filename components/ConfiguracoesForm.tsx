@@ -11,6 +11,41 @@ import {
 type Feedback = { kind: 'ok' | 'err'; text: string } | null;
 type HistoryKey = 'model_history' | 'study_guide_model_history';
 
+type SettingsResponse = {
+  model_history?: unknown;
+  study_guide_model_history?: unknown;
+  error?: string;
+};
+
+async function persistSetting(
+  payload: Record<string, unknown>,
+  setSaving: (v: boolean) => void,
+  setFeedback: (f: Feedback) => void,
+  okText: string,
+  onData?: (data: SettingsResponse) => void,
+): Promise<void> {
+  setSaving(true);
+  setFeedback(null);
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = (await res.json()) as SettingsResponse;
+    if (res.ok) {
+      setFeedback({ kind: 'ok', text: okText });
+      onData?.(data);
+    } else {
+      setFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar.' });
+    }
+  } catch {
+    setFeedback({ kind: 'err', text: 'Erro de rede ao salvar.' });
+  } finally {
+    setSaving(false);
+  }
+}
+
 function ModelHistoryDropdown({
   history,
   onUse,
@@ -126,6 +161,8 @@ export function ConfiguracoesForm({
   const [timeoutFeedback, setTimeoutFeedback] = useState<Feedback>(null);
   const [savingTimeout, setSavingTimeout] = useState(false);
 
+  const [historyFeedback, setHistoryFeedback] = useState<Feedback>(null);
+
   async function saveVault() {
     setSavingVault(true);
     setVaultFeedback(null);
@@ -203,53 +240,30 @@ export function ConfiguracoesForm({
       setDefaultModelFeedback({ kind: 'err', text: 'Informe o identificador do modelo.' });
       return;
     }
-    setSavingDefaultModel(true);
-    setDefaultModelFeedback(null);
-    try {
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ default_model: trimmed }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setDefaultModelFeedback({ kind: 'ok', text: 'Modelo padrão salvo.' });
-        if (Array.isArray(data.model_history)) {
-          setModelHistory(data.model_history);
-        }
-      } else {
-        setDefaultModelFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar.' });
-      }
-    } catch {
-      setDefaultModelFeedback({ kind: 'err', text: 'Erro de rede ao salvar.' });
-    } finally {
-      setSavingDefaultModel(false);
-    }
+    await persistSetting(
+      { default_model: trimmed },
+      setSavingDefaultModel,
+      setDefaultModelFeedback,
+      'Modelo padrão salvo.',
+      (data) => {
+        if (Array.isArray(data.model_history)) setModelHistory(data.model_history);
+      },
+    );
   }
 
   async function saveStudyGuideModelField() {
-    setSavingStudyGuideModel(true);
-    setStudyGuideModelFeedback(null);
-    try {
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ study_guide_model: studyGuideModel.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setStudyGuideModelFeedback({ kind: 'ok', text: 'Modelo do Guia de Estudo salvo.' });
+    const trimmed = studyGuideModel.trim();
+    await persistSetting(
+      { study_guide_model: trimmed },
+      setSavingStudyGuideModel,
+      setStudyGuideModelFeedback,
+      trimmed ? 'Modelo do Guia de Estudo salvo.' : 'Modelo do Guia de Estudo removido.',
+      (data) => {
         if (Array.isArray(data.study_guide_model_history)) {
           setStudyGuideModelHistory(data.study_guide_model_history);
         }
-      } else {
-        setStudyGuideModelFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar.' });
-      }
-    } catch {
-      setStudyGuideModelFeedback({ kind: 'err', text: 'Erro de rede ao salvar.' });
-    } finally {
-      setSavingStudyGuideModel(false);
-    }
+      },
+    );
   }
 
   async function saveHistoryWindowField() {
@@ -258,25 +272,12 @@ export function ConfiguracoesForm({
       setHistoryWindowFeedback({ kind: 'err', text: 'Janela de histórico deve ser entre 1 e 50.' });
       return;
     }
-    setSavingHistoryWindow(true);
-    setHistoryWindowFeedback(null);
-    try {
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_history_window: windowNum }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setHistoryWindowFeedback({ kind: 'ok', text: 'Janela de histórico salva.' });
-      } else {
-        setHistoryWindowFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar.' });
-      }
-    } catch {
-      setHistoryWindowFeedback({ kind: 'err', text: 'Erro de rede ao salvar.' });
-    } finally {
-      setSavingHistoryWindow(false);
-    }
+    await persistSetting(
+      { chat_history_window: windowNum },
+      setSavingHistoryWindow,
+      setHistoryWindowFeedback,
+      'Janela de histórico salva.',
+    );
   }
 
   async function saveMaxTokensField() {
@@ -292,25 +293,12 @@ export function ConfiguracoesForm({
       });
       return;
     }
-    setSavingMaxTokens(true);
-    setMaxTokensFeedback(null);
-    try {
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ study_guide_max_tokens: tokensNum }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setMaxTokensFeedback({ kind: 'ok', text: 'Máximo de tokens salvo.' });
-      } else {
-        setMaxTokensFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar.' });
-      }
-    } catch {
-      setMaxTokensFeedback({ kind: 'err', text: 'Erro de rede ao salvar.' });
-    } finally {
-      setSavingMaxTokens(false);
-    }
+    await persistSetting(
+      { study_guide_max_tokens: tokensNum },
+      setSavingMaxTokens,
+      setMaxTokensFeedback,
+      'Máximo de tokens salvo.',
+    );
   }
 
   async function saveTimeoutField() {
@@ -326,44 +314,39 @@ export function ConfiguracoesForm({
       });
       return;
     }
-    setSavingTimeout(true);
-    setTimeoutFeedback(null);
-    try {
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ study_guide_timeout_s: timeoutNum }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setTimeoutFeedback({ kind: 'ok', text: 'Timeout salvo.' });
-      } else {
-        setTimeoutFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar.' });
-      }
-    } catch {
-      setTimeoutFeedback({ kind: 'err', text: 'Erro de rede ao salvar.' });
-    } finally {
-      setSavingTimeout(false);
-    }
+    await persistSetting(
+      { study_guide_timeout_s: timeoutNum },
+      setSavingTimeout,
+      setTimeoutFeedback,
+      'Timeout salvo.',
+    );
   }
 
   async function removeFromHistory(key: HistoryKey, entry: string) {
+    setHistoryFeedback(null);
     try {
       const res = await fetch('/api/settings/model-history', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, model: entry }),
       });
-      const data = await res.json();
-      if (res.ok && Array.isArray(data.history)) {
-        if (key === 'model_history') {
-          setModelHistory(data.history);
-        } else {
-          setStudyGuideModelHistory(data.history);
-        }
+      const data = (await res.json()) as { history?: unknown; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error ?? `Falha ao remover do histórico (${res.status}).`);
       }
-    } catch {
-      // Falha silenciosa — usuário pode tentar novamente
+      if (!Array.isArray(data.history)) {
+        throw new Error('Resposta inválida do servidor.');
+      }
+      if (key === 'model_history') {
+        setModelHistory(data.history);
+      } else {
+        setStudyGuideModelHistory(data.history);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Erro de rede ao remover do histórico.';
+      console.error('removeFromHistory failed', { key, entry, error: message });
+      setHistoryFeedback({ kind: 'err', text: message });
     }
   }
 
@@ -500,6 +483,9 @@ export function ConfiguracoesForm({
           onUse={setStudyGuideModel}
           onRemove={(entry) => removeFromHistory('study_guide_model_history', entry)}
         />
+        {historyFeedback && (
+          <p className={`feedback ${historyFeedback.kind}`}>{historyFeedback.text}</p>
+        )}
       </div>
 
       <div className="field">
