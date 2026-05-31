@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 11 em progresso (etapas 11.1–11.3 implementadas em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo operacional: gate 11.4 — validação do guia com Zetel DFT.**
+**Estado atual: Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo operacional: Módulo 12 — gestão completa de memória no app.**
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
@@ -31,9 +31,9 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 #### Próximos passos
 - Gate visual/manual do Documento Técnico refinado, se necessário.
-- Próximo passo operacional: **gate 11.4 — validação do Guia de Estudo com Zetel DFT** (PRD v3, ver `prd-v3.md`); após gate → Módulo 12.
+- Próximo passo operacional: **Módulo 12 — gestão completa de memória no app** (PRD v3, ver `prd-v3.md`).
 
-**Módulo 11 (Guia de Estudo: experiência interativa) em progresso — etapas 11.1–11.3 implementadas em 2026-05-31; `pnpm build` limpo; gate 11.4 pendente.** **11.1** — template interativo em `renderStudyGuideHtml`: sidebar sticky (desktop) / nav compacta (mobile), quiz pedagógico (`data-answer-index`, feedback pós-clique, pontuação, reiniciar), glossário pesquisável, highlight de seção via `IntersectionObserver`. **11.2** — schema editorial v2 opcional (`comparison_tabs`, `accordions`, `timelines`, `tables`) + `renderV2Blocks`; compatibilidade retroativa. **11.3** — `buildSystemPrompt` como designer instrucional com blocos v2. Pendente: **11.4** validação visual com Zetel DFT. Ver `spikes/lessons.md` (Módulos 11.1–11.3).
+**Módulo 11 (Guia de Estudo: experiência interativa) concluído em 2026-05-31; gate 11.4 aprovado; `pnpm build` limpo.** **11.1** — template interativo em `renderStudyGuideHtml`: sidebar sticky (desktop) / nav compacta (mobile), quiz pedagógico (`data-answer-index`, feedback pós-clique, pontuação, reiniciar), glossário pesquisável, highlight de seção via `IntersectionObserver`. **11.2** — schema editorial v2 opcional (`comparison_tabs`, `accordions`, `timelines`, `tables`) + `renderV2Blocks`; compatibilidade retroativa. **11.3** — `buildSystemPrompt` como designer instrucional com blocos v2. **11.4** — validação com Zetel `dft` (reprocessado 28→27 páginas): `deepseek/deepseek-v4-flash`, 100% rastreabilidade (35/35 itens, 0 órfãos, 0 flagged), 4 tipos v2 preenchidos, HTML offline (~51 KB). Ressalva não-bloqueante: compat retroativa v1 não testada por ausência de fixture. Ver `spikes/lessons.md` (Módulos 11.1–11.4).
 
 **Módulo 10D (Implementação do guia de estudo) implementado em 2026-05-30; `pnpm build` limpo (compile + lint + types); etapa LLM live requer chave (verificação manual pendente).** Portou o pipeline do spike 10C para produção via `POST /api/zetels/:id/build?mode=guia-estudo` → `generateStudyGuide` (`lib/study-guide-service.ts`). Sem migration SQLite; nenhum contrato existente quebrado; Regras #1/#2 preservadas. Ver `spikes/lessons.md` (Módulo 10D).
 
@@ -215,7 +215,7 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **10C** | **Spike de guia de estudo com LLM** ✅ (GO) | PRD v3 — JSON estruturado e rastreável | 10B |
 | **10D** | **Implementação do guia de estudo** ✅ | PRD v3 — `guia-estudo.html` + metadados + source map | 10C |
 | **10E** | **Configuração de modelos por tarefa** ✅ (parcial; absorvido no M11/M12) | `study_guide_model` + limites do guia; restante D28 → M12 | 10D |
-| **11** | **Guia de Estudo: experiência interativa** (11.1–11.3 ✅; gate **11.4** pendente) | Template interativo, schema/prompt v2, validação DFT | 10E |
+| **11** | **Guia de Estudo: experiência interativa** ✅ | Template interativo, schema/prompt v2, validação DFT (gate 11.4) | 10E |
 | **12** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 11 |
 | PRD v4 | Voz, TTS e STT | PRD v4 | 12 |
 | PRD v5 | Prompts editáveis e modo internet | PRD v5 | 12 |

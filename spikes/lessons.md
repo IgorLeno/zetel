@@ -847,7 +847,28 @@ schema inline com comentários de opcionalidade (não incluídos no JSON final).
 Implementação em código concluída; gate manual com guia DFT real (visual + rastreabilidade) integrado
 ao **gate 11.4**.
 
-## Módulo 11.4 — Validação Zetel DFT (pendente)
+## Módulo 11.4 — Validação Zetel DFT (2026-05-31)
 
-Próximo gate operacional: gerar guia do Zetel DFT e comparar M11 vs. referência — quiz interativo,
-glossário pesquisável, navegação, rastreabilidade, offline, blocos v2 quando aplicável.
+Gate **11 → 12 aprovado**. Zetel `dft`, modelo `deepseek/deepseek-v4-flash`, 244 s, 41 767 tokens
+(28 110 prompt / 13 657 completion), HTML ~51 KB. Meta: 6 cards, 5 seções, 8 glossário, 6 quiz,
+5 zettelkasten; `coveragePct` 100%, 0 órfãos, 0 flagged. Quatro blocos v2 (1 de cada tipo), todos
+com hashes válidos. Invariantes HTML OK: quiz sem vazamento de resposta, glossário pesquisável,
+sidebar v1+v2, `.trace` em 35 itens, offline (0 CDN), 40× `data-page`. `pnpm build` limpo.
+
+### Calibrações
+
+- **Reprocessar antes de gerar guia:** Zetel `dft` ainda tinha 28 páginas no SQLite (pipeline antigo +
+  artefato legado `leitura.html`). `POST /process` reescreveu para 27 páginas (paridade com `dft2`) e
+  desbloqueou a checagem em `study-guide-service.ts`. Rule: guia de estudo exige `zetel_pages` alinhado
+  à segmentação atual — reprocessar se o Zetel foi ingerido antes de mudanças de parser/paginação.
+- **Blocos v2 dependem de conteúdo + modelo, não só de prompt:** run anterior com zero v2 atribuiu
+  "lacuna de prompt"; após reprocessamento, o mesmo prompt 11.3 + DeepSeek emitiu comp/acc/time/table
+  justificados pelo material DFT. Escalonamento de endurecimento de prompt (plano passo 9) **não**
+  acionado.
+- **Rastreabilidade:** 100% cobertura no run final; pendência anterior de glossário 100% flagged foi
+  operacional (fonte desatualizada), não regressão de validador.
+- **Compat retroativa v1:** não testada — sem guia pré-v2 no vault (só `leitura.html` técnico). Coberta
+  por desenho (`renderV2Blocks` omite seções vazias). Ressalva não-bloqueante.
+
+### Gate 11.4
+Aprovado sem alteração de código; apenas reprocessar, restaurar `study_guide_model` e regenerar.

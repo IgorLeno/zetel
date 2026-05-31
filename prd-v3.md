@@ -1,6 +1,6 @@
 # Zetel — PRD v3: Fase Visual, Artefatos de Leitura e Gestão de Memória
 
-> Versão: v3.0 — 2026-05-30 (atualizado 2026-05-31: status M11 etapas 11.1–11.3)
+> Versão: v3.0 — 2026-05-30 (atualizado 2026-05-31: M11 concluído, gate 11.4 aprovado)
 > Substitui todas as versões anteriores de rascunho do PRD v3.
 > Fonte autoritativa para os Módulos 9 e 10 como histórico; fonte autoritativa dos **Módulos 11 e 12** e das decisões D16–D28.
 > Divergência entre este PRD e o CLAUDE.md → **este PRD vence**.
@@ -37,7 +37,7 @@ Isso precisa permanecer corrigido antes de qualquer implementação. A tabela de
 | 10C | Spike de guia de estudo com LLM | PRD v3 |
 | 10D | Implementação do guia de estudo | PRD v3 |
 | 10E | Configuração de modelos por tarefa ✅ (parcial; absorvido no M11/M12) | PRD v3 |
-| 11 | Guia de Estudo: experiência de estudo interativa — **em progresso** (11.1–11.3 ✅; gate 11.4 pendente) | PRD v3 |
+| 11 | Guia de Estudo: experiência de estudo interativa ✅ (gate 11.4 aprovado 2026-05-31) | PRD v3 |
 | 12 | Gestão completa de memória no app | PRD v3 |
 | PRD v4 | Voz, TTS e STT | PRD v4 |
 | PRD v5 | Prompts editáveis e modo internet | PRD v5 |
@@ -45,7 +45,7 @@ Isso precisa permanecer corrigido antes de qualquer implementação. A tabela de
 
 E o campo "Próximos passos" deve apontar para:
 
-> Próximo passo operacional: **gate 11.4 — validação do Guia de Estudo com Zetel DFT** (Módulo 11 em progresso; etapas 11.1–11.3 implementadas)
+> Próximo passo operacional: **Módulo 12 — gestão completa de memória no app** (Módulo 11 concluído; gate 11.4 aprovado)
 
 ***
 
@@ -263,7 +263,7 @@ Quando os dois artefatos existirem, a aba Leitura deve oferecer toggle de altern
 
 **Depende de:** Módulo 10 concluído.
 
-**Status geral (2026-05-31):** etapas **11.1–11.3 implementadas**; `pnpm build` limpo; **gate 11.4** (validação DFT) pendente.
+**Status geral (2026-05-31):** Módulo 11 **concluído**; gate **11.4 aprovado** (Zetel `dft`, `deepseek/deepseek-v4-flash`, 100% rastreabilidade, blocos v2 validados); `pnpm build` limpo.
 
 ---
 
@@ -324,13 +324,13 @@ Atualizar `buildSystemPrompt` em `lib/study-guide-service.ts` para instruir a LL
 
 ### Etapa 11.4 — Validação com Zetel DFT
 
-**Status:** pendente (próximo gate operacional).
+**Status:** ✅ gate aprovado em 2026-05-31 (Zetel `dft` reprocessado; `deepseek/deepseek-v4-flash`; 100% rastreabilidade; 4 tipos v2; HTML offline validado). Detalhes em `spikes/lessons.md` (Módulo 11.4).
 
 Gerar o guia do Zetel DFT e comparar M11 vs. M10D vs. HTML de referência:
 
 - Quiz interativo ✓, glossário pesquisável ✓, navegação ✓, rastreabilidade ✓, offline ✓
 
-**Gate 11 → 12:** Todas as etapas com gate aprovado; guia DFT validado.
+**Gate 11 → 12:** ✅ Aprovado.
 
 ***
 
@@ -511,7 +511,7 @@ Módulo 11 — Guia de Estudo: experiência de estudo interativa
          ├─ 11.1 Template interativo ✅
          ├─ 11.2 Schema editorial v2 ✅
          ├─ 11.3 Prompt editorial v2 ✅
-         └─ 11.4 Validação Zetel DFT (gate pendente)
+         └─ 11.4 Validação Zetel DFT ✅ (gate 11.4 aprovado)
          ↓
 Módulo 12 — Gestão completa de memória no app
          ↓
