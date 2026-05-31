@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 10D (implementação do guia de estudo) implementado. Próximo passo operacional: Módulo 10E — Configuração de modelos por tarefa.**
+**Estado atual: Módulo 10 concluído (10A–10D entregues; 10E absorvido como pré-condição do M11). Próximo passo operacional: Módulo 11 — Guia de Estudo: experiência de estudo interativa.**
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
@@ -31,7 +31,7 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 #### Próximos passos
 - Gate visual/manual do Documento Técnico refinado, se necessário.
-- Próximo passo operacional: **Módulo 10D — Implementação do guia de estudo** (PRD v3, ver `prd-v3.md`), portando a estratégia validada no spike 10C.
+- Próximo passo operacional: **Módulo 11 — Guia de Estudo: experiência de estudo interativa** (PRD v3, ver `prd-v3.md`)
 
 **Módulo 10D (Implementação do guia de estudo) implementado em 2026-05-30; `pnpm build` limpo (compile + lint + types); etapa LLM live requer chave (verificação manual pendente).** Portou o pipeline do spike 10C para produção via `POST /api/zetels/:id/build?mode=guia-estudo` → `generateStudyGuide` (`lib/study-guide-service.ts`). Sem migration SQLite; nenhum contrato existente quebrado; Regras #1/#2 preservadas. Ver `spikes/lessons.md` (Módulo 10D).
 
@@ -41,7 +41,7 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 **Renderização e artefatos:** `renderStudyGuideHtml` (template determinístico, CSS inline, sem CDN/LLM, tema claro/escuro via `data-theme`+`postMessage zetel:theme`, `IntersectionObserver` postando `zetel:page-change` com `data-page`). Grava `artefatos/{guia-estudo.html, guia-estudo.meta.json, guia-estudo.source.json}`. `getArtifactsInfo` (`render-service`) reporta `guiaEstudo.exists/metaExists/sourceExists/model/generatedAt/counts` via `getStudyGuideInfo`. `GET /api/zetels/:id/leitura?artifact=guia-estudo` serve o guia.
 
-**UI e limitações (D27):** o `page_index` derivado embutido no guia posta um `pageIndex` real → reusa D8 e a Regra #3 (fonte = `zetel_pages.content_text`), sem tocar o chat route. `LeituraPanel`: modo "Guia de Estudo" ativado; `selectedMode` é build-target E view (empty-state quando o artefato do modo ainda não existe). Modelo: `study_guide_model` → `default_model` → `OPENROUTER_MODEL` (`resolveStudyGuideModel`); setting dedicado consolidado no 10E.
+**UI e limitações (D27):** o `page_index` derivado embutido no guia posta um `pageIndex` real → reusa D8 e a Regra #3 (fonte = `zetel_pages.content_text`), sem tocar o chat route. `LeituraPanel`: modo "Guia de Estudo" ativado; `selectedMode` é build-target E view (empty-state quando o artefato do modo ainda não existe). Modelo: `study_guide_model` → `default_model` → `OPENROUTER_MODEL` (`resolveStudyGuideModel`); setting `study_guide_model` entregue em 10D; 10E absorvido — UI por tarefa e fallback `response_format` ficam no M11.
 
 **Módulo 10C (Spike de guia de estudo com LLM) concluído em 2026-05-30; spike isolado em `spikes/spike-10c-guia-estudo/` (zero toque em produção, R1); `pnpm build` raiz limpo; execução live com `anthropic/claude-3.5-haiku` (default do config) gerou JSON D26 válido com 100% de rastreabilidade (18/18 itens, 0 hashes órfãos).** Recomendação: **GO para o Módulo 10D**. Validou o pipeline editorial Markdown → LLM (JSON) → template determinístico (D26/D27): a LLM gera **só JSON, nunca HTML** (R2). Achado central: rastreabilidade confiável vem de **pré-segmentar o Markdown em blocos com `sha256` (parser paritário com `parseMarkdownForSegmentation`) e injetar esse catálogo no prompt**, instruindo a LLM a *copiar* hashes em vez de inventá-los, com **validação pós-resposta** (hash citado deve existir no catálogo → cobertura medida, órfãos contados). Entregáveis do spike: `lib-source-index.mjs` (catálogo de blocos), `run-guia.mjs` (chamada OpenRouter paritária com `lib/openrouter.ts`/`lib/config.ts`, sem SDK, chave via env→`~/.zetel/config`, schema D26 + validação de schema/rastreabilidade), `run-render.mjs` (template HTML determinístico, sem LLM/rede), `input.md` sintético (Transformada de Fourier; H1–H3, eqs inline+bloco, tabelas GFM, ≥3 seções), `output/{guia-estudo.json,guia-estudo.source.json,guia-estudo.html,source-index.json}` e `README.md` com modelo/tokens/limitações/go-no-go. Ajustes recomendados para o 10D: reusar parser/segmentação de produção (idealmente derivar blocos de `zetel_pages.content_text`), gerar `guia-estudo.source.json` server-side a partir dos hashes validados, espelhar o template de `lib/render-service.ts` (CSS inline, `<iframe sandbox>`, Regra #2), dimensionar `max_tokens`/`temperature` e validar `response_format` por modelo (Módulo 10E — `study_guide_model`), e endurecer o validador (`resposta_correta ∈ opcoes`). Ver `spikes/spike-10c-guia-estudo/README.md` e `spikes/lessons.md` (Módulo 10C).
 
@@ -72,7 +72,7 @@ Módulo 1 (Fundação) concluído em 2026-05-29: scaffold Next.js 15 + TS strict
 | Arquivo | Papel |
 |---------|-------|
 | `piped-pondering-dahl2.md` | PRD v2 completo (Partes A–D, D1–D15, DT1–DT5) — fonte autoritativa do MVP textual (Módulos 1–8) |
-| `prd-v3.md` | PRD v3 — Módulo 9 como histórico já implementado; fonte autoritativa dos **Módulos 10A–10E e 11** e das decisões D16–D28 |
+| `prd-v3.md` | PRD v3 — Módulos 9 e 10 como histórico; fonte autoritativa dos **Módulos 11 e 12** e das decisões D16–D28 |
 | `spikes/lessons.md` | Calibrações e dívidas técnicas do Módulo 0 — leitura obrigatória antes do Módulo 1 |
 | `estamos-construindo-um-projeto-humble-harbor.md` | Histórico: 5 ajustes de consistência aplicados ao PRD em 2026-05-28 |
 | `zetel-prd-v1.md` (fora deste diretório) | Histórico; não consultar para decisões |
@@ -212,11 +212,12 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **10B** | **Redesign visual compartilhado / ajustes finos** ✅ | PRD v3 — CSS compartilhado sem injeção pelo app | 10A |
 | **10C** | **Spike de guia de estudo com LLM** ✅ (GO) | PRD v3 — JSON estruturado e rastreável | 10B |
 | **10D** | **Implementação do guia de estudo** ✅ | PRD v3 — `guia-estudo.html` + metadados + source map | 10C |
-| **10E** | **Configuração de modelos por tarefa** | PRD v3 — modelos para chat, notas, memória e guia | 10D |
-| **11** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 10E |
-| PRD v4 | Voz, TTS e STT | PRD v4 | 11 |
-| PRD v5 | Prompts editáveis e modo internet | PRD v5 | 11 |
-| Futuro | Memória emergente automática | Fase futura | 11 |
+| **10E** | **Configuração de modelos por tarefa** ✅ (absorvido no M11) | `resolveStudyGuideModel` + `study_guide_model` já implementados em 10D | 10D |
+| **11** | **Guia de Estudo: experiência interativa** | PRD v3 — template interativo, quiz pedagógico, glossário pesquisável, sidebar, prompt editorial v2 | 10E |
+| **12** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 11 |
+| PRD v4 | Voz, TTS e STT | PRD v4 | 12 |
+| PRD v5 | Prompts editáveis e modo internet | PRD v5 | 12 |
+| Futuro | Memória emergente automática | Fase futura | 12 |
 
 ---
 

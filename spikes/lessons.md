@@ -777,8 +777,29 @@ Mistake (evitado): manter dois controles paralelos fazendo coisas parecidas conf
 Rule: consolidei — `selectedMode` escolhe ao mesmo tempo o alvo de geração E o artefato exibido (fallback para empty-state quando o artefato do modo ainda não existe). Satisfaz o PRD ("toggle quando ambos existem") com um controle só.
 
 ### Limitações herdadas do 10C que seguem abertas
+Ver tabela M10D-1…6 na seção **Módulo 10D — Dívidas pendentes** abaixo.
 - `response_format:json_object`: modelos que **rejeitam** o parâmetro com 400 (em vez de
   ignorá-lo) ainda quebram a chamada — `extractJson` só cobre quem ignora e devolve
   texto/cerca. O default (`claude-3.5-haiku`) suporta. Fica para o 10E avaliar
   `study_guide_model` por modelo. Modelo neste módulo = global (`default_model` →
   `OPENROUTER_MODEL`), sem chave dedicada (decidido com Igor).
+
+## Módulo 10D — Dívidas pendentes (base para o Módulo 11)
+
+| # | Dívida | Módulo que resolve |
+|---|--------|--------------------|
+| M10D-1 | Quiz revela a resposta: `class="correta"` e `✓` aplicados antes da interação; `resposta_correta` em atributo legível | M11 etapa 11.1 |
+| M10D-2 | Glossário estático sem busca | M11 etapa 11.1 |
+| M10D-3 | Layout linear sem sidebar; sem navegação interna | M11 etapa 11.1 |
+| M10D-4 | `response_format:json_object` quebra modelos que rejeitam o parâmetro com 400 em vez de ignorar | M11 etapa 11.3 / 10E absorvido |
+| M10D-5 | Schema sem campos editoriais opcionais (tabelas, acordeons, timelines) | M11 etapa 11.2 |
+| M10D-6 | Prompt não instrui LLM como designer instrucional | M11 etapa 11.3 |
+
+### Regra registrada: quiz é pedagógico, não seguro
+
+[2026-05-31] Contexto: proposta de usar `data-answer` com índice para "ocultar" a resposta do DOM.
+Decisão: o objetivo do quiz não é segurança — é experiência pedagógica.
+Regra: o índice correto pode existir no DOM para funcionamento offline, mas não deve aparecer como
+texto, classe óbvia ou símbolo ✓ antes do clique. Não afirmar que "a resposta não fica legível com
+DevTools aberto" — isso é falso e fora do escopo. O usuário que inspecionar o DOM pode encontrar o
+índice; isso é aceitável. O que não é aceitável é a resposta visível no fluxo normal de uso.
