@@ -94,6 +94,36 @@ interface ZkItem extends TraceFields {
   guide_block_id: string;
   pergunta: string;
 }
+interface ComparisonTable {
+  titulo: string;
+  colunas: string[];
+  linhas: string[][];
+}
+interface ComparisonTabsItem extends TraceFields {
+  guide_block_id: string;
+  titulo: string;
+  tabs: ComparisonTable[];
+}
+interface AccordionItem extends TraceFields {
+  guide_block_id: string;
+  titulo: string;
+  conteudo: string;
+}
+interface TimelineStep {
+  titulo: string;
+  descricao: string;
+}
+interface TimelineItem extends TraceFields {
+  guide_block_id: string;
+  titulo: string;
+  etapas: TimelineStep[];
+}
+interface EditorialTableItem extends TraceFields {
+  guide_block_id: string;
+  titulo: string;
+  colunas: string[];
+  linhas: string[][];
+}
 
 interface StudyGuide {
   titulo: string;
@@ -104,9 +134,23 @@ interface StudyGuide {
   glossario: GlossarioItem[];
   quiz: QuizItem[];
   perguntas_zettelkasten: ZkItem[];
+  comparison_tabs?: ComparisonTabsItem[];
+  accordions?: AccordionItem[];
+  timelines?: TimelineItem[];
+  tables?: EditorialTableItem[];
 }
 
-const ITEM_COLLECTIONS = ['cards', 'secoes', 'glossario', 'quiz', 'perguntas_zettelkasten'] as const;
+const ITEM_COLLECTIONS = [
+  'cards',
+  'secoes',
+  'comparison_tabs',
+  'accordions',
+  'timelines',
+  'tables',
+  'glossario',
+  'quiz',
+  'perguntas_zettelkasten',
+] as const;
 
 // ---------------------------------------------------------------------------
 // Mapa de rastreabilidade derivado server-side (R4) e metadados.
@@ -366,6 +410,19 @@ function asArray(v: unknown): unknown[] {
 function stringArray(v: unknown): string[] {
   return asArray(v).filter((x): x is string => typeof x === 'string');
 }
+function stringRows(v: unknown): string[][] {
+  return asArray(v)
+    .map((row) => stringArray(row))
+    .filter((row) => row.length > 0);
+}
+
+function traceFrom(it: Record<string, unknown>): TraceFields {
+  return {
+    source_headings: it.source_headings,
+    source_file: it.source_file,
+    source_block_hashes: it.source_block_hashes,
+  };
+}
 
 /**
  * Endurecimento de quiz (R5): remove itens cuja `resposta_correta` não está em `opcoes`.
@@ -401,6 +458,67 @@ function hardenQuiz(rawQuiz: unknown): { quiz: QuizItem[]; removed: number } {
     }
   }
   return { quiz, removed };
+}
+
+function normalizeComparisonTabs(raw: unknown): ComparisonTabsItem[] {
+  return asArray(raw).flatMap((rawItem) => {
+    const it = rawItem as Record<string, unknown>;
+    if (!isNonEmptyString(it.guide_block_id) || !isNonEmptyString(it.titulo)) return [];
+    const tabs = asArray(it.tabs ?? it.tabelas).flatMap((rawTab) => {
+      const tab = rawTab as Record<string, unknown>;
+      const colunas = stringArray(tab.colunas);
+      const linhas = stringRows(tab.linhas);
+      if (!isNonEmptyString(tab.titulo) || colunas.length === 0 || linhas.length === 0) return [];
+      return [{ titulo: tab.titulo, colunas, linhas }];
+    });
+    if (tabs.length === 0) return [];
+    return [{ guide_block_id: it.guide_block_id, titulo: it.titulo, tabs, ...traceFrom(it) }];
+  });
+}
+
+function normalizeAccordions(raw: unknown): AccordionItem[] {
+  return asArray(raw).flatMap((rawItem) => {
+    const it = rawItem as Record<string, unknown>;
+    if (
+      !isNonEmptyString(it.guide_block_id) ||
+      !isNonEmptyString(it.titulo) ||
+      !isNonEmptyString(it.conteudo)
+    ) {
+      return [];
+    }
+    return [{ guide_block_id: it.guide_block_id, titulo: it.titulo, conteudo: it.conteudo, ...traceFrom(it) }];
+  });
+}
+
+function normalizeTimelines(raw: unknown): TimelineItem[] {
+  return asArray(raw).flatMap((rawItem) => {
+    const it = rawItem as Record<string, unknown>;
+    if (!isNonEmptyString(it.guide_block_id) || !isNonEmptyString(it.titulo)) return [];
+    const etapas = asArray(it.etapas ?? it.steps).flatMap((rawStep) => {
+      const step = rawStep as Record<string, unknown>;
+      if (!isNonEmptyString(step.titulo) || !isNonEmptyString(step.descricao)) return [];
+      return [{ titulo: step.titulo, descricao: step.descricao }];
+    });
+    if (etapas.length === 0) return [];
+    return [{ guide_block_id: it.guide_block_id, titulo: it.titulo, etapas, ...traceFrom(it) }];
+  });
+}
+
+function normalizeEditorialTables(raw: unknown): EditorialTableItem[] {
+  return asArray(raw).flatMap((rawItem) => {
+    const it = rawItem as Record<string, unknown>;
+    const colunas = stringArray(it.colunas);
+    const linhas = stringRows(it.linhas);
+    if (
+      !isNonEmptyString(it.guide_block_id) ||
+      !isNonEmptyString(it.titulo) ||
+      colunas.length === 0 ||
+      linhas.length === 0
+    ) {
+      return [];
+    }
+    return [{ guide_block_id: it.guide_block_id, titulo: it.titulo, colunas, linhas, ...traceFrom(it) }];
+  });
 }
 
 /**
@@ -462,6 +580,10 @@ function validateAndNormalize(raw: unknown, hardenedQuiz: QuizItem[]): StudyGuid
     glossario,
     quiz: hardenedQuiz,
     perguntas_zettelkasten: zk,
+    comparison_tabs: normalizeComparisonTabs(g.comparison_tabs),
+    accordions: normalizeAccordions(g.accordions),
+    timelines: normalizeTimelines(g.timelines),
+    tables: normalizeEditorialTables(g.tables),
   };
 }
 
@@ -471,7 +593,7 @@ function traceTargets(guia: StudyGuide): { label: string; id: string; item: Trac
     { label: 'resumo', id: 'resumo', item: guia.resumo },
   ];
   for (const key of ITEM_COLLECTIONS) {
-    const arr = guia[key] as (TraceFields & { guide_block_id: string })[];
+    const arr = (guia[key] ?? []) as (TraceFields & { guide_block_id: string })[];
     arr.forEach((item, i) =>
       targets.push({ label: `${key}[${i}]`, id: item.guide_block_id, item }),
     );
@@ -593,21 +715,161 @@ function navLink(id: string, label: string): string {
   return `<a href="#${esc(id)}" data-nav-target="${esc(id)}">${esc(label)}</a>`;
 }
 
-function renderGuideNav(secoes: SecaoItem[]): string {
-  const sectionLinks = secoes
+function renderGuideNav(guia: StudyGuide): string {
+  const sectionLinks = guia.secoes
     .map((s, i) => navLink(`secao-${i + 1}`, s.titulo))
     .join('\n');
+  const v2Links = [
+    ...(guia.comparison_tabs ?? []).map((item, i) => navLink(`comparison-${i + 1}`, item.titulo)),
+    ...(guia.accordions ?? []).map((item, i) => navLink(`accordion-${i + 1}`, item.titulo)),
+    ...(guia.timelines ?? []).map((item, i) => navLink(`timeline-${i + 1}`, item.titulo)),
+    ...(guia.tables ?? []).map((item, i) => navLink(`editorial-table-${i + 1}`, item.titulo)),
+  ].join('\n');
   return `<aside class="guide-sidebar" aria-label="Navegação do guia">
     <nav class="guide-nav">
       ${navLink('capa', 'Capa')}
       ${navLink('conceitos-chave', 'Conceitos-chave')}
       ${navLink('secoes', 'Seções')}
       ${sectionLinks}
+      ${v2Links}
       ${navLink('glossario', 'Glossário')}
       ${navLink('quiz', 'Quiz')}
       ${navLink('zettelkasten', 'Perguntas Zettelkasten')}
     </nav>
   </aside>`;
+}
+
+function renderTableHead(colunas: string[]): string {
+  return `<thead><tr>${colunas.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead>`;
+}
+
+function renderTableRows(linhas: string[][], colCount: number): string {
+  return `<tbody>${linhas
+    .map(
+      (row) =>
+        `<tr>${Array.from({ length: colCount }, (_, i) => `<td>${esc(row[i] ?? '')}</td>`).join('')}</tr>`,
+    )
+    .join('')}</tbody>`;
+}
+
+function renderTable(table: Pick<EditorialTableItem, 'colunas' | 'linhas'>): string {
+  return `<div class="editorial-table-wrap"><table>${renderTableHead(table.colunas)}${renderTableRows(
+    table.linhas,
+    table.colunas.length,
+  )}</table></div>`;
+}
+
+function renderComparisonTabs(
+  items: ComparisonTabsItem[],
+  sourceMap: StudyGuideSourceMap,
+): string {
+  return items
+    .map((item, i) => {
+      const id = `comparison-${i + 1}`;
+      const tabs = item.tabs
+        .map((tab, tabIndex) => {
+          const panelId = `${id}-tab-${tabIndex + 1}`;
+          return `<section class="comparison-panel" id="${panelId}" data-tab-panel="${panelId}">
+            <h4>${esc(tab.titulo)}</h4>
+            ${renderTable(tab)}
+          </section>`;
+        })
+        .join('\n');
+      const tabButtons =
+        item.tabs.length > 1
+          ? `<div class="comparison-tab-list" role="tablist" aria-label="${esc(item.titulo)}">
+            ${item.tabs
+              .map((tab, tabIndex) => {
+                const panelId = `${id}-tab-${tabIndex + 1}`;
+                return `<button type="button" class="comparison-tab" data-tab-target="${panelId}" aria-controls="${panelId}" aria-selected="${tabIndex === 0 ? 'true' : 'false'}">${esc(tab.titulo)}</button>`;
+              })
+              .join('\n')}
+          </div>`
+          : '';
+
+      return `<article id="${id}" class="comparison-tabs" data-nav-section="${id}"${pageAttr(
+        item.guide_block_id,
+        sourceMap,
+      )}>
+        <h3>${esc(item.titulo)}</h3>
+        ${tabButtons}
+        <div class="comparison-panels">${tabs}</div>
+        ${traceBadge(item.guide_block_id, sourceMap)}
+      </article>`;
+    })
+    .join('\n');
+}
+
+function renderAccordions(items: AccordionItem[], sourceMap: StudyGuideSourceMap): string {
+  if (items.length === 0) return '';
+  const rendered = items
+    .map((item, i) => {
+      const id = `accordion-${i + 1}`;
+      return `<article id="${id}" class="accordion-block" data-nav-section="${id}"${pageAttr(
+        item.guide_block_id,
+        sourceMap,
+      )}>
+        <details>
+          <summary>${esc(item.titulo)}</summary>
+          <div class="accordion-content">${paragraphs(item.conteudo)}</div>
+        </details>
+        ${traceBadge(item.guide_block_id, sourceMap)}
+      </article>`;
+    })
+    .join('\n');
+  return `<div class="accordion-list">${rendered}</div>`;
+}
+
+function renderTimelines(items: TimelineItem[], sourceMap: StudyGuideSourceMap): string {
+  return items
+    .map((item, i) => {
+      const id = `timeline-${i + 1}`;
+      const steps = item.etapas
+        .map(
+          (step, stepIndex) => `<li>
+            <span class="timeline-marker">${stepIndex + 1}</span>
+            <div><h4>${esc(step.titulo)}</h4><p>${esc(step.descricao)}</p></div>
+          </li>`,
+        )
+        .join('\n');
+      return `<article id="${id}" class="timeline" data-nav-section="${id}"${pageAttr(
+        item.guide_block_id,
+        sourceMap,
+      )}>
+        <h3>${esc(item.titulo)}</h3>
+        <ol>${steps}</ol>
+        ${traceBadge(item.guide_block_id, sourceMap)}
+      </article>`;
+    })
+    .join('\n');
+}
+
+function renderEditorialTables(
+  items: EditorialTableItem[],
+  sourceMap: StudyGuideSourceMap,
+): string {
+  return items
+    .map((item, i) => {
+      const id = `editorial-table-${i + 1}`;
+      return `<article id="${id}" class="editorial-table" data-nav-section="${id}"${pageAttr(
+        item.guide_block_id,
+        sourceMap,
+      )}>
+        <h3>${esc(item.titulo)}</h3>
+        ${renderTable(item)}
+        ${traceBadge(item.guide_block_id, sourceMap)}
+      </article>`;
+    })
+    .join('\n');
+}
+
+function renderV2Blocks(guia: StudyGuide, sourceMap: StudyGuideSourceMap): string {
+  const comparison = renderComparisonTabs(guia.comparison_tabs ?? [], sourceMap);
+  const accordions = renderAccordions(guia.accordions ?? [], sourceMap);
+  const timelines = renderTimelines(guia.timelines ?? [], sourceMap);
+  const tables = renderEditorialTables(guia.tables ?? [], sourceMap);
+  const content = [comparison, accordions, timelines, tables].filter(Boolean).join('\n');
+  return content ? `<section class="v2-blocks" aria-label="Blocos editoriais">${content}</section>` : '';
 }
 
 function renderCards(cards: CardItem[], sourceMap: StudyGuideSourceMap): string {
@@ -731,6 +993,35 @@ function guideCss(): string {
   .card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:18px}
   .card h3{font-size:15px}
   .secao{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:22px;margin-bottom:16px}
+  .v2-blocks{margin-bottom:40px}
+  .comparison-tabs,.accordion-block,.timeline,.editorial-table{background:var(--card);border:1px solid var(--border);
+    border-radius:8px;padding:22px;margin-bottom:16px}
+  .comparison-tab-list{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+  .comparison-tab{min-height:38px;border:1px solid var(--border);border-radius:6px;background:var(--sub);
+    color:var(--text);font:inherit;font-size:13px;font-weight:700;padding:7px 10px;cursor:pointer}
+  .comparison-tab:hover,.comparison-tab:focus{border-color:var(--accent);outline:none}
+  .comparison-tab.is-active{color:var(--accent);border-color:var(--accent);background:var(--bg)}
+  .comparison-tabs.is-enhanced .comparison-panel[hidden]{display:none}
+  .comparison-panel{margin-top:12px}
+  .comparison-panel h4,.timeline h4{font-size:14px;color:var(--text);margin-bottom:8px}
+  .accordion-list{display:flex;flex-direction:column;gap:12px}
+  .accordion-block{padding:0}
+  .accordion-block details{padding:18px 22px}
+  .accordion-block summary{cursor:pointer;font-weight:700;color:var(--accent);list-style:none}
+  .accordion-block summary::-webkit-details-marker{display:none}
+  .accordion-block summary::after{content:'+';float:right;color:var(--muted);font-weight:700}
+  .accordion-block details[open] summary::after{content:'-'}
+  .accordion-content{margin-top:12px;color:var(--text)}
+  .accordion-block .trace{margin:0 22px 18px}
+  .timeline ol{list-style:none;display:flex;flex-direction:column;gap:14px;position:relative}
+  .timeline li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start}
+  .timeline-marker{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:999px;
+    background:var(--sub);border:1px solid var(--border);color:var(--accent);font-weight:800;font-size:13px}
+  .editorial-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--bg)}
+  table{width:100%;border-collapse:collapse;min-width:520px;font-size:14px}
+  th,td{border-bottom:1px solid var(--border);padding:10px 12px;text-align:left;vertical-align:top}
+  th{background:var(--sub);color:var(--text);font-weight:700;position:sticky;top:0}
+  tr:last-child td{border-bottom:0}
   .glossary-search-label{display:block;font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px}
   .glossary-search{width:100%;min-height:44px;border:1px solid var(--border);border-radius:8px;
     background:var(--card);color:var(--text);font:inherit;padding:10px 12px;margin-bottom:14px}
@@ -798,6 +1089,35 @@ function guideNavScript(): string {
     if (d && d.type === 'zetel:theme' && (d.theme === 'dark' || d.theme === 'light')) {
       document.documentElement.setAttribute('data-theme', d.theme);
     }
+  });
+
+  bySel('.comparison-tabs').forEach(function(group){
+    var buttons = Array.prototype.slice.call(group.querySelectorAll('[data-tab-target]'));
+    var panels = Array.prototype.slice.call(group.querySelectorAll('[data-tab-panel]'));
+    if (!buttons.length || !panels.length) return;
+    group.classList.add('is-enhanced');
+    function activate(target){
+      buttons.forEach(function(btn){
+        var active = btn.getAttribute('data-tab-target') === target;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      panels.forEach(function(panel){
+        panel.hidden = panel.getAttribute('data-tab-panel') !== target;
+      });
+    }
+    buttons.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activate(btn.getAttribute('data-tab-target'));
+      });
+    });
+    activate(buttons[0].getAttribute('data-tab-target'));
+  });
+
+  bySel('.accordion-block details').forEach(function(details){
+    details.addEventListener('toggle', function(){
+      details.classList.toggle('is-open', details.open);
+    });
   });
 
   var glossarySearch = document.getElementById('glossary-search');
@@ -986,7 +1306,7 @@ export function renderStudyGuideHtml(
 </head>
 <body>
   <div class="guide-shell">
-    ${renderGuideNav(guia.secoes)}
+    ${renderGuideNav(guia)}
     <main class="guide-main">
       <header id="capa" class="capa" data-nav-section="capa">
         <span class="brand">⚡ Zetel · Guia de Estudo</span>
@@ -997,6 +1317,7 @@ export function renderStudyGuideHtml(
       </header>
       ${renderCards(guia.cards, sourceMap)}
       ${renderSecoes(guia.secoes, sourceMap)}
+      ${renderV2Blocks(guia, sourceMap)}
       ${renderGlossario(guia.glossario, sourceMap)}
       ${renderQuiz(guia.quiz, sourceMap)}
       ${renderZettelkasten(guia.perguntas_zettelkasten, sourceMap)}
