@@ -803,3 +803,11 @@ Regra: o índice correto pode existir no DOM para funcionamento offline, mas nã
 texto, classe óbvia ou símbolo ✓ antes do clique. Não afirmar que "a resposta não fica legível com
 DevTools aberto" — isso é falso e fora do escopo. O usuário que inspecionar o DOM pode encontrar o
 índice; isso é aceitável. O que não é aceitável é a resposta visível no fluxo normal de uso.
+
+### Regra registrada: verificação focada não deve subir servidor sem necessidade
+
+[2026-05-31] Context: polimento M11.1 em template/script do Guia de Estudo, sem fluxo real de app.
+Mistake: usar Playwright E2E para uma asserção de template fez o `webServer` tentar subir `next dev`
+e bater em `EMFILE: too many open files` antes de chegar aos asserts.
+Rule: para dívidas puras de template/source, preferir smoke script local em Node; reservar Playwright
+para fluxos que exigem navegador, servidor ou interação real do app.

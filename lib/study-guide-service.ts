@@ -601,6 +601,7 @@ function renderGuideNav(secoes: SecaoItem[]): string {
     <nav class="guide-nav">
       ${navLink('capa', 'Capa')}
       ${navLink('conceitos-chave', 'Conceitos-chave')}
+      ${navLink('secoes', 'Seções')}
       ${sectionLinks}
       ${navLink('glossario', 'Glossário')}
       ${navLink('quiz', 'Quiz')}
@@ -632,7 +633,7 @@ function renderSecoes(secoes: SecaoItem[], sourceMap: StudyGuideSourceMap): stri
     </article>`,
     )
     .join('\n');
-  return `<section class="secoes"><h2>Seções</h2>${items}</section>`;
+  return `<section id="secoes" class="secoes" data-nav-section="secoes"><h2>Seções</h2>${items}</section>`;
 }
 
 function renderGlossario(glossario: GlossarioItem[], sourceMap: StudyGuideSourceMap): string {
@@ -790,6 +791,7 @@ function guideNavScript(): string {
   return `
 (function(){
   function bySel(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+  function quizOptionsFor(item){ return Array.prototype.slice.call(item.querySelectorAll('.quiz-option')); }
 
   window.addEventListener('message', function(e){
     var d = e && e.data;
@@ -819,12 +821,12 @@ function guideNavScript(): string {
     if (score) score.textContent = 'Pontuação: ' + hits + ' / ' + answered;
   }
   quizItems.forEach(function(item){
-    bySel.call(null, '.quiz-option').filter(function(btn){ return item.contains(btn); }).forEach(function(btn){
+    var buttons = quizOptionsFor(item);
+    buttons.forEach(function(btn){
       btn.addEventListener('click', function(){
         if (item.getAttribute('data-answered') === 'true') return;
         var chosen = Number(btn.getAttribute('data-option-index'));
         var target = Number(item.getAttribute('data-answer-index'));
-        var buttons = bySel.call(null, '.quiz-option').filter(function(opt){ return item.contains(opt); });
         var targetButton = buttons.filter(function(opt){
           return Number(opt.getAttribute('data-option-index')) === target;
         })[0];
@@ -855,7 +857,7 @@ function guideNavScript(): string {
       hits = 0;
       quizItems.forEach(function(item){
         item.setAttribute('data-answered', 'false');
-        bySel.call(null, '.quiz-option').filter(function(btn){ return item.contains(btn); }).forEach(function(btn){
+        quizOptionsFor(item).forEach(function(btn){
           btn.disabled = false;
           btn.classList.remove('target', 'miss');
         });
