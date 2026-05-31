@@ -1,6 +1,6 @@
 # Zetel — PRD v3: Fase Visual, Artefatos de Leitura e Gestão de Memória
 
-> Versão: v3.0 — 2026-05-30
+> Versão: v3.0 — 2026-05-30 (atualizado 2026-05-31: status M11 etapas 11.1–11.3)
 > Substitui todas as versões anteriores de rascunho do PRD v3.
 > Fonte autoritativa para os Módulos 9 e 10 como histórico; fonte autoritativa dos **Módulos 11 e 12** e das decisões D16–D28.
 > Divergência entre este PRD e o CLAUDE.md → **este PRD vence**.
@@ -36,8 +36,8 @@ Isso precisa permanecer corrigido antes de qualquer implementação. A tabela de
 | 10B | Redesign visual compartilhado / ajustes finos de CSS | PRD v3 |
 | 10C | Spike de guia de estudo com LLM | PRD v3 |
 | 10D | Implementação do guia de estudo | PRD v3 |
-| 10E | Configuração de modelos por tarefa ✅ (absorvido no M11) | PRD v3 |
-| 11 | Guia de Estudo: experiência de estudo interativa | PRD v3 |
+| 10E | Configuração de modelos por tarefa ✅ (parcial; absorvido no M11/M12) | PRD v3 |
+| 11 | Guia de Estudo: experiência de estudo interativa — **em progresso** (11.1–11.3 ✅; gate 11.4 pendente) | PRD v3 |
 | 12 | Gestão completa de memória no app | PRD v3 |
 | PRD v4 | Voz, TTS e STT | PRD v4 |
 | PRD v5 | Prompts editáveis e modo internet | PRD v5 |
@@ -45,7 +45,7 @@ Isso precisa permanecer corrigido antes de qualquer implementação. A tabela de
 
 E o campo "Próximos passos" deve apontar para:
 
-> Próximo passo operacional: **Módulo 11 — Guia de Estudo: experiência de estudo interativa**
+> Próximo passo operacional: **gate 11.4 — validação do Guia de Estudo com Zetel DFT** (Módulo 11 em progresso; etapas 11.1–11.3 implementadas)
 
 ***
 
@@ -163,7 +163,7 @@ Com o spike aprovado e as decisões registradas, o Claude Code implementa tudo e
 
 **Paleta e tema:** template adota variáveis CSS do app principal. Modo claro e escuro via `postMessage` (`{ type: 'zetel:theme', theme: 'dark' | 'light' }`). O iframe aplica `data-theme` no `<html>` ao receber a mensagem. Fallback: `prefers-color-scheme`. Regra #2 preservada — app não injeta CSS no iframe.
 
-**Tipografia:** o corpo de leitura **mantém o serif atual** (`Newsreader`, Georgia, serif — `render-service.ts:124`), melhor para textos longos; a UI (mini-índice, barra de navegação, contadores) usa sans-serif `system-ui, -apple-system, sans-serif`. Sem CDN — `Newsreader` com fallback Georgia/serif, sem custo de rede. Line-height 1.6–1.75. Hierarquia clara de H1 a H3. Largura máxima de `65ch` no corpo. `text-wrap: pretty` onde suportado.
+**Tipografia:** o corpo de leitura usa **`system-ui`** em todo o artefato (consolidado no Módulo 10B; antes do 10B o M9 usava serif `Newsreader`/Georgia/65ch). Largura máxima ~860px no corpo (`article.page`), line-height 1.6, `text-wrap: pretty`. Mini-índice, barra de navegação e contadores compartilham a mesma família UI. Sem CDN — 100% offline. Hierarquia clara de H1 a H3.
 
 **Mini-índice:** destaque da seção ativa via `IntersectionObserver`. Em telas < 768px, colapsa para dropdown no topo.
 
@@ -193,7 +193,7 @@ Com o spike aprovado e as decisões registradas, o Claude Code implementa tudo e
 
 **Implementação (etapa 9.2):**
 - [ ] Template renderiza com paleta e tema do app (claro e escuro via postMessage)
-- [ ] Tipografia com hierarquia visual clara, largura máxima de 65ch
+- [ ] Tipografia com hierarquia visual clara, largura ~860px no corpo (`system-ui`, consolidado no 10B)
 - [ ] Mini-índice destaca seção ativa ao rolar
 - [ ] Botões Anterior/Próxima com design consistente e área de toque ≥ 44px
 - [ ] Primeira página com H1 isolado não fica em branco (dívida HTML-1 fechada)
@@ -244,7 +244,7 @@ Implementar geração do Guia de Estudo: Markdown original → LLM gera JSON est
 
 Adicionar seleção de modelos por tarefa: `chat_model`, `note_model`, `memory_model`, `study_guide_model` e `study_guide_review_model` opcional. Todos usam a chave OpenRouter já configurada e fazem fallback para o modelo padrão global.
 
-**Status:** parcialmente entregue em 10D (`study_guide_model`, `resolveStudyGuideModel`). Escopo restante de 10E (UI de modelos por tarefa para chat/notas/memória; fallback `response_format` por modelo) absorvido pelo Módulo 11 etapa 11.3 / pré-requisito do M12.
+**Status (2026-05-31):** parcialmente entregue. **Implementado:** `study_guide_model`, `resolveStudyGuideModel`, `study_guide_max_tokens`, `study_guide_timeout_s`, históricos de modelo e teste por campo em Configurações. **Não implementado:** `chat_model`, `note_model`, `memory_model`, `study_guide_review_model`. `tech_doc_model` persiste na UI mas o Documento Técnico continua determinístico (sem LLM) — setting reservada. Escopo restante de D28 absorvido pelo Módulo 12. Produção **não envia** `response_format:json_object` ao OpenRouter — compatibilidade por prompt + `extractJson`.
 
 ## UI de geração e leitura
 
@@ -259,13 +259,17 @@ Quando os dois artefatos existirem, a aba Leitura deve oferecer toggle de altern
 
 # Parte D — Módulo 11: Guia de Estudo — experiência de estudo interativa
 
-**Objetivo:** Evoluir o Guia de Estudo de documento HTML estático para experiência navegável e pedagogicamente efetiva, sem alterar o pipeline LLM → JSON nem o schema obrigatório das coleções.
+**Objetivo:** Evoluir o Guia de Estudo de documento HTML estático para experiência navegável e pedagogicamente efetiva, sem alterar o pipeline LLM → JSON nem o schema obrigatório das coleções v1.
 
 **Depende de:** Módulo 10 concluído.
+
+**Status geral (2026-05-31):** etapas **11.1–11.3 implementadas**; `pnpm build` limpo; **gate 11.4** (validação DFT) pendente.
 
 ---
 
 ### Etapa 11.1 — Template interativo (schema atual, sem mudança de prompt)
+
+**Status:** ✅ implementado em 2026-05-31.
 
 Melhorias em `renderStudyGuideHtml` e funções auxiliares em `lib/study-guide-service.ts`:
 
@@ -287,6 +291,8 @@ Melhorias em `renderStudyGuideHtml` e funções auxiliares em `lib/study-guide-s
 
 ### Etapa 11.2 — Schema editorial v2 (campos opcionais, compatibilidade retroativa)
 
+**Status:** ✅ implementado em 2026-05-31.
+
 Adicionar ao schema campos opcionais sem quebrar compatibilidade:
 
 - `comparison_tabs` — tabelas comparativas em abas
@@ -302,6 +308,8 @@ O template renderiza esses blocos se presentes; usa layout v1 caso contrário. `
 
 ### Etapa 11.3 — Prompt editorial v2
 
+**Status:** ✅ implementado em 2026-05-31.
+
 Atualizar `buildSystemPrompt` em `lib/study-guide-service.ts` para instruir a LLM como designer instrucional:
 
 - Solicitar estrutura em seções navegáveis com títulos claros
@@ -315,6 +323,8 @@ Atualizar `buildSystemPrompt` em `lib/study-guide-service.ts` para instruir a LL
 ---
 
 ### Etapa 11.4 — Validação com Zetel DFT
+
+**Status:** pendente (próximo gate operacional).
 
 Gerar o guia do Zetel DFT e comparar M11 vs. M10D vs. HTML de referência:
 
@@ -442,7 +452,7 @@ Path safety idêntico ao GET. Apagar com `fs.unlink`. Responder `204 No Content`
 | D25 | Dois modos de geração de HTML por Zetel: Documento Técnico determinístico, sem LLM, fiel ao Markdown, em `artefatos/leitura-tecnica.html`; Guia de Estudo editorial com LLM, não determinístico, em `artefatos/guia-estudo.html`, `artefatos/guia-estudo.meta.json` e `artefatos/guia-estudo.source.json`. O antigo `leitura.html` deve ser migrado/renomeado para o papel técnico. | 10A–10D |
 | D26 | Pipeline editorial do Guia de Estudo: Markdown original → LLM gera JSON estruturado → template determinístico renderiza HTML. A LLM nunca gera HTML final diretamente. O JSON inclui título, subtítulo, resumo, cards, seções, glossário, quiz e perguntas Zettelkasten; cada item inclui rastreabilidade ao Markdown (`source_headings`, `source_file`, `source_block_hashes` ou equivalente). | 10C–10D |
 | D27 | Fonte de conhecimento do parceiro permanece o Markdown. O HTML visível informa localização do usuário, não limite do conhecimento do parceiro. O parceiro usa Markdown original ou `zetel_pages.content_text`; em modo Guia de Estudo, usa `guia-estudo.source.json` para mapear `guide_block_id` → origem no Markdown. D8 deve ser estendido, não substituído. | 10D |
-| D28 | Configuração de modelos por tarefa: `chat_model`, `note_model`, `memory_model`, `study_guide_model` e `study_guide_review_model` opcional. Todos usam a chave OpenRouter já configurada, com fallback para o modelo padrão global. TTS/STT ficam para PRD v4. `study_guide_model` parcial em 10D; escopo restante absorvido no M11. | 10D (parcial) / M11 |
+| D28 | Configuração de modelos por tarefa: `chat_model`, `note_model`, `memory_model`, `study_guide_model` e `study_guide_review_model` opcional. Todos usam a chave OpenRouter já configurada, com fallback para o modelo padrão global. TTS/STT ficam para PRD v4. **Entregue (parcial):** `study_guide_model`, `study_guide_max_tokens`, `study_guide_timeout_s`. **Pendente:** demais chaves D28; `tech_doc_model` na UI sem uso (Documento Técnico sem LLM). | 10D/M11 (parcial) / M12 |
 
 ***
 
@@ -495,9 +505,13 @@ Módulo 10C — Spike de guia de estudo com LLM
          ↓
 Módulo 10D — Implementação do guia de estudo
          ↓
-Módulo 10E — Configuração de modelos por tarefa ✅ (absorvido no M11)
+Módulo 10E — Configuração de modelos por tarefa ✅ (parcial; absorvido no M11/M12)
          ↓
-Módulo 11 — Guia de Estudo: experiência de estudo interativa (11.1–11.4)
+Módulo 11 — Guia de Estudo: experiência de estudo interativa
+         ├─ 11.1 Template interativo ✅
+         ├─ 11.2 Schema editorial v2 ✅
+         ├─ 11.3 Prompt editorial v2 ✅
+         └─ 11.4 Validação Zetel DFT (gate pendente)
          ↓
 Módulo 12 — Gestão completa de memória no app
          ↓

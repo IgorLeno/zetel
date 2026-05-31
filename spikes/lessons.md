@@ -776,24 +776,19 @@ template), `requestJson` em `lib/openrouter.ts`, branch `?mode=guia-estudo` em
 Mistake (evitado): manter dois controles paralelos fazendo coisas parecidas confunde o usuário.
 Rule: consolidei — `selectedMode` escolhe ao mesmo tempo o alvo de geração E o artefato exibido (fallback para empty-state quando o artefato do modo ainda não existe). Satisfaz o PRD ("toggle quando ambos existem") com um controle só.
 
-### Limitações herdadas do 10C que seguem abertas
-Ver tabela M10D-1…6 na seção **Módulo 10D — Dívidas pendentes** abaixo.
-- `response_format:json_object`: modelos que **rejeitam** o parâmetro com 400 (em vez de
-  ignorá-lo) ainda quebram a chamada — `extractJson` só cobre quem ignora e devolve
-  texto/cerca. O default (`claude-3.5-haiku`) suporta. Fica para o 10E avaliar
-  `study_guide_model` por modelo. Modelo neste módulo = global (`default_model` →
-  `OPENROUTER_MODEL`), sem chave dedicada (decidido com Igor).
+### Limitações herdadas do 10C — resolvidas no M11
+Ver tabela M10D-1…6 abaixo. **M10D-4** fechado em produção ao **remover** `response_format:json_object` de `requestJson` — compatibilidade por prompt ("responda só JSON") + `extractJson` tolerante a cerca ```json. O spike 10C ainda usava `response_format`; produção não.
 
-## Módulo 10D — Dívidas pendentes (base para o Módulo 11)
+## Módulo 10D — Dívidas (histórico → resolução no M11)
 
-| # | Dívida | Módulo que resolve |
-|---|--------|--------------------|
-| M10D-1 | Quiz revela a resposta: `class="correta"` e `✓` aplicados antes da interação; `resposta_correta` em atributo legível | M11 etapa 11.1 |
-| M10D-2 | Glossário estático sem busca | M11 etapa 11.1 |
-| M10D-3 | Layout linear sem sidebar; sem navegação interna | M11 etapa 11.1 |
-| M10D-4 | `response_format:json_object` quebra modelos que rejeitam o parâmetro com 400 em vez de ignorar | M11 etapa 11.3 / 10E absorvido |
-| M10D-5 | Schema sem campos editoriais opcionais (tabelas, acordeons, timelines) | M11 etapa 11.2 |
-| M10D-6 | Prompt não instrui LLM como designer instrucional | M11 etapa 11.3 |
+| # | Dívida | Status | Resolvido em |
+|---|--------|--------|--------------|
+| M10D-1 | Quiz revelava resposta antes da interação | ✅ Fechada | M11.1 — `data-answer-index`, sem `class="correta"` pré-clique |
+| M10D-2 | Glossário estático sem busca | ✅ Fechada | M11.1 — filtro JS inline |
+| M10D-3 | Layout linear sem sidebar | ✅ Fechada | M11.1 — `.guide-sidebar` + nav mobile |
+| M10D-4 | `response_format:json_object` quebrava modelos com 400 | ✅ Fechada | Produção — sem `response_format`; prompt + `extractJson` |
+| M10D-5 | Schema sem campos editoriais v2 | ✅ Fechada | M11.2 — `comparison_tabs`, `accordions`, `timelines`, `tables` |
+| M10D-6 | Prompt não instruía designer instrucional | ✅ Fechada | M11.3 — `buildSystemPrompt` v2 |
 
 ### Regra registrada: quiz é pedagógico, não seguro
 
@@ -812,15 +807,47 @@ e bater em `EMFILE: too many open files` antes de chegar aos asserts.
 Rule: para dívidas puras de template/source, preferir smoke script local em Node; reservar Playwright
 para fluxos que exigem navegador, servidor ou interação real do app.
 
-## Módulo 11.2 — Pontos de atenção pós-gate (2026-05-31)
+## Módulo 11.1 — Template interativo (2026-05-31)
 
+Evoluiu `renderStudyGuideHtml` / `guideCss()` / `guideNavScript()` em `lib/study-guide-service.ts`
+sem alterar o schema v1 obrigatório nem o prompt da época.
+
+### Entregue
+- Sidebar sticky (desktop) com links para Capa, Cards, Seções, blocos v2 (quando existem),
+  Glossário, Quiz, Zettelkasten; nav compacta no topo em mobile.
+- Highlight da seção ativa via extensão do `IntersectionObserver` existente (um observer só).
+- Quiz pedagógico: botões `.quiz-option`, `data-answer-index`, feedback pós-clique, pontuação,
+  botão reiniciar; sem revelar resposta no fluxo normal.
+- Glossário pesquisável: `<input id="glossary-search">` filtra termo e definição inline.
+- `.trace` e `data-page` / `postMessage zetel:page-change` preservados.
+
+### Gate 11.1
+`pnpm build` limpo. Validação visual completa adiada para gate 11.4 (Zetel DFT).
+
+## Módulo 11.2 — Schema editorial v2 (2026-05-31)
+
+Campos opcionais em `StudyGuideJson`: `comparison_tabs`, `accordions`, `timelines`, `tables`.
+`validateAndNormalize` não falha pela ausência; `renderV2Blocks` renderiza se presentes.
+Aliases tolerantes: `tabs ?? tabelas`, `etapas ?? steps` (fixtures/smoke).
+
+### Pontos de atenção pós-implementação
 - `renderAccordions` renderiza `.trace` fora do `<details>`, preservando o selo visível
-  independentemente do estado recolhido. O recuo visual pode ficar ligeiramente desalinhado em
-  telas estreitas porque o `<details>` concentra o padding e o selo usa margem própria; tratar como
-  ajuste cosmético na validação visual 11.4.
-- Os aliases tolerantes `tabs ?? tabelas` e `etapas ?? steps` cobrem fixtures/schema v2, mas a LLM
-  não deve gerar esses campos em fluxo real até a Etapa 11.3, porque `buildSystemPrompt` ainda não
-  instrui os blocos editoriais avançados. Validar o gate 11.2 com fixture manual/smoke local.
-- A ordem de leitura dos blocos v2 é fixa em `renderV2Blocks`: `comparison_tabs`, `accordions`,
-  `timelines`, `tables`; a sidebar espelha essa ordem após `Seções` e antes de `Glossário`.
-  Ordenação editorial customizável fica fora do escopo da 11.2 e pode virar requisito futuro.
+  independentemente do estado recolhido. Recuo visual pode desalinhar em telas estreitas — tratar
+  como ajuste cosmético na validação visual 11.4.
+- Ordem fixa em `renderV2Blocks`: `comparison_tabs` → `accordions` → `timelines` → `tables`;
+  sidebar espelha após Seções e antes de Glossário. Ordenação editorial customizável: fora de escopo.
+
+## Módulo 11.3 — Prompt editorial v2 (2026-05-31)
+
+`buildSystemPrompt` instrui a LLM como **designer instrucional**: papel editorial, blocos v2
+opcionais (só quando o documento justificar), rastreabilidade obrigatória também nos blocos v2,
+schema inline com comentários de opcionalidade (não incluídos no JSON final).
+
+### Gate 11.3
+Implementação em código concluída; gate manual com guia DFT real (visual + rastreabilidade) integrado
+ao **gate 11.4**.
+
+## Módulo 11.4 — Validação Zetel DFT (pendente)
+
+Próximo gate operacional: gerar guia do Zetel DFT e comparar M11 vs. referência — quiz interativo,
+glossário pesquisável, navegação, rastreabilidade, offline, blocos v2 quando aplicável.
