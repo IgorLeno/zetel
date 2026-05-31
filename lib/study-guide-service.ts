@@ -882,7 +882,13 @@ function guideNavScript(): string {
     if (!id || id === activeNav) return;
     activeNav = id;
     bySel('[data-nav-target]').forEach(function(a){
-      a.classList.toggle('is-active', a.getAttribute('data-nav-target') === id);
+      var isActive = a.getAttribute('data-nav-target') === id;
+      a.classList.toggle('is-active', isActive);
+      if (isActive) {
+        a.setAttribute('aria-current', 'true');
+      } else {
+        a.removeAttribute('aria-current');
+      }
     });
   }
   var navSections = bySel('[data-nav-section]');
@@ -920,6 +926,29 @@ function guideNavScript(): string {
       updateActiveFromViewport();
     }, { threshold: 0.15 });
     blocks.forEach(function(b){ io.observe(b); });
+  } else if (blocks.length) {
+    var fallbackTimer = null;
+    function fallbackUpdate(){
+      var focusLine = window.innerHeight * 0.35;
+      for (var n = 0; n < blocks.length; n += 1) {
+        var el = blocks[n];
+        if (!el.hasAttribute('data-page')) continue;
+        var r = el.getBoundingClientRect();
+        if (r.top <= focusLine && r.bottom >= focusLine) {
+          var i = Number(el.getAttribute('data-page'));
+          if (!isNaN(i) && i !== last) { last = i; post(i); }
+          break;
+        }
+      }
+      updateActiveFromViewport();
+    }
+    function throttledFallback(){
+      if (fallbackTimer) return;
+      fallbackTimer = setTimeout(function(){ fallbackTimer = null; fallbackUpdate(); }, 200);
+    }
+    window.addEventListener('scroll', throttledFallback);
+    window.addEventListener('resize', throttledFallback);
+    fallbackUpdate();
   }
   updateActiveFromViewport();
 })();
