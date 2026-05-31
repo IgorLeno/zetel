@@ -13,10 +13,12 @@ import {
   segmentFile,
 } from './ingestao-service';
 import { getZetelById, slugify } from './zetel-service';
+import { zetelArquivosDir, zetelArtefatosDir } from './paths';
 import {
   buildSourceIndex,
   catalogForPrompt,
   type IndexableFile,
+  type SourceBlock,
   type SourceIndex,
 } from './source-index';
 
@@ -133,21 +135,14 @@ export interface StudyGuideResult {
 // Caminhos / leitura de artefatos
 // ---------------------------------------------------------------------------
 
-function artefatosDir(vaultPath: string, slug: string): string {
-  return join(vaultPath, 'zetels', slug, 'artefatos');
-}
-function arquivosDir(vaultPath: string, slug: string): string {
-  return join(vaultPath, 'zetels', slug, 'arquivos');
-}
-
 export function guiaEstudoHtmlPath(vaultPath: string, slug: string): string {
-  return join(artefatosDir(vaultPath, slug), GUIA_ESTUDO_FILENAME);
+  return join(zetelArtefatosDir(vaultPath, slug), GUIA_ESTUDO_FILENAME);
 }
 function guiaEstudoMetaPath(vaultPath: string, slug: string): string {
-  return join(artefatosDir(vaultPath, slug), GUIA_ESTUDO_META_FILENAME);
+  return join(zetelArtefatosDir(vaultPath, slug), GUIA_ESTUDO_META_FILENAME);
 }
 function guiaEstudoSourcePath(vaultPath: string, slug: string): string {
-  return join(artefatosDir(vaultPath, slug), GUIA_ESTUDO_SOURCE_FILENAME);
+  return join(zetelArtefatosDir(vaultPath, slug), GUIA_ESTUDO_SOURCE_FILENAME);
 }
 
 export interface ResolvedStudyGuideArtifact {
@@ -236,7 +231,7 @@ function loadSegmentedFiles(
     .prepare('SELECT filename FROM zetel_files WHERE zetel_id = ? ORDER BY order_index ASC')
     .all(zetelId) as ZetelFileRow[];
 
-  const dir = arquivosDir(vaultPath, slug);
+  const dir = zetelArquivosDir(vaultPath, slug);
   const maxWords = Number(getSetting('max_words_per_page')) || DEFAULT_MAX_WORDS;
   const anchorOf = makeAnchorFactory(new Set<string>());
 
@@ -273,7 +268,15 @@ function loadSegmentedFiles(
 // Prompt
 // ---------------------------------------------------------------------------
 
-function buildSystemPrompt(catalog: ReturnType<typeof catalogForPrompt>): string {
+function buildSystemPrompt(
+  catalog: ReturnType<typeof catalogForPrompt>,
+  catalogOmitted = 0,
+): string {
+  const catalogNote =
+    catalogOmitted > 0
+      ? `\n\nAVISO: ${catalogOmitted} bloco(s) omitido(s) do catálogo por limite de tamanho do prompt. ` +
+        `Use apenas os hashes listados abaixo em source_block_hashes.\n`
+      : '';
   return `Você é um designer instrucional que transforma um documento técnico em Markdown
 num GUIA DE ESTUDO didático, estruturado e rastreável. Responda em PT-BR.
 
@@ -325,7 +328,7 @@ SCHEMA EXATO (todos os campos são obrigatórios; arrays com pelo menos 1 item):
 Gere de 3 a 6 cards, 3 a 5 seções, 4 a 8 termos de glossário, 3 a 6 perguntas de quiz e
 3 a 5 perguntas Zettelkasten.
 
-CATÁLOGO DE BLOCOS (sha256 → origem; use estes hashes em source_block_hashes):
+CATÁLOGO DE BLOCOS (sha256 → origem; use estes hashes em source_block_hashes):${catalogNote}
 ${JSON.stringify(catalog)}`;
 }
 
@@ -786,6 +789,8 @@ export function renderStudyGuideHtml(
 
 function resolveStudyGuideModel(explicit?: string): string {
   if (explicit?.trim()) return explicit.trim();
+  const perTask = getSetting('study_guide_model');
+  if (perTask?.trim()) return perTask.trim();
   const setting = getSetting('default_model');
   if (setting?.trim()) return setting.trim();
   return getOpenRouterModel();
@@ -795,6 +800,44 @@ function resolveStudyGuideModel(explicit?: string): string {
 function sizeMaxTokens(blockCount: number): number {
   const sized = 4000 + blockCount * 120;
   return Math.max(4000, Math.min(16000, sized));
+}
+
+const CATALOG_SNIPPET_CHARS = 220;
+const CHARS_PER_TOKEN_EST = 4;
+/** Fração do orçamento estimado de prompt reservada ao catálogo JSON. */
+const CATALOG_PROMPT_FRACTION = 0.28;
+
+/** Orçamento de caracteres do catálogo no system prompt (evita crescimento ilimitado). */
+function catalogPromptCharBudget(blockCount: number, maxCompletionTokens: number): number {
+  const promptTokensEst = Math.min(128_000, 8_000 + blockCount * 120 + maxCompletionTokens * 0.15);
+  const fromFraction = Math.floor(promptTokensEst * CATALOG_PROMPT_FRACTION * CHARS_PER_TOKEN_EST);
+  return Math.max(6_000, Math.min(fromFraction, 60_000));
+}
+
+/** Seleciona blocos na ordem do documento até o orçamento de caracteres do catálogo. */
+function selectBlocksForCatalog(
+  blocks: SourceBlock[],
+  budgetChars: number,
+): { blocks: SourceBlock[]; omitted: number } {
+  const selected: SourceBlock[] = [];
+  let used = 2; // '[]'
+  for (const b of blocks) {
+    const snippet =
+      b.text.length > CATALOG_SNIPPET_CHARS ? b.text.slice(0, CATALOG_SNIPPET_CHARS) + '…' : b.text;
+    const entryLen =
+      JSON.stringify({
+        block_id: b.block_id,
+        type: b.type,
+        heading_path: b.heading_path,
+        source_file: b.source_file,
+        sha256: b.sha256,
+        text: snippet.replace(/\s+/g, ' '),
+      }).length + 1;
+    if (selected.length > 0 && used + entryLen > budgetChars) break;
+    selected.push(b);
+    used += entryLen;
+  }
+  return { blocks: selected, omitted: blocks.length - selected.length };
 }
 
 /**
@@ -825,13 +868,26 @@ export async function generateStudyGuide(
   }
 
   const index = buildSourceIndex(files);
-  const catalog = catalogForPrompt(index);
   const model = resolveStudyGuideModel(explicitModel);
+  const maxTokens = sizeMaxTokens(index.blocks.length);
+  const catalogBudget = catalogPromptCharBudget(index.blocks.length, maxTokens);
+  const { blocks: catalogBlocks, omitted: catalogOmitted } = selectBlocksForCatalog(
+    index.blocks,
+    catalogBudget,
+  );
+  if (catalogOmitted > 0) {
+    logger.info('study guide catalog truncated', {
+      zetelId,
+      total: index.blocks.length,
+      included: catalogBlocks.length,
+      omitted: catalogOmitted,
+    });
+  }
+  const catalog = catalogForPrompt({ blocks: catalogBlocks, byHash: index.byHash });
   const apiKey = readApiKey();
 
-  const system = buildSystemPrompt(catalog);
+  const system = buildSystemPrompt(catalog, catalogOmitted);
   const user = buildUserPrompt(fullMarkdown);
-  const maxTokens = sizeMaxTokens(index.blocks.length);
 
   logger.info('study guide generate start', {
     zetelId,
@@ -859,7 +915,7 @@ export async function generateStudyGuide(
   const trace = computeTraceability(guia, index);
 
   // Artefatos.
-  const outDir = artefatosDir(vaultPath, slug);
+  const outDir = zetelArtefatosDir(vaultPath, slug);
   mkdirSync(outDir, { recursive: true });
 
   const html = renderStudyGuideHtml(guia, trace.sourceMap, zetel.displayName, builtAt);

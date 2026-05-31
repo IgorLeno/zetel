@@ -7,6 +7,9 @@ import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
+/** OpenRouter + render podem levar ~1 min; Next.js usa segundos. */
+export const maxDuration = 60;
+
 const NO_VAULT = 'Caminho do vault não configurado. Configure-o em Configurações.';
 
 type Ctx = { params: Promise<{ id: string }> };

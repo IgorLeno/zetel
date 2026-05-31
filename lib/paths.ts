@@ -12,3 +12,13 @@ export const DB_PATH = join(ZETEL_HOME, 'zetel.db');
 export const CONFIG_PATH = join(ZETEL_HOME, 'config');
 export const LOGS_DIR = join(ZETEL_HOME, 'logs');
 export const LOG_FILE = join(LOGS_DIR, 'zetel.log');
+
+/** `zetels/<slug>/arquivos` — Markdown original copiado no upload. */
+export function zetelArquivosDir(vaultPath: string, slug: string): string {
+  return join(vaultPath, 'zetels', slug, 'arquivos');
+}
+
+/** `zetels/<slug>/artefatos` — HTML e metadados regeneráveis. */
+export function zetelArtefatosDir(vaultPath: string, slug: string): string {
+  return join(vaultPath, 'zetels', slug, 'artefatos');
+}

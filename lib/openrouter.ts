@@ -185,24 +185,29 @@ export async function requestJson(params: RequestJsonParams): Promise<RequestJso
       signal: controller.signal,
     });
   } catch (err) {
+    clearTimeout(timer);
     if ((err as Error)?.name === 'AbortError') {
       throw new Error(`OpenRouter: timeout após ${Math.round(timeoutMs / 1000)}s`);
     }
     throw err;
-  } finally {
-    clearTimeout(timer);
   }
 
   logger.info('openrouter requestJson', { model, status: res.status });
 
   if (!res.ok) {
+    clearTimeout(timer);
     throw new Error(`OpenRouter: ${res.status}`);
   }
 
-  const data = (await res.json()) as {
+  let data: {
     choices?: { message?: { content?: string } }[];
     usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
+  try {
+    data = (await res.json()) as typeof data;
+  } finally {
+    clearTimeout(timer);
+  }
   const content = data?.choices?.[0]?.message?.content;
   if (typeof content !== 'string' || content.trim().length === 0) {
     throw new Error('OpenRouter: resposta sem conteúdo de texto.');
