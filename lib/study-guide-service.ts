@@ -589,6 +589,26 @@ function traceBadge(id: string, sourceMap: StudyGuideSourceMap): string {
   return `<p class="trace" title="${title}">↳ ${trail} · ${n} bloco(s) de origem</p>`;
 }
 
+function navLink(id: string, label: string): string {
+  return `<a href="#${esc(id)}" data-nav-target="${esc(id)}">${esc(label)}</a>`;
+}
+
+function renderGuideNav(secoes: SecaoItem[]): string {
+  const sectionLinks = secoes
+    .map((s, i) => navLink(`secao-${i + 1}`, s.titulo))
+    .join('\n');
+  return `<aside class="guide-sidebar" aria-label="Navegação do guia">
+    <nav class="guide-nav">
+      ${navLink('capa', 'Capa')}
+      ${navLink('conceitos-chave', 'Conceitos-chave')}
+      ${sectionLinks}
+      ${navLink('glossario', 'Glossário')}
+      ${navLink('quiz', 'Quiz')}
+      ${navLink('zettelkasten', 'Perguntas Zettelkasten')}
+    </nav>
+  </aside>`;
+}
+
 function renderCards(cards: CardItem[], sourceMap: StudyGuideSourceMap): string {
   const items = cards
     .map(
@@ -599,52 +619,60 @@ function renderCards(cards: CardItem[], sourceMap: StudyGuideSourceMap): string 
     </div>`,
     )
     .join('\n');
-  return `<section><h2>Conceitos-chave</h2><div class="card-grid">${items}</div></section>`;
+  return `<section id="conceitos-chave" data-nav-section="conceitos-chave"><h2>Conceitos-chave</h2><div class="card-grid">${items}</div></section>`;
 }
 
 function renderSecoes(secoes: SecaoItem[], sourceMap: StudyGuideSourceMap): string {
   const items = secoes
     .map(
-      (s) => `<article class="secao"${pageAttr(s.guide_block_id, sourceMap)}>
+      (s, i) => `<article id="secao-${i + 1}" class="secao" data-nav-section="secao-${i + 1}"${pageAttr(s.guide_block_id, sourceMap)}>
       <h3>${esc(s.titulo)}</h3>
       ${paragraphs(s.conteudo)}
       ${traceBadge(s.guide_block_id, sourceMap)}
     </article>`,
     )
     .join('\n');
-  return `<section><h2>Seções</h2>${items}</section>`;
+  return `<section class="secoes"><h2>Seções</h2>${items}</section>`;
 }
 
 function renderGlossario(glossario: GlossarioItem[], sourceMap: StudyGuideSourceMap): string {
   const items = glossario
     .map(
-      (g) => `<div class="termo"${pageAttr(g.guide_block_id, sourceMap)}>
+      (g) => `<div class="termo"${pageAttr(g.guide_block_id, sourceMap)} data-search-text="${esc(
+        `${g.termo} ${g.definicao}`.toLocaleLowerCase('pt-BR'),
+      )}">
       <dt>${esc(g.termo)}</dt>
       <dd>${esc(g.definicao)} ${traceBadge(g.guide_block_id, sourceMap)}</dd>
     </div>`,
     )
     .join('\n');
-  return `<section><h2>Glossário</h2><dl>${items}</dl></section>`;
+  return `<section id="glossario" data-nav-section="glossario"><h2>Glossário</h2>
+    <label class="glossary-search-label" for="glossary-search">Buscar no glossário</label>
+    <input id="glossary-search" class="glossary-search" type="search" autocomplete="off" placeholder="Buscar termo ou definição">
+    <dl id="glossary-list">${items}</dl>
+  </section>`;
 }
 
 function renderQuiz(quiz: QuizItem[], sourceMap: StudyGuideSourceMap): string {
   const items = quiz
     .map((q, i) => {
+      const correctIndex = Math.max(0, q.opcoes.findIndex((o) => o === q.resposta_correta));
       const opts = q.opcoes
-        .map((o) => {
-          const correct = o === q.resposta_correta;
-          return `<li class="${correct ? 'correta' : ''}">${esc(o)}${correct ? ' ✓' : ''}</li>`;
-        })
+        .map(
+          (o, j) =>
+            `<button type="button" class="quiz-option" data-option-index="${j}">${esc(o)}</button>`,
+        )
         .join('\n');
-      return `<div class="quiz-item"${pageAttr(q.guide_block_id, sourceMap)}>
+      return `<div class="quiz-item" data-answer-index="${correctIndex}"${pageAttr(q.guide_block_id, sourceMap)}>
       <p class="quiz-q"><strong>${i + 1}.</strong> ${esc(q.pergunta)}</p>
-      <ul class="quiz-opts">${opts}</ul>
-      ${q.explicacao ? `<p class="quiz-exp"><em>${esc(q.explicacao)}</em></p>` : ''}
+      <div class="quiz-opts">${opts}</div>
+      <p class="quiz-feedback" hidden></p>
+      ${q.explicacao ? `<p class="quiz-exp" hidden>${esc(q.explicacao)}</p>` : ''}
       ${traceBadge(q.guide_block_id, sourceMap)}
     </div>`;
     })
     .join('\n');
-  return `<section><h2>Quiz</h2>${items}</section>`;
+  return `<section id="quiz" data-nav-section="quiz"><div class="quiz-head"><h2>Quiz</h2><div class="quiz-score" id="quiz-score">Pontuação: 0 / 0</div><button type="button" id="quiz-reset" class="quiz-reset">Reiniciar quiz</button></div>${items}</section>`;
 }
 
 function renderZettelkasten(perguntas: ZkItem[], sourceMap: StudyGuideSourceMap): string {
@@ -654,15 +682,15 @@ function renderZettelkasten(perguntas: ZkItem[], sourceMap: StudyGuideSourceMap)
         `<li${pageAttr(p.guide_block_id, sourceMap)}>${esc(p.pergunta)} ${traceBadge(p.guide_block_id, sourceMap)}</li>`,
     )
     .join('\n');
-  return `<section><h2>Perguntas Zettelkasten</h2><ul class="zk">${items}</ul></section>`;
+  return `<section id="zettelkasten" data-nav-section="zettelkasten"><h2>Perguntas Zettelkasten</h2><ul class="zk">${items}</ul></section>`;
 }
 
 const GUIDE_DARK_VARS = `--bg:#0d1117;--card:#161b22;--sub:#21262d;--border:rgba(255,255,255,.1);
   --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#2ea043;--ok-bg:rgba(46,160,67,.12);
-  --ok-fg:#7ee787;--warn:#d29922;`;
+  --ok-fg:#7ee787;--bad:#f85149;--bad-bg:rgba(248,81,73,.13);--warn:#d29922;--shadow:rgba(0,0,0,.22);`;
 const GUIDE_LIGHT_VARS = `--bg:#ffffff;--card:#f6f8fa;--sub:#eaeef2;--border:rgba(31,35,40,.12);
   --text:#1f2328;--muted:#57606a;--accent:#0969da;--ok:#1a7f37;--ok-bg:rgba(26,127,55,.10);
-  --ok-fg:#1a7f37;--warn:#9a6700;`;
+  --ok-fg:#1a7f37;--bad:#cf222e;--bad-bg:rgba(207,34,46,.10);--warn:#9a6700;--shadow:rgba(31,35,40,.10);`;
 
 function guideCss(): string {
   return `
@@ -671,33 +699,65 @@ function guideCss(): string {
   [data-theme="dark"]{${GUIDE_DARK_VARS}}
   [data-theme="light"]{${GUIDE_LIGHT_VARS}}
   @media (prefers-color-scheme:light){:root:not([data-theme]){${GUIDE_LIGHT_VARS}}}
+  html{scroll-behavior:smooth}
   body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);
-    color:var(--text);line-height:1.65;max-width:860px;margin:0 auto;padding:48px 24px 80px}
-  header.capa{text-align:center;padding:32px 0 40px;border-bottom:1px solid var(--border);margin-bottom:36px}
-  .brand{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--text);line-height:1.65;margin:0;padding:0}
+  .guide-shell{display:grid;grid-template-columns:248px minmax(0,860px);gap:32px;max-width:1200px;
+    margin:0 auto;padding:32px 24px 80px}
+  .guide-sidebar{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;
+    border:1px solid var(--border);border-radius:8px;background:var(--card);box-shadow:0 14px 34px var(--shadow)}
+  .guide-nav{display:flex;flex-direction:column;padding:10px}
+  .guide-nav a{display:block;color:var(--muted);text-decoration:none;border-radius:6px;padding:9px 10px;
+    font-size:13px;line-height:1.35}
+  .guide-nav a:hover,.guide-nav a:focus{color:var(--text);background:var(--sub);outline:none}
+  .guide-nav a.is-active{color:var(--accent);background:var(--sub);font-weight:700}
+  .guide-main{min-width:0}
+  header.capa{text-align:center;padding:34px 0 42px;border-bottom:1px solid var(--border);margin-bottom:36px;
+    scroll-margin-top:24px}
+  .brand{display:inline-block;font-size:12px;font-weight:700;letter-spacing:0;text-transform:uppercase;
     color:var(--accent);margin-bottom:18px}
   header.capa h1{font-size:34px;line-height:1.15;margin-bottom:12px;font-weight:780}
   header.capa .sub{font-size:18px;color:var(--muted);margin-bottom:24px}
-  header.capa .resumo{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  header.capa .resumo{background:var(--card);border:1px solid var(--border);border-radius:8px;
     padding:18px 22px;text-align:left;font-size:15px;color:var(--text)}
+  section,.secao{scroll-margin-top:24px}
   section{margin-bottom:40px}
-  section>h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  section>h2,.quiz-head h2{font-size:13px;font-weight:700;letter-spacing:0;text-transform:uppercase;
     color:var(--muted);margin-bottom:18px;padding-bottom:8px;border-bottom:1px solid var(--border)}
   h3{font-size:18px;font-weight:680;margin-bottom:10px;color:var(--accent)}
   p{margin-bottom:12px}
   .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:18px}
   .card h3{font-size:15px}
-  .secao{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:16px}
+  .secao{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:22px;margin-bottom:16px}
+  .glossary-search-label{display:block;font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px}
+  .glossary-search{width:100%;min-height:44px;border:1px solid var(--border);border-radius:8px;
+    background:var(--card);color:var(--text);font:inherit;padding:10px 12px;margin-bottom:14px}
+  .glossary-search:focus{outline:2px solid var(--accent);outline-offset:2px}
   dl{display:flex;flex-direction:column;gap:12px}
   .termo{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 18px}
+  .termo.is-hidden{display:none}
   dt{font-weight:700;color:var(--accent);margin-bottom:4px}
   dd{color:var(--text)}
-  .quiz-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
+  .quiz-head{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:start;margin-bottom:18px}
+  .quiz-head h2{margin-bottom:0}
+  .quiz-score{font-size:13px;color:var(--muted);border:1px solid var(--border);border-radius:999px;
+    padding:6px 10px;white-space:nowrap}
+  .quiz-reset{min-height:34px;border:1px solid var(--border);border-radius:6px;background:var(--sub);
+    color:var(--text);font:inherit;font-size:13px;font-weight:700;padding:6px 10px;cursor:pointer}
+  .quiz-reset:hover,.quiz-reset:focus{border-color:var(--accent);outline:none}
+  .quiz-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:14px}
   .quiz-q{margin-bottom:10px}
-  .quiz-opts{list-style:none;display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
-  .quiz-opts li{padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--sub)}
-  .quiz-opts li.correta{border-color:var(--ok);background:var(--ok-bg);color:var(--ok-fg);font-weight:600}
+  .quiz-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+  .quiz-option{width:100%;min-height:44px;text-align:left;padding:9px 12px;border:1px solid var(--border);
+    border-radius:6px;background:var(--sub);color:var(--text);font:inherit;cursor:pointer}
+  .quiz-option:hover,.quiz-option:focus{border-color:var(--accent);outline:none}
+  .quiz-option.target{border-color:var(--ok);background:var(--ok-bg);color:var(--ok-fg);font-weight:700}
+  .quiz-option.miss{border-color:var(--bad);background:var(--bad-bg);color:var(--text)}
+  .quiz-option:disabled{cursor:default}
+  .quiz-feedback{font-size:14px;font-weight:700;margin-top:10px}
+  .quiz-feedback.ok{color:var(--ok-fg)}
+  .quiz-feedback.bad{color:var(--bad)}
   .quiz-exp{color:var(--muted);font-size:14px}
   ul.zk{list-style:none;display:flex;flex-direction:column;gap:12px}
   ul.zk li{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);
@@ -706,7 +766,18 @@ function guideCss(): string {
     border-top:1px dashed var(--border);padding-top:8px;cursor:help}
   .trace-flag{color:var(--warn);cursor:default}
   footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px;
-    padding-top:20px;border-top:1px solid var(--border)}`;
+    padding-top:20px;border-top:1px solid var(--border)}
+  @media (max-width:767px){
+    .guide-shell{display:block;padding:0 18px 64px}
+    .guide-sidebar{position:sticky;top:0;z-index:10;margin:0 -18px 24px;border-radius:0;border-width:0 0 1px;
+      max-height:none;overflow-x:auto;box-shadow:none}
+    .guide-nav{flex-direction:row;gap:4px;padding:8px 12px}
+    .guide-nav a{white-space:nowrap}
+    header.capa{padding-top:28px}
+    header.capa h1{font-size:28px}
+    .quiz-head{grid-template-columns:1fr;gap:8px}
+    .quiz-score,.quiz-reset{justify-self:start}
+  }`;
 }
 
 /** Script no <head>: tema inicial por prefers-color-scheme se o app não mandar. */
@@ -718,29 +789,139 @@ function guideHeadScript(): string {
 function guideNavScript(): string {
   return `
 (function(){
+  function bySel(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+
   window.addEventListener('message', function(e){
     var d = e && e.data;
     if (d && d.type === 'zetel:theme' && (d.theme === 'dark' || d.theme === 'light')) {
       document.documentElement.setAttribute('data-theme', d.theme);
     }
   });
-  var blocks = document.querySelectorAll('[data-page]');
-  if (!blocks.length) return;
+
+  var glossarySearch = document.getElementById('glossary-search');
+  if (glossarySearch) {
+    var terms = bySel('.termo');
+    glossarySearch.addEventListener('input', function(){
+      var q = String(glossarySearch.value || '').toLocaleLowerCase('pt-BR').trim();
+      terms.forEach(function(t){
+        var hay = t.getAttribute('data-search-text') || t.textContent.toLocaleLowerCase('pt-BR');
+        t.classList.toggle('is-hidden', q.length > 0 && hay.indexOf(q) === -1);
+      });
+    });
+  }
+
+  var score = document.getElementById('quiz-score');
+  var reset = document.getElementById('quiz-reset');
+  var quizItems = bySel('.quiz-item');
+  var answered = 0;
+  var hits = 0;
+  function updateScore(){
+    if (score) score.textContent = 'Pontuação: ' + hits + ' / ' + answered;
+  }
+  quizItems.forEach(function(item){
+    bySel.call(null, '.quiz-option').filter(function(btn){ return item.contains(btn); }).forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if (item.getAttribute('data-answered') === 'true') return;
+        var chosen = Number(btn.getAttribute('data-option-index'));
+        var target = Number(item.getAttribute('data-answer-index'));
+        var buttons = bySel.call(null, '.quiz-option').filter(function(opt){ return item.contains(opt); });
+        var targetButton = buttons.filter(function(opt){
+          return Number(opt.getAttribute('data-option-index')) === target;
+        })[0];
+        var ok = chosen === target;
+        item.setAttribute('data-answered', 'true');
+        answered += 1;
+        if (ok) hits += 1;
+        buttons.forEach(function(opt){ opt.disabled = true; });
+        if (targetButton) targetButton.classList.add('target');
+        if (!ok) btn.classList.add('miss');
+        var feedback = item.querySelector('.quiz-feedback');
+        if (feedback) {
+          feedback.hidden = false;
+          feedback.className = 'quiz-feedback ' + (ok ? 'ok' : 'bad');
+          feedback.textContent = ok
+            ? 'Acerto. A alternativa escolhida está correta.'
+            : 'Ainda não. Resposta: ' + (targetButton ? targetButton.textContent : 'alternativa destacada') + '.';
+        }
+        var exp = item.querySelector('.quiz-exp');
+        if (exp) exp.hidden = false;
+        updateScore();
+      });
+    });
+  });
+  if (reset) {
+    reset.addEventListener('click', function(){
+      answered = 0;
+      hits = 0;
+      quizItems.forEach(function(item){
+        item.setAttribute('data-answered', 'false');
+        bySel.call(null, '.quiz-option').filter(function(btn){ return item.contains(btn); }).forEach(function(btn){
+          btn.disabled = false;
+          btn.classList.remove('target', 'miss');
+        });
+        var feedback = item.querySelector('.quiz-feedback');
+        if (feedback) {
+          feedback.hidden = true;
+          feedback.className = 'quiz-feedback';
+          feedback.textContent = '';
+        }
+        var exp = item.querySelector('.quiz-exp');
+        if (exp) exp.hidden = true;
+      });
+      updateScore();
+    });
+  }
+
+  var blocks = bySel('[data-page],[data-nav-section]');
   function post(idx){
     try { window.parent.postMessage({ type:'zetel:page-change', pageIndex: idx }, '*'); } catch(_){}
   }
   var last = -1;
-  if ('IntersectionObserver' in window) {
+  var activeNav = '';
+  function setActiveNav(id){
+    if (!id || id === activeNav) return;
+    activeNav = id;
+    bySel('[data-nav-target]').forEach(function(a){
+      a.classList.toggle('is-active', a.getAttribute('data-nav-target') === id);
+    });
+  }
+  var navSections = bySel('[data-nav-section]');
+  function updateActiveFromViewport(){
+    var focusLine = window.innerHeight * 0.35;
+    var fallback = null;
+    var fallbackDistance = Infinity;
+    for (var n = 0; n < navSections.length; n += 1) {
+      var el = navSections[n];
+      var r = el.getBoundingClientRect();
+      if (r.top <= focusLine && r.bottom >= focusLine) {
+        setActiveNav(el.getAttribute('data-nav-section'));
+        return;
+      }
+      if (r.bottom > 0 && r.top < window.innerHeight) {
+        var distance = Math.abs(r.top - focusLine);
+        if (distance < fallbackDistance) {
+          fallbackDistance = distance;
+          fallback = el;
+        }
+      }
+    }
+    if (fallback) setActiveNav(fallback.getAttribute('data-nav-section'));
+  }
+  if (blocks.length && 'IntersectionObserver' in window) {
     var io = new IntersectionObserver(function(entries){
       entries.forEach(function(en){
         if (en.isIntersecting) {
-          var i = Number(en.target.getAttribute('data-page'));
-          if (!isNaN(i) && i !== last) { last = i; post(i); }
+          if (en.target.hasAttribute('data-page')) {
+            var i = Number(en.target.getAttribute('data-page'));
+            if (!isNaN(i) && i !== last) { last = i; post(i); }
+          }
         }
       });
-    }, { threshold: 0.25 });
+      updateActiveFromViewport();
+    }, { threshold: 0.15 });
     blocks.forEach(function(b){ io.observe(b); });
   }
+  updateActiveFromViewport();
 })();
 `.trim();
 }
@@ -773,19 +954,24 @@ export function renderStudyGuideHtml(
 <script>${guideHeadScript()}</script>
 </head>
 <body>
-  <header class="capa">
-    <span class="brand">⚡ Zetel · Guia de Estudo</span>
-    <h1>${esc(guia.titulo)}</h1>
-    <p class="sub">${esc(guia.subtitulo)}</p>
-    <div class="resumo"${pageAttr('resumo', sourceMap)}>${paragraphs(guia.resumo.texto)}${traceBadge('resumo', sourceMap)}</div>
-    <p class="sub" style="font-size:13px;margin-top:18px">${esc(displayName)} · Gerado em ${esc(buildDate)}</p>
-  </header>
-  ${renderCards(guia.cards, sourceMap)}
-  ${renderSecoes(guia.secoes, sourceMap)}
-  ${renderGlossario(guia.glossario, sourceMap)}
-  ${renderQuiz(guia.quiz, sourceMap)}
-  ${renderZettelkasten(guia.perguntas_zettelkasten, sourceMap)}
-  <footer>Renderizado por template determinístico (sem LLM). O conteúdo editorial foi gerado por IA a partir do material; verifique a origem nos selos de rastreabilidade.</footer>
+  <div class="guide-shell">
+    ${renderGuideNav(guia.secoes)}
+    <main class="guide-main">
+      <header id="capa" class="capa" data-nav-section="capa">
+        <span class="brand">⚡ Zetel · Guia de Estudo</span>
+        <h1>${esc(guia.titulo)}</h1>
+        <p class="sub">${esc(guia.subtitulo)}</p>
+        <div class="resumo"${pageAttr('resumo', sourceMap)}>${paragraphs(guia.resumo.texto)}${traceBadge('resumo', sourceMap)}</div>
+        <p class="sub" style="font-size:13px;margin-top:18px">${esc(displayName)} · Gerado em ${esc(buildDate)}</p>
+      </header>
+      ${renderCards(guia.cards, sourceMap)}
+      ${renderSecoes(guia.secoes, sourceMap)}
+      ${renderGlossario(guia.glossario, sourceMap)}
+      ${renderQuiz(guia.quiz, sourceMap)}
+      ${renderZettelkasten(guia.perguntas_zettelkasten, sourceMap)}
+      <footer>Renderizado por template determinístico (sem LLM). O conteúdo editorial foi gerado por IA a partir do material; verifique a origem nos selos de rastreabilidade.</footer>
+    </main>
+  </div>
   <script>${guideNavScript()}</script>
 </body>
 </html>`;
