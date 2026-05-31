@@ -29,6 +29,19 @@ export function readApiKey(): string {
   );
 }
 
+/** Monta mensagem de erro HTTP a partir de `error.message` (sem logar body completo). */
+async function formatOpenRouterHttpError(res: Response): Promise<string> {
+  let detail: string | undefined;
+  try {
+    const data = (await res.json()) as { error?: { message?: unknown } };
+    const msg = data?.error?.message;
+    if (typeof msg === 'string' && msg.trim()) detail = msg.trim();
+  } catch {
+    /* body ausente ou não-JSON */
+  }
+  return detail ? `OpenRouter: ${res.status} — ${detail}` : `OpenRouter: ${res.status}`;
+}
+
 /** Extrai contagens de uso para o sink (e loga só se ZETEL_LOG_TOKENS=1). */
 function captureUsage(usage: unknown, sink: UsageSink | undefined, logTokens: boolean): void {
   try {
@@ -195,7 +208,7 @@ export async function requestJson(params: RequestJsonParams): Promise<RequestJso
 
   if (!res.ok) {
     clearTimeout(timer);
-    throw new Error(`OpenRouter: ${res.status}`);
+    throw new Error(await formatOpenRouterHttpError(res));
   }
 
   let data: {
@@ -257,6 +270,6 @@ export async function pingChat(apiKey: string, model: string): Promise<void> {
   }
 
   if (!res.ok) {
-    throw new Error(`OpenRouter: ${res.status}`);
+    throw new Error(await formatOpenRouterHttpError(res));
   }
 }
