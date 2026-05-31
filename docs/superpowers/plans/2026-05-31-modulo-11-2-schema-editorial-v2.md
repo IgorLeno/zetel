@@ -58,3 +58,9 @@
 - [ ] Run `pnpm build`.
 - [ ] Review `git diff --check` and `git diff --name-only`.
 - [ ] Confirm v1 compatibility is structural: v2 fields optional and renderers return empty string/links when arrays are absent.
+
+### Post-Gate Notes
+
+- `renderAccordions` keeps `.trace` outside `<details>`, which is functionally correct and keeps the origin badge visible after the native accordion body. The CSS indentation can look slightly offset because `<details>` owns `padding:18px 22px` and `.accordion-block .trace` uses `margin:0 22px 18px`; treat as a cosmetic alignment pass for 11.4.
+- `comparison_tabs` accepts `tabs ?? tabelas` and `timelines` accepts `etapas ?? steps` as schema tolerance. Real generated guides will not populate these fields until 11.3 changes the prompt, so 11.2 validation must use a manual JSON fixture/smoke, not live generation.
+- `renderV2Blocks` and the sidebar place v2 blocks after `Seções` and before `Glossário`. The internal v2 order is fixed as comparison tabs, accordions, timelines, then tables; custom editorial ordering is out of scope for 11.2 and can become a future requirement if needed.

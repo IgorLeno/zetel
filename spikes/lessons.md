@@ -811,3 +811,16 @@ Mistake: usar Playwright E2E para uma asserção de template fez o `webServer` t
 e bater em `EMFILE: too many open files` antes de chegar aos asserts.
 Rule: para dívidas puras de template/source, preferir smoke script local em Node; reservar Playwright
 para fluxos que exigem navegador, servidor ou interação real do app.
+
+## Módulo 11.2 — Pontos de atenção pós-gate (2026-05-31)
+
+- `renderAccordions` renderiza `.trace` fora do `<details>`, preservando o selo visível
+  independentemente do estado recolhido. O recuo visual pode ficar ligeiramente desalinhado em
+  telas estreitas porque o `<details>` concentra o padding e o selo usa margem própria; tratar como
+  ajuste cosmético na validação visual 11.4.
+- Os aliases tolerantes `tabs ?? tabelas` e `etapas ?? steps` cobrem fixtures/schema v2, mas a LLM
+  não deve gerar esses campos em fluxo real até a Etapa 11.3, porque `buildSystemPrompt` ainda não
+  instrui os blocos editoriais avançados. Validar o gate 11.2 com fixture manual/smoke local.
+- A ordem de leitura dos blocos v2 é fixa em `renderV2Blocks`: `comparison_tabs`, `accordions`,
+  `timelines`, `tables`; a sidebar espelha essa ordem após `Seções` e antes de `Glossário`.
+  Ordenação editorial customizável fica fora do escopo da 11.2 e pode virar requisito futuro.
