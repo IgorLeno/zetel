@@ -85,7 +85,7 @@ function imagesDir(vaultPath: string, slug: string): string {
   return join(vaultPath, 'zetels', slug, 'images');
 }
 
-function sha256(data: string | Buffer): string {
+export function sha256(data: string | Buffer): string {
   return createHash('sha256').update(data).digest('hex');
 }
 
@@ -350,7 +350,7 @@ export function listPages(db: Database.Database, zetelId: string): ZetelPage[] {
 // ---------------------------------------------------------------------------
 
 /** Texto plano de um nó MDAST (concatena `value` recursivamente). */
-function toPlainText(node: Node): string {
+export function toPlainText(node: Node): string {
   const n = node as Node & { value?: unknown; children?: Node[] };
   if (typeof n.value === 'string') return n.value;
   if (Array.isArray(n.children)) return n.children.map(toPlainText).join('');

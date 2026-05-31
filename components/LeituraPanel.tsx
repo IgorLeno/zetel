@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { ChatPanel } from './ChatPanel';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
-type ReadingArtifact = 'documento-tecnico' | 'guia-estudo';
 
 interface ArtifactsInfo {
   mode: 'tecnico' | 'legado' | null;
@@ -37,6 +36,15 @@ interface ArtifactsInfo {
     metaFilename: 'guia-estudo.meta.json';
     sourceExists: boolean;
     sourceFilename: 'guia-estudo.source.json';
+    model: string | null;
+    generatedAt: string | null;
+    counts: {
+      cards: number;
+      secoes: number;
+      glossario: number;
+      quiz: number;
+      zettelkasten: number;
+    } | null;
   };
 }
 
@@ -52,42 +60,56 @@ export function LeituraPanel({
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [building, setBuilding] = useState(false);
+  const [buildingMode, setBuildingMode] = useState<ReadingMode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<ArtifactsInfo | null>(null);
   const [selectedMode, setSelectedMode] = useState<ReadingMode>('tecnico');
-  const [activeArtifact, setActiveArtifact] = useState<ReadingArtifact>('documento-tecnico');
   const [chatOpen, setChatOpen] = useState(false);
   const [currentPageIndex, setCurrentPageIndex] = useState<number | null>(null);
+  // Força recarregar o iframe após gerar/atualizar (mesmo quando o src não muda).
+  const [reloadNonce, setReloadNonce] = useState(0);
 
-  const hasBuilt = lastBuiltAt !== null || artifacts?.documentoTecnico.exists === true;
-  const showIframe = hasBuilt && !building;
+  const tecnicoBuilt = lastBuiltAt !== null || artifacts?.documentoTecnico.exists === true;
+  const guiaBuilt = artifacts?.guiaEstudo.exists === true;
+  const anyBuilt = tecnicoBuilt || guiaBuilt;
 
-  const buttonLabel = hasBuilt ? 'Atualizar leitura' : 'Preparar leitura';
-  const buttonPrimary = !hasBuilt || readingStale;
-  const availableArtifacts = [
-    {
-      kind: 'documento-tecnico' as const,
-      label: 'Documento Técnico',
-      exists: artifacts?.documentoTecnico.exists === true,
-    },
-    {
-      kind: 'guia-estudo' as const,
-      label: 'Guia de Estudo',
-      exists: artifacts?.guiaEstudo.exists === true,
-    },
-  ].filter((artifact) => artifact.exists);
-  const showArtifactToggle = availableArtifacts.length > 1;
+  // O modo selecionado é, ao mesmo tempo, o alvo de geração e o artefato exibido
+  // (a alternância entre Documento Técnico e Guia de Estudo é o próprio seletor).
+  const viewArtifact: ReadingMode | null =
+    selectedMode === 'guia-estudo'
+      ? guiaBuilt
+        ? 'guia-estudo'
+        : null
+      : tecnicoBuilt
+        ? 'tecnico'
+        : null;
+
+  const showIframe = anyBuilt && !building && viewArtifact !== null;
+
+  const buttonLabel =
+    selectedMode === 'guia-estudo'
+      ? guiaBuilt
+        ? 'Regenerar Guia de Estudo'
+        : 'Gerar Guia de Estudo'
+      : tecnicoBuilt
+        ? 'Atualizar leitura'
+        : 'Preparar leitura';
+  const buttonPrimary =
+    selectedMode === 'guia-estudo' ? !guiaBuilt : !tecnicoBuilt || readingStale;
+
+  const iframeSrc = (() => {
+    const params = new URLSearchParams();
+    if (viewArtifact === 'guia-estudo') params.set('artifact', 'guia-estudo');
+    if (reloadNonce) params.set('v', String(reloadNonce));
+    const qs = params.toString();
+    return `/api/zetels/${zetelId}/leitura${qs ? `?${qs}` : ''}`;
+  })();
 
   const loadArtifacts = useCallback(async () => {
     try {
       const res = await fetch(`/api/zetels/${zetelId}/artifacts`);
       const data = await res.json();
-      if (res.ok) {
-        setArtifacts(data);
-        if (data.openArtifact?.kind === 'documento-tecnico') {
-          setActiveArtifact('documento-tecnico');
-        }
-      }
+      if (res.ok) setArtifacts(data);
     } catch {
       // A rota de leitura ainda mostra erro próprio se o usuário tentar abrir sem artefato.
     }
@@ -126,10 +148,13 @@ export function LeituraPanel({
   }, [postCurrentTheme]);
 
   async function onBuild() {
+    const mode = selectedMode;
     setBuilding(true);
+    setBuildingMode(mode);
     setError(null);
     try {
-      const res = await fetch(`/api/zetels/${zetelId}/build`, { method: 'POST' });
+      const qs = mode === 'guia-estudo' ? '?mode=guia-estudo' : '';
+      const res = await fetch(`/api/zetels/${zetelId}/build${qs}`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? 'Falha ao construir a leitura.');
@@ -137,13 +162,12 @@ export function LeituraPanel({
       }
       await loadArtifacts();
       router.refresh();
-      if (iframeRef.current) {
-        iframeRef.current.src = iframeRef.current.src;
-      }
+      setReloadNonce(Date.now());
     } catch {
       setError('Erro de rede ao construir a leitura.');
     } finally {
       setBuilding(false);
+      setBuildingMode(null);
     }
   }
 
@@ -156,6 +180,7 @@ export function LeituraPanel({
             role="radio"
             aria-checked={selectedMode === 'tecnico'}
             className={`mode-option${selectedMode === 'tecnico' ? ' active' : ''}`}
+            disabled={building}
             onClick={() => setSelectedMode('tecnico')}
           >
             Documento Técnico
@@ -164,9 +189,9 @@ export function LeituraPanel({
             type="button"
             role="radio"
             aria-checked={selectedMode === 'guia-estudo'}
-            className="mode-option"
-            disabled
-            title="Em breve"
+            className={`mode-option${selectedMode === 'guia-estudo' ? ' active' : ''}`}
+            disabled={building}
+            title="Gerado por IA a partir do material"
             onClick={() => setSelectedMode('guia-estudo')}
           >
             Guia de Estudo
@@ -178,46 +203,45 @@ export function LeituraPanel({
           disabled={building}
           onClick={onBuild}
         >
-          {building ? 'Construindo…' : buttonLabel}
+          {building
+            ? buildingMode === 'guia-estudo'
+              ? 'Gerando guia…'
+              : 'Construindo…'
+            : buttonLabel}
         </button>
         {showIframe && (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => setChatOpen((o) => !o)}
-          >
+          <button type="button" className="btn" onClick={() => setChatOpen((o) => !o)}>
             {chatOpen ? 'Fechar chat' : 'Interagir'}
           </button>
         )}
-        {hasBuilt && !readingStale && !building && (
+        {selectedMode === 'tecnico' && tecnicoBuilt && !readingStale && !building && (
           <span className="feedback ok">Leitura pronta para uso.</span>
         )}
+        {selectedMode === 'guia-estudo' && guiaBuilt && !building && (
+          <span className="feedback ok">Guia de estudo pronto.</span>
+        )}
       </div>
-      {showArtifactToggle && (
-        <div className="artifact-switch" role="tablist" aria-label="Artefato aberto">
-          {availableArtifacts.map((artifact) => (
-            <button
-              key={artifact.kind}
-              type="button"
-              role="tab"
-              aria-selected={activeArtifact === artifact.kind}
-              className={`artifact-option${activeArtifact === artifact.kind ? ' active' : ''}`}
-              onClick={() => setActiveArtifact(artifact.kind)}
-            >
-              {artifact.label}
-            </button>
-          ))}
-        </div>
-      )}
       {error && <p className="feedback err">{error}</p>}
 
-      {!hasBuilt && !building ? (
+      {!anyBuilt && !building ? (
         <div className="empty-state leitura-empty">
           <div>Nenhuma leitura construída ainda.</div>
         </div>
       ) : building ? (
         <div className="empty-state leitura-empty">
-          <div>Gerando HTML de leitura…</div>
+          <div>
+            {buildingMode === 'guia-estudo'
+              ? 'Gerando guia de estudo com IA… isso pode levar até um minuto.'
+              : 'Gerando HTML de leitura…'}
+          </div>
+        </div>
+      ) : viewArtifact === null ? (
+        <div className="empty-state leitura-empty">
+          <div>
+            {selectedMode === 'guia-estudo'
+              ? 'Guia de Estudo ainda não gerado. Use o botão acima para gerá-lo.'
+              : 'Documento Técnico ainda não construído. Use o botão acima.'}
+          </div>
         </div>
       ) : (
         /* ChatPanel sempre montado — toggle de visibilidade via CSS para não perder
@@ -228,7 +252,7 @@ export function LeituraPanel({
             className="leitura-iframe"
             title="Leitura do Zetel"
             sandbox="allow-scripts"
-            src={`/api/zetels/${zetelId}/leitura`}
+            src={iframeSrc}
             onLoad={postCurrentTheme}
           />
           <div style={{ display: chatOpen ? 'contents' : 'none' }}>

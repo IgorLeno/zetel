@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
 import { renderZetel } from '@/lib/render-service';
+import { generateStudyGuide } from '@/lib/study-guide-service';
 import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
@@ -10,8 +11,12 @@ const NO_VAULT = 'Caminho do vault não configurado. Configure-o em Configuraç�
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** POST /api/zetels/[id]/build — gera artefatos/leitura-tecnica.html (determinístico, sem LLM). */
-export async function POST(_request: Request, { params }: Ctx) {
+/**
+ * POST /api/zetels/[id]/build — gera um artefato de leitura.
+ *  - sem `mode` ou `mode=tecnico`: Documento Técnico (determinístico, sem LLM).
+ *  - `mode=guia-estudo`: Guia de Estudo (pipeline editorial com LLM, D26).
+ */
+export async function POST(request: Request, { params }: Ctx) {
   const { id } = await params;
 
   const vaultPath = getSetting('vault_path');
@@ -19,11 +24,17 @@ export async function POST(_request: Request, { params }: Ctx) {
     return NextResponse.json({ error: NO_VAULT }, { status: 400 });
   }
 
+  const mode = new URL(request.url).searchParams.get('mode');
+
   try {
+    if (mode === 'guia-estudo') {
+      const result = await generateStudyGuide(getDb(), vaultPath, id);
+      return NextResponse.json({ result });
+    }
     const result = await renderZetel(getDb(), vaultPath, id);
     return NextResponse.json({ result });
   } catch (err) {
-    logger.error('zetel build failed', { id, error: (err as Error).message });
+    logger.error('zetel build failed', { id, mode: mode ?? 'tecnico', error: (err as Error).message });
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
 }

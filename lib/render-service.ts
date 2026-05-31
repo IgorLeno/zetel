@@ -36,15 +36,18 @@ import {
 } from './ingestao-service';
 import { getZetelById, slugify } from './zetel-service';
 import { sanitizeSchema } from './sanitize';
+import {
+  GUIA_ESTUDO_FILENAME,
+  GUIA_ESTUDO_META_FILENAME,
+  GUIA_ESTUDO_SOURCE_FILENAME,
+  getStudyGuideInfo,
+} from './study-guide-service';
 
 const DEFAULT_MAX_WORDS = 1000;
 const IMG_BLOCKED = '__blocked__';
 const IMG_NOTFOUND = '__notfound__';
 const LEITURA_TECNICA_FILENAME = 'leitura-tecnica.html';
 const LEITURA_LEGADO_FILENAME = 'leitura.html';
-const GUIA_ESTUDO_FILENAME = 'guia-estudo.html';
-const GUIA_ESTUDO_META_FILENAME = 'guia-estudo.meta.json';
-const GUIA_ESTUDO_SOURCE_FILENAME = 'guia-estudo.source.json';
 
 export type LeituraArtifactMode = 'tecnico' | 'legado';
 
@@ -65,12 +68,15 @@ interface ArtifactSummary {
 }
 
 interface StudyGuideArtifactSummary {
-  exists: false;
+  exists: boolean;
   filename: typeof GUIA_ESTUDO_FILENAME;
-  metaExists: false;
+  metaExists: boolean;
   metaFilename: typeof GUIA_ESTUDO_META_FILENAME;
-  sourceExists: false;
+  sourceExists: boolean;
   sourceFilename: typeof GUIA_ESTUDO_SOURCE_FILENAME;
+  model: string | null;
+  generatedAt: string | null;
+  counts: { cards: number; secoes: number; glossario: number; quiz: number; zettelkasten: number } | null;
 }
 
 export interface ArtifactsInfo {
@@ -865,6 +871,8 @@ export function getArtifactsInfo(
     pagesCount,
   };
 
+  const guideInfo = getStudyGuideInfo(vaultPath, slug);
+
   return {
     mode: artifact?.mode ?? null,
     openArtifact: artifact
@@ -877,12 +885,15 @@ export function getArtifactsInfo(
     leituraHtml: documentoTecnico,
     documentoTecnico,
     guiaEstudo: {
-      exists: false,
+      exists: guideInfo.exists,
       filename: GUIA_ESTUDO_FILENAME,
-      metaExists: false,
+      metaExists: guideInfo.metaExists,
       metaFilename: GUIA_ESTUDO_META_FILENAME,
-      sourceExists: false,
+      sourceExists: guideInfo.sourceExists,
       sourceFilename: GUIA_ESTUDO_SOURCE_FILENAME,
+      model: guideInfo.model,
+      generatedAt: guideInfo.generatedAt,
+      counts: guideInfo.counts,
     },
   };
 }

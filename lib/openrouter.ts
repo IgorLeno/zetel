@@ -124,6 +124,102 @@ export async function* streamChat(params: StreamChatParams): AsyncIterable<strin
   }
 }
 
+/** Contagens de uso de uma chamada não-streaming. */
+export interface RequestUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
+export interface RequestJsonParams {
+  apiKey: string;
+  model: string;
+  system: string;
+  user: string;
+  maxTokens: number;
+  temperature?: number;
+  /** Timeout em ms (default 120s, como o spike 10C). */
+  timeoutMs?: number;
+}
+
+export interface RequestJsonResult {
+  content: string;
+  usage: RequestUsage | null;
+}
+
+const REQUEST_JSON_TIMEOUT_MS = 120_000;
+
+/**
+ * Chamada NÃO-streaming pedindo JSON estruturado (Módulo 10D / Guia de Estudo).
+ * Espelha o padrão de `streamChat` (fetch, mesmos headers, sem SDK) e do spike
+ * `run-guia.mjs`. Pede `response_format: json_object`; modelos que o ignoram ainda
+ * funcionam pelo parser tolerante a montante (R6). Não loga conteúdo (regra #6).
+ */
+export async function requestJson(params: RequestJsonParams): Promise<RequestJsonResult> {
+  const { apiKey, model, system, user, maxTokens, temperature = 0.3 } = params;
+  const timeoutMs = params.timeoutMs ?? REQUEST_JSON_TIMEOUT_MS;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'http://localhost',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        stream: false,
+        max_tokens: maxTokens,
+        temperature,
+        response_format: { type: 'json_object' },
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if ((err as Error)?.name === 'AbortError') {
+      throw new Error(`OpenRouter: timeout após ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  logger.info('openrouter requestJson', { model, status: res.status });
+
+  if (!res.ok) {
+    throw new Error(`OpenRouter: ${res.status}`);
+  }
+
+  const data = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+  };
+  const content = data?.choices?.[0]?.message?.content;
+  if (typeof content !== 'string' || content.trim().length === 0) {
+    throw new Error('OpenRouter: resposta sem conteúdo de texto.');
+  }
+
+  const u = data.usage;
+  const usage: RequestUsage | null = u
+    ? {
+        promptTokens: u.prompt_tokens ?? 0,
+        completionTokens: u.completion_tokens ?? 0,
+        totalTokens: u.total_tokens ?? (u.prompt_tokens ?? 0) + (u.completion_tokens ?? 0),
+      }
+    : null;
+
+  return { content, usage };
+}
+
 /** Chamada mínima para validar chave + modelo (Configurações). */
 export async function pingChat(apiKey: string, model: string): Promise<void> {
   const res = await fetch(OPENROUTER_URL, {

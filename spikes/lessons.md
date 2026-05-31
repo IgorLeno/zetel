@@ -738,3 +738,47 @@ Rule: ao achatar MDAST para texto, inserir separador por tipo de pai (`tableRow`
   blocos no catálogo (já a 220 chars) ou enviar só `block_id`+`heading_path`+`sha256`,
   e dimensionar `max_tokens` por tamanho do material. Etapa LLM NÃO é determinística
   (≠ Documento Técnico); `temperature` baixa ajuda a estabilizar o JSON.
+
+## Módulo 10D — Implementação do guia de estudo (2026-05-30)
+
+Portou o pipeline do spike 10C para produção. Entregou `lib/source-index.ts`
+(catálogo de blocos), `lib/study-guide-service.ts` (orquestração + validação +
+template), `requestJson` em `lib/openrouter.ts`, branch `?mode=guia-estudo` em
+`build`, `?artifact=guia-estudo` em `leitura`, e ativação do modo guia em
+`LeituraPanel`. `pnpm build` limpo. Decisões/achados:
+
+### `page_index` no catálogo resolve D27 sem tocar o chat route
+- A integração D27 (parceiro em modo guia usa `source.json` → origem no Markdown)
+  foi resolvida **derivando o `page_index` no render**: cada bloco do catálogo carrega
+  o `page_index` da página que o contém (paridade com `zetel_pages` porque usa o mesmo
+  `parseMarkdownForSegmentation`/`segmentFile`/`max_words`). O `source.json` grava
+  `page_indices` por item; o HTML embute `data-page`; o guia posta `zetel:page-change`
+  com o `pageIndex` real. **Resultado: o chat route não muda** — reusa D8 inteiro e a
+  Regra #3 (fonte é sempre `zetel_pages.content_text`).
+- Regra: ao portar segmentação para um novo consumidor, derive índices da MESMA
+  função de produção; não recompute boundaries por conta própria (drift garantido).
+
+### `source.json` é derivado server-side, nunca da LLM (R4)
+- `computeTraceability` ignora os `source_file`/`source_headings` que a LLM afirma e
+  reconstrói tudo a partir dos hashes que existem no catálogo (`byHash`): `source_file`,
+  `heading_path` e `page_indices` saem dos blocos reais. Item com 0 hashes válidos não
+  é descartado — entra com `flagged:true` (R5), visível como selo "origem não
+  confirmada" no HTML.
+
+### Reuso > reimplementação: exportar utilitários em vez de duplicar (R3)
+- `sha256` e `toPlainText` viraram `export` em `ingestao-service.ts`; `source-index.ts`
+  os importa. Mudança mínima, evita um terceiro `toPlainText` divergente. O catálogo de
+  produção usa `toPlainText` com `join('')` (não os separadores do spike) — o que
+  importa é consistência catálogo↔validação, não bater com o hash de `zetel_pages`.
+
+### O seletor de modo é o próprio toggle de visualização
+[2026-05-30] Context: 10A deixou um `mode-switch` (build) e um `artifact-switch` (view) separados.
+Mistake (evitado): manter dois controles paralelos fazendo coisas parecidas confunde o usuário.
+Rule: consolidei — `selectedMode` escolhe ao mesmo tempo o alvo de geração E o artefato exibido (fallback para empty-state quando o artefato do modo ainda não existe). Satisfaz o PRD ("toggle quando ambos existem") com um controle só.
+
+### Limitações herdadas do 10C que seguem abertas
+- `response_format:json_object`: modelos que **rejeitam** o parâmetro com 400 (em vez de
+  ignorá-lo) ainda quebram a chamada — `extractJson` só cobre quem ignora e devolve
+  texto/cerca. O default (`claude-3.5-haiku`) suporta. Fica para o 10E avaliar
+  `study_guide_model` por modelo. Modelo neste módulo = global (`default_model` →
+  `OPENROUTER_MODEL`), sem chave dedicada (decidido com Igor).
