@@ -65,7 +65,11 @@ export function LeituraPanel({
   const [artifacts, setArtifacts] = useState<ArtifactsInfo | null>(null);
   const [selectedMode, setSelectedMode] = useState<ReadingMode>('tecnico');
   const [chatOpen, setChatOpen] = useState(false);
+  const [currentReadingMode, setCurrentReadingMode] = useState<ReadingMode>('tecnico');
   const [currentPageIndex, setCurrentPageIndex] = useState<number | null>(null);
+  const [currentGuideBlockId, setCurrentGuideBlockId] = useState<string | null>(null);
+  const [currentGuideSectionId, setCurrentGuideSectionId] = useState<string | null>(null);
+  const [currentGuideBlockTitle, setCurrentGuideBlockTitle] = useState<string | null>(null);
   // Força recarregar o iframe após gerar/atualizar (mesmo quando o src não muda).
   const [reloadNonce, setReloadNonce] = useState(0);
 
@@ -117,13 +121,38 @@ export function LeituraPanel({
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
-      if (e.data?.type === 'zetel:page-change' && typeof e.data.pageIndex === 'number') {
-        setCurrentPageIndex(e.data.pageIndex);
+      if (e.data?.type === 'zetel:page-change') {
+        const readingMode = e.data.readingMode === 'guia-estudo' ? 'guia-estudo' : 'tecnico';
+        setCurrentReadingMode(readingMode);
+        if (typeof e.data.pageIndex === 'number') setCurrentPageIndex(e.data.pageIndex);
+        if (readingMode === 'guia-estudo') {
+          setCurrentGuideBlockId(
+            typeof e.data.guideBlockId === 'string' ? e.data.guideBlockId : null,
+          );
+          setCurrentGuideSectionId(
+            typeof e.data.guideSectionId === 'string' ? e.data.guideSectionId : null,
+          );
+          setCurrentGuideBlockTitle(
+            typeof e.data.guideBlockTitle === 'string' ? e.data.guideBlockTitle : null,
+          );
+        } else {
+          setCurrentGuideBlockId(null);
+          setCurrentGuideSectionId(null);
+          setCurrentGuideBlockTitle(null);
+        }
       }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, []);
+
+  useEffect(() => {
+    if (viewArtifact) setCurrentReadingMode(viewArtifact);
+    setCurrentPageIndex(null);
+    setCurrentGuideBlockId(null);
+    setCurrentGuideSectionId(null);
+    setCurrentGuideBlockTitle(null);
+  }, [viewArtifact]);
 
   useEffect(() => {
     void loadArtifacts();
@@ -256,7 +285,14 @@ export function LeituraPanel({
             onLoad={postCurrentTheme}
           />
           <div style={{ display: chatOpen ? 'contents' : 'none' }}>
-            <ChatPanel zetelId={zetelId} currentPageIndex={currentPageIndex} />
+            <ChatPanel
+              zetelId={zetelId}
+              currentReadingMode={currentReadingMode}
+              currentPageIndex={currentPageIndex}
+              currentGuideBlockId={currentGuideBlockId}
+              currentGuideSectionId={currentGuideSectionId}
+              currentGuideBlockTitle={currentGuideBlockTitle}
+            />
           </div>
         </div>
       )}

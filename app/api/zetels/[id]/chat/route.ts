@@ -15,6 +15,7 @@ import {
   extractMemorySuggestion,
   NOTE_MARK_START,
   MEMORY_MARK_START,
+  type ReadingLocationContext,
   resolveChatModel,
   resolveHistoryWindow,
 } from '@/lib/chat-prompt';
@@ -26,6 +27,11 @@ import { getOpenRouterModel } from '@/lib/config';
 import { getSetting } from '@/lib/settings';
 import { getZetelById } from '@/lib/zetel-service';
 import { logger } from '@/lib/logger';
+import {
+  findStudyGuideSourceEntry,
+  readStudyGuideSourceMap,
+  type SourceMapEntry,
+} from '@/lib/study-guide-service';
 
 export const runtime = 'nodejs';
 
@@ -33,6 +39,13 @@ type Ctx = { params: Promise<{ id: string }> };
 
 const KEY_ERROR =
   'Chave OpenRouter não configurada. Defina OPENROUTER_API_KEY em ~/.zetel/config.';
+
+function optionalShortString(value: unknown, maxLength: number): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, maxLength);
+}
 
 function friendlyKeyError(err: unknown): string | null {
   if (err instanceof Error && err.message.includes('não configurada')) {
@@ -106,7 +119,15 @@ export async function POST(request: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'Zetel não encontrado.' }, { status: 404 });
   }
 
-  let body: { userMessage?: unknown; pageIndex?: unknown; model?: unknown };
+  let body: {
+    userMessage?: unknown;
+    pageIndex?: unknown;
+    model?: unknown;
+    readingMode?: unknown;
+    guideBlockId?: unknown;
+    guideSectionId?: unknown;
+    guideBlockTitle?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
@@ -138,6 +159,20 @@ export async function POST(request: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'Zetel não encontrado.' }, { status: 404 });
   }
 
+  const readingMode = body.readingMode === 'guia-estudo' ? 'guia-estudo' : 'tecnico';
+  const guideBlockId = optionalShortString(body.guideBlockId, 120);
+  const guideSectionId = optionalShortString(body.guideSectionId, 120);
+  const guideBlockTitle = optionalShortString(body.guideBlockTitle, 300);
+
+  let guideSourceEntry: SourceMapEntry | null = null;
+  const vaultPath = getSetting('vault_path');
+  if (readingMode === 'guia-estudo' && vaultPath && guideBlockId) {
+    guideSourceEntry = findStudyGuideSourceEntry(
+      readStudyGuideSourceMap(vaultPath, zetel.slug),
+      guideBlockId,
+    );
+  }
+
   let pageIndex: number | null = null;
   if (body.pageIndex !== undefined && body.pageIndex !== null) {
     const n =
@@ -148,6 +183,9 @@ export async function POST(request: Request, { params }: Ctx) {
       return NextResponse.json({ error: 'Índice de página inválido.' }, { status: 400 });
     }
     pageIndex = n;
+  }
+  if (pageIndex === null && guideSourceEntry?.page_indices?.length) {
+    pageIndex = guideSourceEntry.page_indices[0] ?? null;
   }
 
   let pageContent: string | null = null;
@@ -178,7 +216,6 @@ export async function POST(request: Request, { params }: Ctx) {
 
   // Prompt do parceiro + rubricas + títulos (Módulo 8: parceiro.md lido do vault).
   // Sem vault, degrada como chat simples (regra #5: leitura sob demanda, nunca cache).
-  const vaultPath = getSetting('vault_path');
   let partnerPrompt: string | undefined;
   let noteRubric: string | undefined;
   let memoryRubric: string | undefined;
@@ -194,12 +231,25 @@ export async function POST(request: Request, { params }: Ctx) {
     }
   }
 
+  const readingLocation: ReadingLocationContext = {
+    readingMode,
+    pageIndex,
+    guideBlockId,
+    guideSectionId,
+    guideBlockTitle,
+    sourceHeadings: guideSourceEntry?.source_headings,
+    sourceBlockHashes: guideSourceEntry?.source_block_hashes,
+    sourceFiles: guideSourceEntry?.source_files,
+    sourcePageIndices: guideSourceEntry?.page_indices,
+  };
+
   // Memória global é lida sob demanda dentro de buildOpenRouterMessages (regra #5).
   const { messages: openRouterMessages, memoryWarnings } = buildOpenRouterMessages({
     displayName: zetel.displayName,
     pageContent,
     history,
     userMessage,
+    readingLocation,
     partnerPrompt,
     noteRubric,
     memoryRubric,
@@ -221,7 +271,13 @@ export async function POST(request: Request, { params }: Ctx) {
     content: userMessage,
     pageIndex,
     model,
-    meta: { pageAnchor, pageHashMatch },
+    meta: {
+      pageAnchor,
+      pageHashMatch,
+      readingMode,
+      guideBlockId: guideBlockId ?? undefined,
+      guideSectionId: guideSectionId ?? undefined,
+    },
   });
 
   const encoder = new TextEncoder();
@@ -289,11 +345,32 @@ export async function POST(request: Request, { params }: Ctx) {
         // nota). extractNoteSuggestion já corta no NOTE_MARK, mas não na memória.
         const cut = earliestMark(fullContent);
         const finalNarrative = cut !== -1 ? fullContent.slice(0, cut).trim() : narrative;
+        const hasSuggestion = Boolean(suggestion || memorySuggestion);
+        const assistantContent =
+          finalNarrative ||
+          (hasSuggestion
+            ? 'Preparei uma sugestão abaixo. Se quiser, posso explicar ou ajustar antes de você guardar.'
+            : '');
+
+        if (!assistantContent) {
+          logger.warn('chat stream ended without visible content', { zetelId, model });
+          controller.enqueue(
+            encoder.encode(
+              'data: [ERROR] O parceiro encerrou a resposta sem conteúdo visível. Tente novamente.\n\n',
+            ),
+          );
+          controller.close();
+          return;
+        }
+
+        if (!finalNarrative && hasSuggestion) {
+          emit(assistantContent);
+        }
 
         const saved = saveMessage(db, {
           zetelId,
           role: 'assistant',
-          content: finalNarrative,
+          content: assistantContent,
           pageIndex,
           model,
           meta: {
@@ -303,7 +380,11 @@ export async function POST(request: Request, { params }: Ctx) {
             tokensOut: usageSink.tokensOut,
             suggestedNote: suggestion ? true : undefined,
             noteTipo: suggestion?.tipo,
+            suggestedMemory: memorySuggestion ? true : undefined,
             memoryLong: memoryWarnings.hasLongFile || undefined,
+            readingMode,
+            guideBlockId: guideBlockId ?? undefined,
+            guideSectionId: guideSectionId ?? undefined,
           },
         });
 

@@ -2,6 +2,12 @@
 export interface ChatMessageMeta {
   /** Anchor da página validada no turno (de `zetel_pages`). */
   pageAnchor?: string | null;
+  /** Modo de leitura ativo no turno. */
+  readingMode?: 'tecnico' | 'guia-estudo';
+  /** Bloco visual ativo do Guia de Estudo, quando aplicável. */
+  guideBlockId?: string;
+  /** Seção visual ativa do Guia de Estudo, quando aplicável. */
+  guideSectionId?: string;
   /** `false` se o cliente enviou conteúdo divergente do `content_hash` (D8). */
   pageHashMatch?: boolean;
   tokensIn?: number;

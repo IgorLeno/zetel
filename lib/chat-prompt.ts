@@ -81,6 +81,20 @@ export interface MemoryContext {
   warnings: MemoryWarnings;
 }
 
+export type ReadingMode = 'tecnico' | 'guia-estudo';
+
+export interface ReadingLocationContext {
+  readingMode: ReadingMode;
+  pageIndex: number | null;
+  guideBlockId?: string | null;
+  guideSectionId?: string | null;
+  guideBlockTitle?: string | null;
+  sourceHeadings?: string[];
+  sourceBlockHashes?: string[];
+  sourceFiles?: string[];
+  sourcePageIndices?: number[];
+}
+
 /**
  * Lê a memória global **sob demanda** (regra #5 — nunca cache de processo) e a
  * trunca a 40% do orçamento do turno. Corta arquivos inteiros, priorizando as
@@ -136,6 +150,7 @@ export function buildOpenRouterMessages(opts: {
   pageContent: string | null;
   history: ChatMessage[];
   userMessage: string;
+  readingLocation?: ReadingLocationContext;
   noteRubric?: string;
   memoryRubric?: string;
   existingTitles?: string[];
@@ -182,6 +197,40 @@ export function buildOpenRouterMessages(opts: {
       content: systemContent,
     },
   ];
+
+  if (opts.readingLocation) {
+    const loc = opts.readingLocation;
+    const lines = [
+      'Localização visual atual do usuário:',
+      `- Modo de leitura: ${loc.readingMode === 'guia-estudo' ? 'Guia de Estudo' : 'Documento Técnico'}`,
+      `- Página atual: ${typeof loc.pageIndex === 'number' ? loc.pageIndex : 'desconhecida'}`,
+    ];
+    if (loc.readingMode === 'guia-estudo') {
+      if (loc.guideSectionId) lines.push(`- Seção visual do Guia: ${loc.guideSectionId}`);
+      if (loc.guideBlockId) lines.push(`- Bloco visual do Guia: ${loc.guideBlockId}`);
+      if (loc.guideBlockTitle) lines.push(`- Título do bloco visual: ${loc.guideBlockTitle}`);
+      if (loc.sourceHeadings?.length) {
+        lines.push(`- Origem no Markdown: ${loc.sourceHeadings.join(' > ')}`);
+      }
+      if (loc.sourceFiles?.length) {
+        lines.push(`- Arquivo(s) de origem: ${loc.sourceFiles.join(', ')}`);
+      }
+      if (loc.sourcePageIndices?.length) {
+        lines.push(`- Página(s) de origem no Markdown: ${loc.sourcePageIndices.join(', ')}`);
+      }
+      if (loc.sourceBlockHashes?.length) {
+        lines.push(`- Hash(es) de origem validado(s): ${loc.sourceBlockHashes.join(', ')}`);
+      }
+    }
+    lines.push(
+      'Use esta localização para responder perguntas como "onde estou?" ou "qual bloco estou vendo"; use o Markdown como fonte principal de conhecimento.',
+    );
+    messages.push({ role: 'user', content: lines.join('\n') });
+    messages.push({
+      role: 'assistant',
+      content: 'Entendido. Vou usar a localização visual apenas como orientação de navegação.',
+    });
+  }
 
   if (opts.pageContent) {
     messages.push({

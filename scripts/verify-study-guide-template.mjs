@@ -30,15 +30,15 @@ assert.doesNotMatch(
 const systemPromptBody = source.match(/function buildSystemPrompt[\s\S]*?function buildUserPrompt/)?.[0] ?? '';
 const userPromptBody = source.match(/function buildUserPrompt[\s\S]*?\/\/ ---------------------------------------------------------------------------\n\/\/ Parsing tolerante/)?.[0] ?? '';
 
-assert.doesNotMatch(
+assert.match(
   systemPromptBody,
   /comparison_tabs|accordions|timelines|tables/,
-  'etapa 11.2 nao deve alterar o prompt de sistema para pedir campos v2',
+  'prompt de sistema deve pedir campos v2 quando o conteudo justificar',
 );
 assert.doesNotMatch(
   userPromptBody,
   /comparison_tabs|accordions|timelines|tables/,
-  'etapa 11.2 nao deve alterar o prompt de usuario para pedir campos v2',
+  'prompt de usuario deve continuar simples; schema fica no system prompt',
 );
 assert.match(source, /comparison_tabs\?: ComparisonTabsItem\[\]/, 'StudyGuide deve aceitar comparison_tabs opcional');
 assert.match(source, /accordions\?: AccordionItem\[\]/, 'StudyGuide deve aceitar accordions opcional');
@@ -51,6 +51,8 @@ assert.match(source, /class="accordion-list"/, 'accordions deve renderizar lista
 assert.match(source, /class="timeline"/, 'timelines deve renderizar fluxo sequencial');
 assert.match(source, /class="editorial-table-wrap"/, 'tables deve renderizar wrapper com scroll horizontal');
 assert.match(source, /data-tab-target/, 'script inline deve alternar abas de comparison_tabs');
+assert.match(source, /data-guide-block-id/, 'template deve marcar blocos com guide_block_id');
+assert.match(source, /readingMode:'guia-estudo'/, 'postMessage do guia deve informar readingMode guia-estudo');
 assert.equal(
   source.match(/new IntersectionObserver/g)?.length,
   1,
@@ -109,6 +111,9 @@ const baseGuide = {
 const renderStudyGuideHtml = moduleForRender.exports.renderStudyGuideHtml;
 const v1Html = renderStudyGuideHtml(baseGuide, sourceMap, 'Zetel', '2026-05-31T00:00:00.000Z');
 assert.doesNotMatch(v1Html, /class="v2-blocks"/, 'guia v1 nao deve renderizar secao v2 vazia');
+assert.match(v1Html, /data-guide-block-id="card1"/, 'cards devem expor guide_block_id no HTML');
+assert.match(v1Html, /data-guide-section-id="conceitos-chave"/, 'cards devem expor secao visual no HTML');
+assert.match(v1Html, /data-guide-block-title="Card"/, 'cards devem expor titulo simples no HTML');
 
 const v2SourceMap = {
   ...sourceMap,
@@ -143,6 +148,7 @@ assert.match(v2Html, /class="accordion-list"/, 'accordions devem renderizar list
 assert.match(v2Html, /<details>/, 'accordions devem iniciar recolhidos');
 assert.match(v2Html, /class="timeline-marker">1<\/span>/, 'timelines devem renderizar marcador sequencial');
 assert.match(v2Html, /id="editorial-table-1" class="editorial-table" data-nav-section="editorial-table-1" data-page="9"/, 'tables devem ter ancora, nav-section e data-page');
+assert.match(v2Html, /id="comparison-1"[^>]+data-guide-block-id="comp1"[^>]+data-guide-section-id="comparison_tabs"/, 'blocos v2 devem expor localizacao visual');
 assert.match(v2Html, /↳ Tabela · 1 bloco\(s\) de origem/, 'blocos v2 devem exibir traceBadge');
 
 console.log('study-guide template checks passed');

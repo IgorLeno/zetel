@@ -872,3 +872,16 @@ sidebar v1+v2, `.trace` em 35 itens, offline (0 CDN), 40× `data-page`. `pnpm bu
 
 ### Gate 11.4
 Aprovado sem alteração de código; apenas reprocessar, restaurar `study_guide_model` e regenerar.
+
+## Correção pós-M11 — Chat no Guia de Estudo (2026-05-31)
+
+[2026-05-31] Context: perguntas feitas enquanto o Guia de Estudo estava aberto terminavam sem resposta visual.
+Mistake: o route de chat salvava `assistant.content = ""` quando a LLM emitia sentinelas de nota/memória antes de qualquer narrativa, e o `ChatPanel` renderizava essa mensagem vazia como bolha normal.
+Rule: nunca persistir nem renderizar bolha de assistant vazia; se houver sugestão sem narrativa, salvar e emitir um fallback curto; se o stream terminar sem texto e sem sugestão, emitir erro SSE claro e manter o histórico sem assistant vazio.
+
+[2026-05-31] Context: o parceiro recebia só `pageIndex`, mas o usuário navegava no Guia de Estudo, cujo bloco visual não é igual à página Markdown.
+Mistake: tratar `data-page` como suficiente para perguntas de localização no Guia.
+Rule: o Guia deve postar `zetel:page-change` com `readingMode:"guia-estudo"`, `pageIndex`, `guideBlockId`, `guideSectionId` e título quando disponível; o backend usa `guia-estudo.source.json` só para localização/rastreabilidade, mantendo `zetel_pages.content_text` como fonte principal de conhecimento.
+
+[2026-05-31] Context: clicar links internos da sidebar do Guia em iframe sandbox podia gerar tentativa insegura de navegação para URL absoluta.
+Rule: links internos continuam como fragmentos relativos (`href="#..."`), mas o script do Guia intercepta o clique, chama `scrollIntoView` e atualiza o estado via `postMessage`, sem relaxar `sandbox="allow-scripts"`.

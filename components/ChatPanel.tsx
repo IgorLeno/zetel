@@ -5,6 +5,8 @@ import type { ChatMessage } from '@/types/chat-message';
 import { NoteCard, type Suggestion } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
 
+type ReadingMode = 'tecnico' | 'guia-estudo';
+
 function parseSseChunk(text: string): {
   chunks: string[];
   suggestion: Suggestion | null;
@@ -63,10 +65,18 @@ function parseSseChunk(text: string): {
 
 export function ChatPanel({
   zetelId,
+  currentReadingMode,
   currentPageIndex,
+  currentGuideBlockId,
+  currentGuideSectionId,
+  currentGuideBlockTitle,
 }: {
   zetelId: string;
+  currentReadingMode: ReadingMode;
   currentPageIndex: number | null;
+  currentGuideBlockId: string | null;
+  currentGuideSectionId: string | null;
+  currentGuideBlockTitle: string | null;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState('');
@@ -83,6 +93,9 @@ export function ChatPanel({
   const [memoryBusy, setMemoryBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
+  const visibleMessages = messages.filter(
+    (m) => !(m.role === 'assistant' && m.content.trim().length === 0),
+  );
 
   // Quando true, a PRÓXIMA sugestão recebida vem sem "Discutir" (bounded — regra #10).
   const discussNextRef = useRef(false);
@@ -164,6 +177,10 @@ export function ChatPanel({
         body: JSON.stringify({
           userMessage: text,
           pageIndex: currentPageIndex,
+          readingMode: currentReadingMode,
+          guideBlockId: currentGuideBlockId,
+          guideSectionId: currentGuideSectionId,
+          guideBlockTitle: currentGuideBlockTitle,
         }),
       });
 
@@ -217,6 +234,8 @@ export function ChatPanel({
 
       if (streamError) {
         setError(streamError);
+      } else if (!accumulated.trim() && !received && !receivedMemory) {
+        setError('O parceiro encerrou a resposta sem conteúdo visível. Tente novamente.');
       } else {
         const histRes = await fetch(`/api/zetels/${zetelId}/chat`);
         const histData = await histRes.json();
@@ -373,10 +392,10 @@ export function ChatPanel({
 
       <div className="chat-messages" ref={messagesRef} data-testid="chat-messages">
         {!loaded && <p className="chat-placeholder">Carregando histórico…</p>}
-        {loaded && messages.length === 0 && !streaming && (
+        {loaded && visibleMessages.length === 0 && !streaming && (
           <p className="chat-placeholder">Pergunte sobre a página atual.</p>
         )}
-        {messages.map((m) => (
+        {visibleMessages.map((m) => (
           <div key={m.id} className={`msg ${m.role === 'user' ? 'msg-user' : 'msg-assistant'}`}>
             <div className="msg-bubble" data-testid="msg-bubble" data-role={m.role}>
               {m.content}

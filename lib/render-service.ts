@@ -580,7 +580,7 @@ function buildNavScript(): string {
     try {
       var el = pages[current];
       var idx = el && el.dataset.page != null ? Number(el.dataset.page) : current;
-      window.parent.postMessage({ type:'zetel:page-change', pageIndex: idx }, '*');
+      window.parent.postMessage({ type:'zetel:page-change', readingMode:'tecnico', pageIndex: idx }, '*');
     } catch(_){}
   }
 

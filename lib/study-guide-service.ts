@@ -193,7 +193,7 @@ export function guiaEstudoHtmlPath(vaultPath: string, slug: string): string {
 function guiaEstudoMetaPath(vaultPath: string, slug: string): string {
   return join(zetelArtefatosDir(vaultPath, slug), GUIA_ESTUDO_META_FILENAME);
 }
-function guiaEstudoSourcePath(vaultPath: string, slug: string): string {
+export function guiaEstudoSourcePath(vaultPath: string, slug: string): string {
   return join(zetelArtefatosDir(vaultPath, slug), GUIA_ESTUDO_SOURCE_FILENAME);
 }
 
@@ -257,6 +257,27 @@ export function getStudyGuideInfo(vaultPath: string, slug: string): StudyGuideIn
     generatedAt,
     counts,
   };
+}
+
+export function readStudyGuideSourceMap(
+  vaultPath: string,
+  slug: string,
+): StudyGuideSourceMap | null {
+  const sourcePath = guiaEstudoSourcePath(vaultPath, slug);
+  if (!existsSync(sourcePath)) return null;
+  try {
+    return JSON.parse(readFileSync(sourcePath, 'utf8')) as StudyGuideSourceMap;
+  } catch {
+    return null;
+  }
+}
+
+export function findStudyGuideSourceEntry(
+  sourceMap: StudyGuideSourceMap | null,
+  guideBlockId: string | null,
+): SourceMapEntry | null {
+  if (!sourceMap || !guideBlockId) return null;
+  return sourceMap[guideBlockId] ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -749,6 +770,17 @@ function pageAttr(id: string, sourceMap: StudyGuideSourceMap): string {
   return typeof pg === 'number' ? ` data-page="${pg}"` : '';
 }
 
+function guideBlockAttrs(
+  id: string,
+  sectionId: string,
+  title: string,
+  sourceMap: StudyGuideSourceMap,
+): string {
+  return `${pageAttr(id, sourceMap)} data-guide-block-id="${esc(id)}" data-guide-section-id="${esc(
+    sectionId,
+  )}" data-guide-block-title="${esc(title)}"`;
+}
+
 /** Badge discreto de rastreabilidade (trilha de headings + nº de blocos válidos). */
 function traceBadge(id: string, sourceMap: StudyGuideSourceMap): string {
   const entry = sourceMap[id];
@@ -838,8 +870,10 @@ function renderComparisonTabs(
           </div>`
           : '';
 
-      return `<article id="${id}" class="comparison-tabs" data-nav-section="${id}"${pageAttr(
+      return `<article id="${id}" class="comparison-tabs" data-nav-section="${id}"${guideBlockAttrs(
         item.guide_block_id,
+        'comparison_tabs',
+        item.titulo,
         sourceMap,
       )}>
         <h3>${esc(item.titulo)}</h3>
@@ -856,8 +890,10 @@ function renderAccordions(items: AccordionItem[], sourceMap: StudyGuideSourceMap
   const rendered = items
     .map((item, i) => {
       const id = `accordion-${i + 1}`;
-      return `<article id="${id}" class="accordion-block" data-nav-section="${id}"${pageAttr(
+      return `<article id="${id}" class="accordion-block" data-nav-section="${id}"${guideBlockAttrs(
         item.guide_block_id,
+        'accordions',
+        item.titulo,
         sourceMap,
       )}>
         <details>
@@ -883,8 +919,10 @@ function renderTimelines(items: TimelineItem[], sourceMap: StudyGuideSourceMap):
           </li>`,
         )
         .join('\n');
-      return `<article id="${id}" class="timeline" data-nav-section="${id}"${pageAttr(
+      return `<article id="${id}" class="timeline" data-nav-section="${id}"${guideBlockAttrs(
         item.guide_block_id,
+        'timelines',
+        item.titulo,
         sourceMap,
       )}>
         <h3>${esc(item.titulo)}</h3>
@@ -902,8 +940,10 @@ function renderEditorialTables(
   return items
     .map((item, i) => {
       const id = `editorial-table-${i + 1}`;
-      return `<article id="${id}" class="editorial-table" data-nav-section="${id}"${pageAttr(
+      return `<article id="${id}" class="editorial-table" data-nav-section="${id}"${guideBlockAttrs(
         item.guide_block_id,
+        'tables',
+        item.titulo,
         sourceMap,
       )}>
         <h3>${esc(item.titulo)}</h3>
@@ -926,7 +966,12 @@ function renderV2Blocks(guia: StudyGuide, sourceMap: StudyGuideSourceMap): strin
 function renderCards(cards: CardItem[], sourceMap: StudyGuideSourceMap): string {
   const items = cards
     .map(
-      (c) => `<div class="card"${pageAttr(c.guide_block_id, sourceMap)}>
+      (c) => `<div class="card"${guideBlockAttrs(
+        c.guide_block_id,
+        'conceitos-chave',
+        c.titulo,
+        sourceMap,
+      )}>
       <h3>${esc(c.titulo)}</h3>
       <p>${esc(c.conteudo)}</p>
       ${traceBadge(c.guide_block_id, sourceMap)}
@@ -939,7 +984,12 @@ function renderCards(cards: CardItem[], sourceMap: StudyGuideSourceMap): string 
 function renderSecoes(secoes: SecaoItem[], sourceMap: StudyGuideSourceMap): string {
   const items = secoes
     .map(
-      (s, i) => `<article id="secao-${i + 1}" class="secao" data-nav-section="secao-${i + 1}"${pageAttr(s.guide_block_id, sourceMap)}>
+      (s, i) => `<article id="secao-${i + 1}" class="secao" data-nav-section="secao-${i + 1}"${guideBlockAttrs(
+        s.guide_block_id,
+        'secoes',
+        s.titulo,
+        sourceMap,
+      )}>
       <h3>${esc(s.titulo)}</h3>
       ${paragraphs(s.conteudo)}
       ${traceBadge(s.guide_block_id, sourceMap)}
@@ -952,7 +1002,12 @@ function renderSecoes(secoes: SecaoItem[], sourceMap: StudyGuideSourceMap): stri
 function renderGlossario(glossario: GlossarioItem[], sourceMap: StudyGuideSourceMap): string {
   const items = glossario
     .map(
-      (g) => `<div class="termo"${pageAttr(g.guide_block_id, sourceMap)} data-search-text="${esc(
+      (g) => `<div class="termo"${guideBlockAttrs(
+        g.guide_block_id,
+        'glossario',
+        g.termo,
+        sourceMap,
+      )} data-search-text="${esc(
         `${g.termo} ${g.definicao}`.toLocaleLowerCase('pt-BR'),
       )}">
       <dt>${esc(g.termo)}</dt>
@@ -977,7 +1032,12 @@ function renderQuiz(quiz: QuizItem[], sourceMap: StudyGuideSourceMap): string {
             `<button type="button" class="quiz-option" data-option-index="${j}">${esc(o)}</button>`,
         )
         .join('\n');
-      return `<div class="quiz-item" data-answer-index="${correctIndex}"${pageAttr(q.guide_block_id, sourceMap)}>
+      return `<div class="quiz-item" data-answer-index="${correctIndex}"${guideBlockAttrs(
+        q.guide_block_id,
+        'quiz',
+        q.pergunta,
+        sourceMap,
+      )}>
       <p class="quiz-q"><strong>${i + 1}.</strong> ${esc(q.pergunta)}</p>
       <div class="quiz-opts">${opts}</div>
       <p class="quiz-feedback" hidden></p>
@@ -993,7 +1053,12 @@ function renderZettelkasten(perguntas: ZkItem[], sourceMap: StudyGuideSourceMap)
   const items = perguntas
     .map(
       (p) =>
-        `<li${pageAttr(p.guide_block_id, sourceMap)}>${esc(p.pergunta)} ${traceBadge(p.guide_block_id, sourceMap)}</li>`,
+        `<li${guideBlockAttrs(
+          p.guide_block_id,
+          'zettelkasten',
+          p.pergunta,
+          sourceMap,
+        )}>${esc(p.pergunta)} ${traceBadge(p.guide_block_id, sourceMap)}</li>`,
     )
     .join('\n');
   return `<section id="zettelkasten" data-nav-section="zettelkasten"><h2>Perguntas Zettelkasten</h2><ul class="zk">${items}</ul></section>`;
@@ -1245,11 +1310,36 @@ function guideNavScript(): string {
     });
   }
 
-  var blocks = bySel('[data-page],[data-nav-section]');
-  function post(idx){
-    try { window.parent.postMessage({ type:'zetel:page-change', pageIndex: idx }, '*'); } catch(_){}
+  var blocks = bySel('[data-guide-block-id],[data-page],[data-nav-section]');
+  var locationBlocks = bySel('[data-guide-block-id]');
+  var activeLocationTargets = locationBlocks.length ? locationBlocks : bySel('[data-page]');
+  function payloadFor(el){
+    var payload = { type:'zetel:page-change', readingMode:'guia-estudo' };
+    if (!el) return payload;
+    var pageRaw = el.getAttribute('data-page');
+    var page = pageRaw == null ? NaN : Number(pageRaw);
+    if (!isNaN(page)) payload.pageIndex = page;
+    var blockId = el.getAttribute('data-guide-block-id');
+    var sectionId = el.getAttribute('data-guide-section-id');
+    var title = el.getAttribute('data-guide-block-title');
+    if (blockId) payload.guideBlockId = blockId;
+    if (sectionId) payload.guideSectionId = sectionId;
+    if (title) payload.guideBlockTitle = title;
+    return payload;
   }
-  var last = -1;
+  var lastLocation = '';
+  function post(el){
+    var payload = payloadFor(el);
+    var key = [
+      payload.pageIndex == null ? '' : String(payload.pageIndex),
+      payload.guideBlockId || '',
+      payload.guideSectionId || ''
+    ].join(':');
+    if (key === lastLocation) return;
+    lastLocation = key;
+    try { window.parent.postMessage(payload, '*'); } catch(_){}
+  }
+  var last = '';
   var activeNav = '';
   function setActiveNav(id){
     if (!id || id === activeNav) return;
@@ -1265,6 +1355,21 @@ function guideNavScript(): string {
     });
   }
   var navSections = bySel('[data-nav-section]');
+  bySel('[data-nav-target]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      var id = a.getAttribute('data-nav-target');
+      var target = id ? document.getElementById(id) : null;
+      if (target) {
+        target.scrollIntoView({ block:'start' });
+        setActiveNav(id);
+        var loc = target.hasAttribute('data-guide-block-id')
+          ? target
+          : target.querySelector('[data-guide-block-id]');
+        if (loc) post(loc);
+      }
+    });
+  });
   function updateActiveFromViewport(){
     var focusLine = window.innerHeight * 0.35;
     var fallback = null;
@@ -1290,26 +1395,25 @@ function guideNavScript(): string {
     var io = new IntersectionObserver(function(entries){
       entries.forEach(function(en){
         if (en.isIntersecting) {
-          if (en.target.hasAttribute('data-page')) {
-            var i = Number(en.target.getAttribute('data-page'));
-            if (!isNaN(i) && i !== last) { last = i; post(i); }
+          if (en.target.hasAttribute('data-guide-block-id') || en.target.hasAttribute('data-page')) {
+            var key = en.target.getAttribute('data-guide-block-id') || en.target.getAttribute('data-page') || '';
+            if (key !== last) { last = key; post(en.target); }
           }
         }
       });
       updateActiveFromViewport();
     }, { threshold: 0.15 });
-    blocks.forEach(function(b){ io.observe(b); });
+    activeLocationTargets.forEach(function(b){ io.observe(b); });
   } else if (blocks.length) {
     var fallbackTimer = null;
     function fallbackUpdate(){
       var focusLine = window.innerHeight * 0.35;
-      for (var n = 0; n < blocks.length; n += 1) {
-        var el = blocks[n];
-        if (!el.hasAttribute('data-page')) continue;
+      for (var n = 0; n < activeLocationTargets.length; n += 1) {
+        var el = activeLocationTargets[n];
         var r = el.getBoundingClientRect();
         if (r.top <= focusLine && r.bottom >= focusLine) {
-          var i = Number(el.getAttribute('data-page'));
-          if (!isNaN(i) && i !== last) { last = i; post(i); }
+          var key = el.getAttribute('data-guide-block-id') || el.getAttribute('data-page') || '';
+          if (key !== last) { last = key; post(el); }
           break;
         }
       }
@@ -1324,6 +1428,7 @@ function guideNavScript(): string {
     fallbackUpdate();
   }
   updateActiveFromViewport();
+  if (activeLocationTargets.length) post(activeLocationTargets[0]);
 })();
 `.trim();
 }
@@ -1363,7 +1468,7 @@ export function renderStudyGuideHtml(
         <span class="brand">⚡ Zetel · Guia de Estudo</span>
         <h1>${esc(guia.titulo)}</h1>
         <p class="sub">${esc(guia.subtitulo)}</p>
-        <div class="resumo"${pageAttr('resumo', sourceMap)}>${paragraphs(guia.resumo.texto)}${traceBadge('resumo', sourceMap)}</div>
+        <div class="resumo"${guideBlockAttrs('resumo', 'capa', 'Resumo', sourceMap)}>${paragraphs(guia.resumo.texto)}${traceBadge('resumo', sourceMap)}</div>
         <p class="sub" style="font-size:13px;margin-top:18px">${esc(displayName)} · Gerado em ${esc(buildDate)}</p>
       </header>
       ${renderCards(guia.cards, sourceMap)}
