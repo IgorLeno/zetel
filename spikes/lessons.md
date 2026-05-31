@@ -694,3 +694,47 @@ Rule: em notas técnicas, símbolos, operadores e fórmulas matemáticas inline 
 - Harness `.mjs` descartável em `/tmp` falha com `ERR_MODULE_NOT_FOUND` para imports
   bare (`remark`): o ESM resolve a partir do diretório DO ARQUIVO, não do cwd.
   Rodar o harness a partir da raiz do projeto (e remover depois).
+
+## Módulo 10C — Spike de guia de estudo com LLM (2026-05-30)
+
+Spike isolado em `spikes/spike-10c-guia-estudo/` (deps próprias, R1: zero toque em
+produção). Validou o pipeline editorial D26/D27 antes do Módulo 10D. Recomendação: **GO**.
+
+### Rastreabilidade LLM só é confiável com catálogo de hashes pré-computado
+- Pedir à LLM para "rastrear de volta ao Markdown" sem âncoras concretas convida
+  alucinação de identificadores. A solução que funcionou (100% cobertura, 0 órfãos
+  mesmo com `claude-3.5-haiku`): **pré-segmentar o Markdown em blocos, hashear cada
+  um com `sha256`, injetar o catálogo (`block_id`/`heading_path`/`sha256`/trecho) no
+  prompt e mandar a LLM COPIAR os hashes** — nunca gerá-los.
+- Rastreabilidade vira **invariante verificável**, não promessa do prompt: validar
+  pós-resposta que todo `source_block_hash` existe no catálogo; medir cobertura
+  (% de itens com ≥1 hash válido) e contar órfãos. Levar isso para o 10D.
+- Regra: para o 10D, derivar o catálogo da segmentação de PRODUÇÃO (idealmente de
+  `zetel_pages.content_text` já persistido), não duplicar o parser — mantém paridade
+  com o Documento Técnico e evita um segundo `content_hash` divergente.
+
+### O texto plano que vira hash precisa de separadores entre filhos de bloco
+[2026-05-30] Context: snippets de tabela/lista no catálogo saíam com palavras coladas (`célula1célula2`).
+Mistake: `toPlainText` concatenava `children` sem separador, colando texto de células/itens adjacentes e degradando legibilidade do trecho injetado no prompt.
+Rule: ao achatar MDAST para texto, inserir separador por tipo de pai (`tableRow`/`tableCell`/`listItem`/`paragraph` → espaço; `table`/`list` → `\n`). Em produção, qualquer hashing de texto plano deve ser deterministicamente consistente entre o catálogo e a validação.
+
+### A LLM gera só JSON; o HTML é template determinístico (R2/D26)
+- `run-guia.mjs` (LLM) produz **apenas JSON estruturado**; `run-render.mjs` gera o
+  HTML por template string puro, **sem rede/LLM**. Confirmado por grep (nenhum
+  `fetch`/`openrouter` em `run-render.mjs`). No 10D o template deve espelhar
+  `lib/render-service.ts` (CSS inline autocontido, `<iframe sandbox>`, Regra #2).
+
+### Paridade de chamada OpenRouter sem SDK
+- O spike replicou `lib/openrouter.ts` (`fetch`, `Authorization: Bearer`,
+  `HTTP-Referer: http://localhost`) e `lib/config.ts` (chave/modelo via
+  env→`~/.zetel/config`). Diferença deliberada: **não-streaming** +
+  `response_format: { type: 'json_object' }` para JSON único. Nem todo modelo do
+  OpenRouter suporta `response_format` → manter parser tolerante a cerca ```json
+  (`extractJson`) como fallback no 10D.
+
+### Custo/dimensionamento observados
+- input ~2000 palavras → catálogo de 43 blocos → prompt ~9,7k tokens (dominado
+  pelo catálogo), completion ~4,0k. Para materiais grandes: truncar o `text` dos
+  blocos no catálogo (já a 220 chars) ou enviar só `block_id`+`heading_path`+`sha256`,
+  e dimensionar `max_tokens` por tamanho do material. Etapa LLM NÃO é determinística
+  (≠ Documento Técnico); `temperature` baixa ajuda a estabilizar o JSON.

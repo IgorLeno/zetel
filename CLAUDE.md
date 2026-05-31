@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 10B implementado. Próximo passo operacional: Módulo 10C — Spike de guia de estudo com LLM.**
+**Estado atual: Módulo 10C (spike de guia de estudo) concluído — recomendação GO. Próximo passo operacional: Módulo 10D — Implementação do guia de estudo.**
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
@@ -31,7 +31,9 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 #### Próximos passos
 - Gate visual/manual do Documento Técnico refinado, se necessário.
-- Próximo passo operacional: **Módulo 10C — Spike de guia de estudo com LLM** (PRD v3, ver `prd-v3.md`)
+- Próximo passo operacional: **Módulo 10D — Implementação do guia de estudo** (PRD v3, ver `prd-v3.md`), portando a estratégia validada no spike 10C.
+
+**Módulo 10C (Spike de guia de estudo com LLM) concluído em 2026-05-30; spike isolado em `spikes/spike-10c-guia-estudo/` (zero toque em produção, R1); `pnpm build` raiz limpo; execução live com `anthropic/claude-3.5-haiku` (default do config) gerou JSON D26 válido com 100% de rastreabilidade (18/18 itens, 0 hashes órfãos).** Recomendação: **GO para o Módulo 10D**. Validou o pipeline editorial Markdown → LLM (JSON) → template determinístico (D26/D27): a LLM gera **só JSON, nunca HTML** (R2). Achado central: rastreabilidade confiável vem de **pré-segmentar o Markdown em blocos com `sha256` (parser paritário com `parseMarkdownForSegmentation`) e injetar esse catálogo no prompt**, instruindo a LLM a *copiar* hashes em vez de inventá-los, com **validação pós-resposta** (hash citado deve existir no catálogo → cobertura medida, órfãos contados). Entregáveis do spike: `lib-source-index.mjs` (catálogo de blocos), `run-guia.mjs` (chamada OpenRouter paritária com `lib/openrouter.ts`/`lib/config.ts`, sem SDK, chave via env→`~/.zetel/config`, schema D26 + validação de schema/rastreabilidade), `run-render.mjs` (template HTML determinístico, sem LLM/rede), `input.md` sintético (Transformada de Fourier; H1–H3, eqs inline+bloco, tabelas GFM, ≥3 seções), `output/{guia-estudo.json,guia-estudo.source.json,guia-estudo.html,source-index.json}` e `README.md` com modelo/tokens/limitações/go-no-go. Ajustes recomendados para o 10D: reusar parser/segmentação de produção (idealmente derivar blocos de `zetel_pages.content_text`), gerar `guia-estudo.source.json` server-side a partir dos hashes validados, espelhar o template de `lib/render-service.ts` (CSS inline, `<iframe sandbox>`, Regra #2), dimensionar `max_tokens`/`temperature` e validar `response_format` por modelo (Módulo 10E — `study_guide_model`), e endurecer o validador (`resposta_correta ∈ opcoes`). Ver `spikes/spike-10c-guia-estudo/README.md` e `spikes/lessons.md` (Módulo 10C).
 
 **Módulo 10B (Redesign visual compartilhado / ajustes finos) implementado em 2026-05-30; `pnpm build` limpo; smoke com Zetel DFT real confirmou KaTeX inline renderizado, sem caixas `<code>` para expressões matemáticas, mantendo `3c` como código.** Entregou: refinamento visual do Documento Técnico em `lib/render-service.ts` (tokens semânticos de tema, capa com marca/metadados, tipografia, KaTeX com fundo/borda/scroll, blockquotes, listas aninhadas, tabelas, mini-índice com scroll/ativo e navegação); ajuste dos controles 10A em `app/globals.css`; `remark-frontmatter` + `parseMarkdownForSegmentation` compartilhado em `lib/ingestao-service.ts` para remover YAML inicial antes da segmentação e preservar paridade `processZetel`/`renderZetel`; correção de conteúdo no vault ativo `zetels/dft2/arquivos/dft_teoria_funcional_densidade.md`, trocando backticks matemáticos por `$...$`. Sem migration SQLite; sem alteração de contratos de API; Regra #1 e Regra #2 preservadas. Ver `spikes/lessons.md` (Módulos 9/10B).
 
@@ -196,9 +198,9 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **7** | **Memória cooperativa** ✅ | Memória global em Markdown, leitura sob demanda | 6 |
 | **8** | **Polimento → MVP TEXTUAL ENTREGUE** ✅ (gate manual pendente) | Estados vazios, erros, tema, jornada completa | 1–7 |
 | **9** | **Qualidade visual da leitura e do app** ✅ | PRD v3 — tipografia, KaTeX, highlight.js, Mermaid (cond.), tema, HTML-1 | 8 |
-| **10A** | **Arquitetura de artefatos de leitura** | PRD v3 — separa Documento Técnico e Guia de Estudo | 9 |
-| **10B** | **Redesign visual compartilhado / ajustes finos** | PRD v3 — CSS compartilhado sem injeção pelo app | 10A |
-| **10C** | **Spike de guia de estudo com LLM** | PRD v3 — JSON estruturado e rastreável | 10B |
+| **10A** | **Arquitetura de artefatos de leitura** ✅ | PRD v3 — separa Documento Técnico e Guia de Estudo | 9 |
+| **10B** | **Redesign visual compartilhado / ajustes finos** ✅ | PRD v3 — CSS compartilhado sem injeção pelo app | 10A |
+| **10C** | **Spike de guia de estudo com LLM** ✅ (GO) | PRD v3 — JSON estruturado e rastreável | 10B |
 | **10D** | **Implementação do guia de estudo** | PRD v3 — `guia-estudo.html` + metadados + source map | 10C |
 | **10E** | **Configuração de modelos por tarefa** | PRD v3 — modelos para chat, notas, memória e guia | 10D |
 | **11** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 10E |
