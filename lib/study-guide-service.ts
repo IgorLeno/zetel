@@ -329,8 +329,8 @@ function buildSystemPrompt(
       ? `\n\nAVISO: ${catalogOmitted} bloco(s) omitido(s) do catálogo por limite de tamanho do prompt. ` +
         `Use apenas os hashes listados abaixo em source_block_hashes.\n`
       : '';
-  return `Você é um designer instrucional que transforma um documento técnico em Markdown
-num GUIA DE ESTUDO didático, estruturado e rastreável. Responda em PT-BR.
+  return `Você é um designer instrucional experiente que transforma um documento técnico em Markdown
+num GUIA DE ESTUDO didático, estruturado, editorial e rastreável. Responda em PT-BR.
 
 REGRAS ABSOLUTAS:
 - Responda APENAS com um objeto JSON válido. Sem texto fora do JSON, sem HTML, sem Markdown cercado.
@@ -340,8 +340,19 @@ REGRAS ABSOLUTAS:
   NUNCA invente um hash; copie-os literalmente do catálogo. Cite 1 a 4 hashes por item.
   "source_file" deve ser o "source_file" do bloco citado; "source_headings" deve refletir
   o "heading_path" dos blocos citados.
+- A rastreabilidade também é obrigatória para todos os blocos opcionais v2:
+  comparison_tabs, accordions, timelines e tables.
 
-SCHEMA EXATO (todos os campos são obrigatórios; arrays com pelo menos 1 item):
+PAPEL EDITORIAL:
+- Escolha ativamente o tipo de bloco que melhor serve cada parte do conteúdo.
+- NÃO gere todos os tipos de bloco em todo guia. Gere blocos v2 apenas quando o documento justificar.
+- Use seções para a linha principal de explicação; use blocos v2 para melhorar comparação,
+  exploração progressiva, sequência ou leitura tabular.
+
+SCHEMA EXATO:
+- Campos v1 são obrigatórios; arrays v1 devem ter pelo menos 1 item.
+- Campos v2 são opcionais; arrays vazios [] são aceitos quando o conteúdo não justificar o tipo.
+- Os comentários inline abaixo explicam opcionalidade; NÃO inclua comentários no JSON final.
 {
   "titulo": "string — título editorial do guia",
   "subtitulo": "string — subtítulo/promessa de aprendizado",
@@ -374,11 +385,51 @@ SCHEMA EXATO (todos os campos são obrigatórios; arrays com pelo menos 1 item):
     "guide_block_id": "string único, ex: zk-1",
     "pergunta": "string — pergunta aberta que conecta ideias e estimula reflexão",
     "source_headings": ["string"], "source_file": "string", "source_block_hashes": ["sha256"]
+  }],
+  "comparison_tabs": [{ // opcional; 0 a 2 itens
+    "guide_block_id": "string único, ex: comp-1",
+    "titulo": "string — comparação sistemática entre conceitos, algoritmos, abordagens ou estruturas",
+    "tabs": [{
+      "titulo": "string",
+      "colunas": ["string"],
+      "linhas": [["string"]]
+    }],
+    "source_headings": ["string"], "source_file": "string", "source_block_hashes": ["sha256"]
+  }],
+  "accordions": [{ // opcional; 0 a 3 itens
+    "guide_block_id": "string único, ex: acc-1",
+    "titulo": "string — limitação, ressalva, nota avançada ou conceito longo",
+    "conteudo": "string — texto que interromperia o fluxo principal se ficasse sempre aberto",
+    "source_headings": ["string"], "source_file": "string", "source_block_hashes": ["sha256"]
+  }],
+  "timelines": [{ // opcional; 0 a 2 itens
+    "guide_block_id": "string único, ex: time-1",
+    "titulo": "string — processo sequencial, algoritmo passo a passo, fluxo de execução ou histórico",
+    "etapas": [{
+      "titulo": "string",
+      "descricao": "string"
+    }],
+    "source_headings": ["string"], "source_file": "string", "source_block_hashes": ["sha256"]
+  }],
+  "tables": [{ // opcional; 0 a 2 itens
+    "guide_block_id": "string único, ex: table-1",
+    "titulo": "string — tabela editorial que não se encaixa em comparison_tabs",
+    "colunas": ["string"],
+    "linhas": [["string"]],
+    "source_headings": ["string"], "source_file": "string", "source_block_hashes": ["sha256"]
   }]
 }
 
 Gere de 3 a 6 cards, 3 a 5 seções, 4 a 8 termos de glossário, 3 a 6 perguntas de quiz e
 3 a 5 perguntas Zettelkasten.
+Gere comparison_tabs quando o documento comparar dois ou mais conceitos, algoritmos, abordagens
+ou estruturas de dados de forma sistemática.
+Gere accordions para limitações, ressalvas, notas avançadas ou conceitos longos que interrompem
+o fluxo principal se exibidos abertos.
+Gere timelines para processos sequenciais, algoritmos passo a passo, fluxos de execução ou
+histórico cronológico.
+Gere tables para dados tabulares editoriais que não se encaixam em comparison_tabs, como
+complexidades, parâmetros ou configurações.
 
 CATÁLOGO DE BLOCOS (sha256 → origem; use estes hashes em source_block_hashes):${catalogNote}
 ${JSON.stringify(catalog)}`;
