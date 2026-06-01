@@ -3,7 +3,15 @@ import { buildOpenRouterMessages } from '@/lib/chat-prompt';
 import type { ChatMessage } from '@/types/chat-message';
 
 function msg(role: ChatMessage['role'], content: string): ChatMessage {
-  return { id: 1, zetelId: 'z1', role, content, pageIndex: null, model: null, createdAt: '', meta: null };
+  return {
+    id: '1',
+    zetelId: 'z1',
+    role,
+    content,
+    pageIndex: null,
+    model: '',
+    createdAt: '',
+  };
 }
 
 describe('buildOpenRouterMessages', () => {
