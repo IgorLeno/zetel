@@ -115,14 +115,16 @@ export async function collectArtifacts(
   ];
 
   const artefatosOutDir = join(outDir, 'artefatos');
-  try {
-    mkdirSync(artefatosOutDir, { recursive: true });
-  } catch { /* ignored */ }
+  let artefatosDirCreated = false;
 
   for (const name of guiaArtifacts) {
     const src = join(ctx.artefatosDir, name);
     if (!existsSync(src)) continue;
     try {
+      if (!artefatosDirCreated) {
+        mkdirSync(artefatosOutDir, { recursive: true });
+        artefatosDirCreated = true;
+      }
       copyFileSync(src, join(artefatosOutDir, name));
       collectedPaths.push(`artefatos/${name}`);
     } catch (err) {

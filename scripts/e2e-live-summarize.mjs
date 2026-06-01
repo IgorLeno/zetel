@@ -163,14 +163,14 @@ async function callLlm(apiKey, report) {
       signal: controller.signal,
     });
 
-    clearTimeout(timerId);
-
     if (!res.ok) {
+      clearTimeout(timerId);
       console.warn(`[summarize] LLM respondeu HTTP ${res.status} — usando summary estático`);
       return null;
     }
 
     const data = await res.json();
+    clearTimeout(timerId);
     const content = data?.choices?.[0]?.message?.content ?? '';
 
     // Extrair JSON da resposta (tolerante a cerca ```json)
@@ -254,12 +254,15 @@ async function main() {
     if (llmResult) {
       const { parsed, model } = llmResult;
       const categoria = CATEGORIAS.includes(parsed.categoria) ? parsed.categoria : 'outro';
+      const arquivos = Array.isArray(parsed.arquivos)
+        ? parsed.arquivos.filter(x => typeof x === 'string')
+        : [];
       summaryMd  = buildStaticMd(report, false) +
         '\n---\n\n## Análise LLM\n\n' +
         `**Categoria:** ${categoria}\n\n` +
         `**Resumo:** ${parsed.resumo ?? ''}\n\n` +
-        (parsed.arquivos?.length
-          ? `**Arquivos prováveis:**\n${parsed.arquivos.map(a => `- ${a}`).join('\n')}\n`
+        (arquivos.length
+          ? `**Arquivos prováveis:**\n${arquivos.map(a => `- ${a}`).join('\n')}\n`
           : '') +
         `\n_Modelo de triagem: ${model}_\n`;
 
@@ -268,7 +271,7 @@ async function main() {
         reportPath,
         categoria,
         resumo:     parsed.resumo ?? '',
-        arquivos:   parsed.arquivos ?? [],
+        arquivos,
         llmUsado:   true,
       };
     } else {
