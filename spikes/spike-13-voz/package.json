@@ -1,0 +1,11 @@
+{
+  "name": "spike-13-voz",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Spike 13.1 — TTS/STT (OpenAI) isolado. Responde perguntas de integração antes do Módulo 13.2. Descartável, zero toque em produção.",
+  "scripts": {
+    "tts": "node run-tts.mjs",
+    "stt": "node run-stt.mjs"
+  }
+}

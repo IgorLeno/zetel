@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spike 13.1 — Browser Test: MediaRecorder + MediaSource</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  h2 { margin-top: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 0.3rem; }
+  pre { background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem; }
+  .log { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 4px; font-size: 0.8rem; min-height: 3rem; }
+  .log .ok   { color: #4ec9b0; }
+  .log .err  { color: #f44747; }
+  .log .info { color: #9cdcfe; }
+  button { padding: 0.4rem 1rem; margin: 0.3rem 0.3rem 0.3rem 0; border: 1px solid #888; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; }
+  .badge.rec { background: #f44747; color: white; }
+  .badge.idle { background: #888; color: white; }
+  .section { border: 1px solid #ddd; border-radius: 6px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
+  .answer { background: #eef6ee; border-left: 4px solid #4caf50; padding: 0.5rem 0.8rem; margin-top: 0.5rem; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<h1>Spike 13.1 — Browser Test</h1>
+<p>Responde as perguntas browser-only do PRD v4 (etapa 13.1).</p>
+<p><strong>Requisito:</strong> servir de <code>localhost</code> (secure context para <code>getUserMedia</code>):<br>
+   <code>cd spikes/spike-13-voz &amp;&amp; python3 -m http.server 8765</code><br>
+   Abrir: <code>http://localhost:8765/browser-test.html</code></p>
+
+<!-- =========================================================
+     BLOCO 1 — MediaRecorder: formato e gravação
+     Responde: STT (a) qual mimeType o MediaRecorder usa por default
+               STT (d) tamanho do blob de ~30s de áudio
+     O download produz audio-sample.webm consumido por run-stt.mjs
+     ========================================================= -->
+<h2>Bloco 1 — STT (a) e (d): MediaRecorder</h2>
+<div class="section">
+  <p>
+    Grava até 30 segundos de áudio PT-BR. Ao parar, exibe o <code>mimeType</code> real
+    usado pelo browser e o tamanho do blob — responde <strong>STT (a)</strong> e
+    <strong>STT (d)</strong>. O botão de download gera o <code>audio-sample.webm</code>
+    necessário para <code>run-stt.mjs</code>.
+  </p>
+  <p><span id="recStatus" class="badge idle">IDLE</span> <span id="recTimer">0s</span></p>
+  <button id="btnStart">▶ Iniciar gravação</button>
+  <button id="btnStop" disabled>⏹ Parar</button>
+  <br>
+  <div id="logRec" class="log">Aguardando...</div>
+  <div id="answerRec"></div>
+  <div id="downloadArea" style="margin-top:0.5rem"></div>
+</div>
+
+<!-- =========================================================
+     BLOCO 2 — MediaSource: reprodução incremental vs Blob URL
+     Responde: TTS (c) qual estratégia de reprodução é mais simples
+     ========================================================= -->
+<h2>Bloco 2 — TTS (c): MediaSource vs Blob URL</h2>
+<div class="section">
+  <p>
+    Carrega <code>output/output.mp3</code> (gerado por <code>run-tts.mjs</code>) e
+    testa duas estratégias de reprodução. Responde <strong>TTS (c)</strong>:
+    reprodução incremental via <code>MediaSource</code> vs <code>Blob URL</code> simples.
+  </p>
+  <p><em>Pré-requisito: rodar <code>node run-tts.mjs</code> primeiro para gerar <code>output/output.mp3</code>.</em></p>
+
+  <h3 style="margin-top:1rem">Estratégia A — Blob URL (acumula tudo, depois reproduz)</h3>
+  <p>Fetch completo do arquivo → <code>createObjectURL(blob)</code> → <code>&lt;audio&gt;</code>.</p>
+  <button id="btnBlobPlay">▶ Testar Blob URL</button>
+  <div id="logBlob" class="log">Aguardando...</div>
+  <div id="answerBlob"></div>
+
+  <h3 style="margin-top:1rem">Estratégia B — MediaSource (reprodução incremental / streaming)</h3>
+  <p>Fetch com <code>ReadableStream</code> → <code>MediaSource + SourceBuffer</code> → reprodução chunk a chunk.</p>
+  <button id="btnMsrcPlay">▶ Testar MediaSource</button>
+  <div id="logMsrc" class="log">Aguardando...</div>
+  <div id="answerMsrc"></div>
+
+  <h3 style="margin-top:1.5rem">Resumo TTS (c)</h3>
+  <div id="summaryTtsc" class="log">Aguardando ambos os testes...</div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────
+// Utilidades de log
+// ──────────────────────────────────────────────────────────────
+function log(el, msg, type = 'info') {
+  const line = document.createElement('div');
+  line.className = type;
+  line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog(el) { el.innerHTML = ''; }
+
+// ──────────────────────────────────────────────────────────────
+// BLOCO 1 — MediaRecorder
+// ──────────────────────────────────────────────────────────────
+const btnStart  = document.getElementById('btnStart');
+const btnStop   = document.getElementById('btnStop');
+const logRec    = document.getElementById('logRec');
+const recStatus = document.getElementById('recStatus');
+const recTimer  = document.getElementById('recTimer');
+const answerRec = document.getElementById('answerRec');
+const dlArea    = document.getElementById('downloadArea');
+
+let mediaRecorder = null;
+let chunks = [];
+let timerInterval = null;
+let elapsed = 0;
+const MAX_DURATION = 30; // segundos
+
+btnStart.addEventListener('click', async () => {
+  clearLog(logRec);
+  answerRec.innerHTML = '';
+  dlArea.innerHTML = '';
+  chunks = [];
+  elapsed = 0;
+
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    log(logRec, 'Microfone ativo.', 'ok');
+  } catch (e) {
+    log(logRec, 'ERRO getUserMedia: ' + e.message, 'err');
+    return;
+  }
+
+  // Detectar mimeType suportado (resposta a STT a)
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+    'audio/mp4',
+  ];
+  let mimeType = '';
+  for (const c of candidates) {
+    if (MediaRecorder.isTypeSupported(c)) { mimeType = c; break; }
+  }
+  // Se nenhum candidato explícito, usar default do browser
+  mediaRecorder = mimeType
+    ? new MediaRecorder(stream, { mimeType })
+    : new MediaRecorder(stream);
+  const actualMime = mediaRecorder.mimeType;
+
+  log(logRec, 'mimeType solicitado:  ' + (mimeType || '(default do browser)'), 'info');
+  log(logRec, 'mimeType real (STT a): ' + actualMime, 'ok');
+  log(logRec, 'Gravando... (máx 30s)', 'info');
+
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) chunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = () => {
+    clearInterval(timerInterval);
+    stream.getTracks().forEach(t => t.stop());
+    recStatus.textContent = 'DONE';
+    recStatus.className = 'badge idle';
+
+    const blob = new Blob(chunks, { type: actualMime || 'audio/webm' });
+    const sizeMb = (blob.size / 1024).toFixed(1);
+    log(logRec, `Gravação encerrada. Tamanho: ${blob.size} bytes (${sizeMb} KB)`, 'ok');
+
+    // Resposta STT (a) e (d)
+    answerRec.innerHTML = `
+      <div class="answer">
+        <strong>STT (a) — mimeType do MediaRecorder:</strong> <code>${actualMime}</code><br>
+        <em>Confirmação: o browser usa webm/opus por default, não WAV PCM. Logo, Whisper precisa
+        aceitar webm/opus diretamente (sem conversão no servidor). Verificado por run-stt.mjs.</em>
+      </div>
+      <div class="answer" style="margin-top:0.5rem">
+        <strong>STT (d) — tamanho de ~${elapsed}s de áudio PT-BR:</strong>
+        ${blob.size} bytes (${sizeMb} KB) em webm/opus.<br>
+        WAV PCM 16kHz 16-bit mono equivalente: ~${Math.round(16000 * 2 * elapsed)} bytes
+        (~${(16000 * 2 * elapsed / 1024).toFixed(0)} KB).<br>
+        Razão de compressão: ~${(16000 * 2 * elapsed / blob.size).toFixed(1)}x menor em webm/opus.
+      </div>`;
+
+    // Oferecer download → audio-sample.webm
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'audio-sample.webm';
+    a.textContent = '⬇ Baixar audio-sample.webm (mover para spikes/spike-13-voz/)';
+    a.style.cssText = 'display:inline-block;margin-top:0.5rem;padding:0.3rem 0.8rem;background:#0078d4;color:white;border-radius:4px;text-decoration:none;font-size:0.85rem';
+    dlArea.appendChild(a);
+
+    btnStart.disabled = false;
+    btnStop.disabled = true;
+  };
+
+  mediaRecorder.start(500); // chunks a cada 500ms
+  recStatus.textContent = 'REC';
+  recStatus.className = 'badge rec';
+  btnStart.disabled = true;
+  btnStop.disabled = false;
+
+  // Timer + limite automático de 30s
+  timerInterval = setInterval(() => {
+    elapsed++;
+    recTimer.textContent = elapsed + 's';
+    if (elapsed >= MAX_DURATION) {
+      log(logRec, 'Limite de 30s atingido — gravação encerrada automaticamente.', 'info');
+      mediaRecorder.stop();
+      btnStop.disabled = true;
+    }
+  }, 1000);
+});
+
+btnStop.addEventListener('click', () => {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+    btnStop.disabled = true;
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// BLOCO 2 — TTS (c): MediaSource vs Blob URL
+// ──────────────────────────────────────────────────────────────
+const AUDIO_FILE = 'output/output.mp3';
+let blobDone = false;
+let msrcDone = false;
+
+// ── Estratégia A: Blob URL ──
+document.getElementById('btnBlobPlay').addEventListener('click', async () => {
+  const logEl = document.getElementById('logBlob');
+  clearLog(logEl);
+  const ans = document.getElementById('answerBlob');
+  ans.innerHTML = '';
+
+  log(logEl, 'Iniciando fetch de ' + AUDIO_FILE + '...', 'info');
+  const t0 = Date.now();
+  let res;
+  try {
+    res = await fetch(AUDIO_FILE);
+  } catch (e) {
+    log(logEl, 'ERRO fetch: ' + e.message + ' — rode run-tts.mjs primeiro.', 'err');
+    return;
+  }
+  if (!res.ok) {
+    log(logEl, 'ERRO HTTP ' + res.status + ' — rode run-tts.mjs primeiro para gerar output/output.mp3.', 'err');
+    return;
+  }
+
+  const blob = await res.blob();
+  const fetchMs = Date.now() - t0;
+  log(logEl, `Fetch completo em ${fetchMs}ms. Size: ${blob.size} bytes`, 'info');
+
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  audio.oncanplaythrough = () => {
+    const readyMs = Date.now() - t0;
+    log(logEl, `canplaythrough em ${readyMs}ms desde o início. Reproduzindo...`, 'ok');
+    audio.play();
+    ans.innerHTML = `<div class="answer">
+      <strong>Blob URL:</strong> funciona. Acumula todo o áudio antes de reproduzir (${fetchMs}ms de fetch + buffer).
+      Simples de implementar: <code>createObjectURL(blob)</code> → <code>audio.src</code>.
+      Desvantagem: latência = download completo antes do primeiro som.
+    </div>`;
+    blobDone = true;
+    updateSummary();
+  };
+  audio.onerror = (e) => log(logEl, 'ERRO de reprodução: ' + (audio.error?.message || e), 'err');
+  audio.src = url;
+  audio.load();
+});
+
+// ── Estratégia B: MediaSource ──
+document.getElementById('btnMsrcPlay').addEventListener('click', async () => {
+  const logEl = document.getElementById('logMsrc');
+  clearLog(logEl);
+  const ans = document.getElementById('answerMsrc');
+  ans.innerHTML = '';
+
+  if (!window.MediaSource) {
+    log(logEl, 'MediaSource API não disponível neste browser.', 'err');
+    ans.innerHTML = '<div class="answer" style="border-color:#f44">MediaSource indisponível — estratégia Blob URL é a única opção.</div>';
+    msrcDone = true; updateSummary(); return;
+  }
+
+  // Testar se audio/mpeg é suportado pelo MediaSource deste browser
+  // (Chrome/Edge suportam; Safari suporta HLS via media-source mas não MP3 raw; Firefox varia)
+  const mimeSupported = MediaSource.isTypeSupported('audio/mpeg');
+  log(logEl, 'MediaSource.isTypeSupported("audio/mpeg"): ' + mimeSupported, mimeSupported ? 'ok' : 'err');
+
+  if (!mimeSupported) {
+    log(logEl, 'Este browser não suporta audio/mpeg em MediaSource. Blob URL é mais simples e universal.', 'info');
+    ans.innerHTML = `<div class="answer">
+      <strong>MediaSource com audio/mpeg:</strong> NÃO suportado neste browser.
+      Conclusão: <strong>Blob URL é a estratégia recomendada</strong> para máxima compatibilidade.
+      Para streaming real com baixa latência, alternativas: converter o MP3 para fragmented MP4 (fMP4),
+      ou usar Web Audio API com ArrayBuffer feeding. Mas a complexidade é alta.
+    </div>`;
+    msrcDone = true; updateSummary(); return;
+  }
+
+  const ms = new MediaSource();
+  const audio = new Audio();
+  audio.src = URL.createObjectURL(ms);
+  audio.volume = 0.8;
+
+  const t0 = Date.now();
+  let firstChunkPlayed = false;
+
+  ms.addEventListener('sourceopen', async () => {
+    log(logEl, 'MediaSource aberto.', 'ok');
+    let sb;
+    try {
+      sb = ms.addSourceBuffer('audio/mpeg');
+    } catch (e) {
+      log(logEl, 'ERRO addSourceBuffer: ' + e.message, 'err');
+      return;
+    }
+    sb.mode = 'sequence';
+
+    let res;
+    try {
+      res = await fetch(AUDIO_FILE);
+    } catch (e) {
+      log(logEl, 'ERRO fetch: ' + e.message, 'err');
+      return;
+    }
+    if (!res.ok) {
+      log(logEl, 'ERRO HTTP ' + res.status, 'err');
+      return;
+    }
+
+    const reader = res.body.getReader();
+    let chunkCount = 0;
+
+    const appendNext = async () => {
+      if (sb.updating) { setTimeout(appendNext, 20); return; }
+      const { done, value } = await reader.read();
+      if (done) {
+        if (!sb.updating) ms.endOfStream();
+        log(logEl, 'Stream concluído.', 'ok');
+        ans.innerHTML = `<div class="answer">
+          <strong>MediaSource:</strong> funciona (${chunkCount} chunks appendados).
+          Latência até o 1º som mais baixa do que Blob URL — inicia reprodução antes de baixar tudo.
+          Porém: implementação mais complexa, suporte inconsistente (Chrome OK, Firefox/Safari variam).
+        </div>`;
+        msrcDone = true; updateSummary();
+        return;
+      }
+      chunkCount++;
+      sb.appendBuffer(value);
+
+      if (!firstChunkPlayed && audio.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
+        firstChunkPlayed = true;
+        const latency = Date.now() - t0;
+        log(logEl, `Pronto para reproduzir após ${latency}ms. Iniciando...`, 'ok');
+        audio.play().catch(e => log(logEl, 'ERRO play: ' + e.message, 'err'));
+      }
+      sb.addEventListener('updateend', appendNext, { once: true });
+    };
+
+    sb.addEventListener('updateend', appendNext, { once: true });
+
+    audio.addEventListener('canplay', () => {
+      if (!firstChunkPlayed) {
+        firstChunkPlayed = true;
+        const latency = Date.now() - t0;
+        log(logEl, `canplay após ${latency}ms. Iniciando reprodução incremental...`, 'ok');
+        audio.play().catch(e => log(logEl, 'ERRO play: ' + e.message, 'err'));
+      }
+    });
+
+    // Iniciar leitura
+    appendNext();
+  });
+
+  log(logEl, 'Iniciando MediaSource...', 'info');
+  audio.load();
+});
+
+// ── Resumo TTS (c) ──
+function updateSummary() {
+  if (!blobDone && !msrcDone) return;
+  const el = document.getElementById('summaryTtsc');
+  el.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'ok';
+
+  if (blobDone && msrcDone) {
+    const msrcSupported = window.MediaSource && MediaSource.isTypeSupported('audio/mpeg');
+    div.innerHTML = `
+[RESUMO TTS (c)] Estratégia recomendada para Módulo 13.2:<br>
+<br>
+• Blob URL: mais simples, universalmente suportado. Acumula tudo antes de reproduzir.<br>
+  Adequado para respostas curtas do parceiro (tipicamente &lt;30s). Latência = download completo.<br>
+<br>
+• MediaSource: latência menor (reprodução inicia antes de baixar tudo). Porém mais complexo<br>
+  e suporte inconsistente por browser (${msrcSupported ? 'funciona neste browser' : 'NÃO funciona neste browser'}).<br>
+<br>
+→ DECISÃO PARA 13.2: Blob URL como estratégia primária. O backend faz passthrough do<br>
+  ReadableStream da OpenAI; o frontend aguarda o Response completo (ou faz fetch + blob),<br>
+  cria Blob URL e reproduz. Se TTFS for problema em produção, avaliar Web Audio API.`;
+  } else {
+    div.textContent = blobDone
+      ? 'Blob URL testado. Aguardando teste de MediaSource...'
+      : 'MediaSource testado. Aguardando teste de Blob URL...';
+  }
+  el.appendChild(div);
+}
+</script>
+</body>
+</html>
