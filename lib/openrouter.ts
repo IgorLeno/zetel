@@ -153,6 +153,11 @@ export interface RequestJsonParams {
   temperature?: number;
   /** Timeout em ms (default 120s, como o spike 10C). */
   timeoutMs?: number;
+  /**
+   * Quando true (default), envia `response_format: { type: "json_object" }`.
+   * Callers que não suportam JSON mode devem passar `false`.
+   */
+  jsonMode?: boolean;
 }
 
 export interface RequestJsonResult {
@@ -165,12 +170,26 @@ const REQUEST_JSON_TIMEOUT_MS = 120_000;
 /**
  * Chamada NÃO-streaming para resposta JSON (Módulo 10D / Guia de Estudo).
  * Espelha o padrão de `streamChat` (fetch, mesmos headers, sem SDK) e do spike
- * `run-guia.mjs`. O prompt instrui retorno JSON; parser tolerante downstream (R6).
- * Não loga conteúdo (regra #6).
+ * `run-guia.mjs`. Com `jsonMode` (default), pede JSON nativo ao provedor;
+ * parser tolerante downstream permanece (R6). Não loga conteúdo (regra #6).
  */
 export async function requestJson(params: RequestJsonParams): Promise<RequestJsonResult> {
-  const { apiKey, model, system, user, maxTokens, temperature = 0.3 } = params;
+  const { apiKey, model, system, user, maxTokens, temperature = 0.3, jsonMode = true } = params;
   const timeoutMs = params.timeoutMs ?? REQUEST_JSON_TIMEOUT_MS;
+
+  const body: Record<string, unknown> = {
+    model,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ],
+    stream: false,
+    max_tokens: maxTokens,
+    temperature,
+  };
+  if (jsonMode) {
+    body.response_format = { type: 'json_object' };
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -184,16 +203,7 @@ export async function requestJson(params: RequestJsonParams): Promise<RequestJso
         'Content-Type': 'application/json',
         'HTTP-Referer': 'http://localhost',
       },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-        stream: false,
-        max_tokens: maxTokens,
-        temperature,
-      }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
   } catch (err) {
