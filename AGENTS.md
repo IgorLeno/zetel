@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo operacional: Módulo 12 — gestão completa de memória no app.**
+**Estado atual: Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 12.0B (integration tests + E2E mock) ou Módulo 12 (gestão de memória no app).**
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
@@ -241,10 +241,13 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 
 ---
 
+**Módulo 12.0A (Fundação de Testes e CI) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage`).** Vitest + coverage V8 configurados; 126 testes unitários (chat-prompt, source-index, ingestão, guia de estudo, zetel-service, utils); CI em `.github/workflows/ci.yml`; `docs/TESTING.md` criado; `validateAndNormalize`, `computeTraceability`, `StudyGuide`, `QuizItem`, `Traceability` exportados com `@internal` de `study-guide-service.ts`. Módulo 12.0B (integration tests com SQLite/vault em `tmpdir` + E2E mock) permanece pendente.
+
 ## Workflow do dev
 
 1. Antes de qualquer módulo: ler a seção correspondente no PRD.
 2. Para mudanças não triviais: entrar em modo plano antes de escrever código.
 3. Antes de declarar módulo concluído: executar o gate específico do PRD (checklists em "Gates de validação entre módulos").
-4. Antes de qualquer commit: `grep` nos anti-padrões aplicáveis ao que foi implementado.
-5. Ao descobrir uma nova armadilha: adicionar como item numerado na seção "Regras invioláveis" acima — este arquivo é log vivo, não snapshot.
+4. **Gate mínimo obrigatório antes de declarar qualquer correção concluída:** `pnpm build` + `pnpm test:ci` + `pnpm test:coverage`.
+5. Antes de qualquer commit: `grep` nos anti-padrões aplicáveis ao que foi implementado.
+6. Ao descobrir uma nova armadilha: adicionar como item numerado na seção "Regras invioláveis" acima — este arquivo é log vivo, não snapshot.

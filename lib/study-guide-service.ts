@@ -83,7 +83,8 @@ interface GlossarioItem extends TraceFields {
   termo: string;
   definicao: string;
 }
-interface QuizItem extends TraceFields {
+/** @internal */
+export interface QuizItem extends TraceFields {
   guide_block_id: string;
   pergunta: string;
   opcoes: string[];
@@ -125,7 +126,8 @@ interface EditorialTableItem extends TraceFields {
   linhas: string[][];
 }
 
-interface StudyGuide {
+/** @internal */
+export interface StudyGuide {
   titulo: string;
   subtitulo: string;
   resumo: ResumoItem;
@@ -597,8 +599,10 @@ function normalizeEditorialTables(raw: unknown): EditorialTableItem[] {
  * Valida e normaliza o JSON da LLM no `StudyGuide`. Lança em erro estrutural (campos
  * obrigatórios ausentes, coleção vazia) — nesse caso nada é gravado (R5). O quiz já
  * vem endurecido. A rastreabilidade é checada à parte (`computeTraceability`).
+ *
+ * @internal Exportado apenas para testes unitários (Módulo 12.0A).
  */
-function validateAndNormalize(raw: unknown, hardenedQuiz: QuizItem[]): StudyGuide {
+export function validateAndNormalize(raw: unknown, hardenedQuiz: QuizItem[]): StudyGuide {
   if (!raw || typeof raw !== 'object') {
     throw new Error('A resposta do modelo não é um objeto JSON.');
   }
@@ -673,7 +677,8 @@ function traceTargets(guia: StudyGuide): { label: string; id: string; item: Trac
   return targets;
 }
 
-interface Traceability {
+/** @internal */
+export interface Traceability {
   sourceMap: StudyGuideSourceMap;
   totalItems: number;
   withValidHash: number;
@@ -686,8 +691,10 @@ interface Traceability {
  * Constrói o `source.json` SERVER-SIDE a partir dos hashes validados (R4) e mede
  * cobertura/órfãos. Cada hash citado deve existir no catálogo (`byHash`); hashes
  * inexistentes contam como órfãos. Item com 0 hashes válidos é `flagged` (R5).
+ *
+ * @internal Exportado apenas para testes unitários (Módulo 12.0A).
  */
-function computeTraceability(guia: StudyGuide, index: SourceIndex): Traceability {
+export function computeTraceability(guia: StudyGuide, index: SourceIndex): Traceability {
   const targets = traceTargets(guia);
   const sourceMap: StudyGuideSourceMap = {};
   let withValidHash = 0;
