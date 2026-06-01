@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { slugify } from './zetel-service';
 import { logger } from './logger';
@@ -15,7 +16,10 @@ import { logger } from './logger';
  * Regra #6: nada de título/corpo/slug nos logs — apenas contagens e o Zetel de origem.
  */
 
-const MEMORY_REL_DIR = 'parceiro/memoria';
+export const MEMORY_REL_DIR = 'parceiro/memoria';
+
+/** Acima disto, a UI sugere consolidar a memória (sem cortar automaticamente). */
+export const MEMORY_FILE_WARN_BYTES = 10_000;
 
 export interface SaveMemoryInput {
   titulo: string;
@@ -269,6 +273,142 @@ export function ensureSugestaoMemoriaPrompt(vaultPath: string): string {
   writeFileSync(file, SUGESTAO_MEMORIA_PROMPT);
   logger.info('sugestao-memoria prompt ensured');
   return SUGESTAO_MEMORIA_PROMPT;
+}
+
+export interface MemoryDetail {
+  slug: string;
+  titulo: string;
+  corpo: string;
+  escopo: string | null;
+  origem: string | null;
+  zetelOrigem: string | null;
+  modelo: string | null;
+  criadaEm: string | null;
+  atualizadaEm: string | null;
+  contentHash: string;
+  bytes: number;
+  long: boolean;
+  relPath: string;
+  absPath: string;
+}
+
+export type UpdateMemoryResult = { conflict: true; currentHash: string } | MemoryDetail;
+
+/**
+ * Lê uma memória pelo slug e retorna MemoryDetail (com contentHash SHA-256 do arquivo
+ * inteiro, incluindo frontmatter). Retorna null se o arquivo não existir.
+ * Regra #5: sem cache — chamada sob demanda.
+ */
+export function getMemory(vaultPath: string, slug: string): MemoryDetail | null {
+  const dir = memoryDir(vaultPath);
+  const filename = `${slug}.md`;
+  const absPath = join(dir, filename);
+
+  let rawBuf: Buffer;
+  try {
+    rawBuf = readFileSync(absPath);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw err;
+  }
+
+  const content = rawBuf.toString('utf8');
+  const fm = parseFrontmatter(content);
+  const titulo = firstHeading(content) ?? slug;
+  const corpo = extractBody(content);
+  const hash = createHash('sha256').update(rawBuf).digest('hex');
+  const bytes = rawBuf.length;
+
+  return {
+    slug,
+    titulo,
+    corpo,
+    escopo: nullable(fm.escopo),
+    origem: nullable(fm.origem),
+    zetelOrigem: nullable(fm.zetel_origem),
+    modelo: nullable(fm.modelo),
+    criadaEm: fm.criada_em ?? null,
+    atualizadaEm: fm.atualizada_em ?? null,
+    contentHash: hash,
+    bytes,
+    long: bytes > MEMORY_FILE_WARN_BYTES,
+    relPath: `${MEMORY_REL_DIR}/${filename}`,
+    absPath,
+  };
+}
+
+/**
+ * Atualiza o corpo da memória. Preserva frontmatter (apenas atualiza `atualizada_em`).
+ * Se `expectedHash` divergir do hash atual e `force` for false → retorna conflito.
+ * Regra #6: sem conteúdo em logs.
+ */
+export function updateMemoryBody(
+  vaultPath: string,
+  slug: string,
+  newBody: string,
+  expectedHash: string,
+  force: boolean,
+): UpdateMemoryResult {
+  const dir = memoryDir(vaultPath);
+  const filename = `${slug}.md`;
+  const absPath = join(dir, filename);
+
+  const rawBuf = readFileSync(absPath); // ENOENT propaga para o handler da rota
+  const currentHash = createHash('sha256').update(rawBuf).digest('hex');
+
+  if (!force && currentHash !== expectedHash) {
+    return { conflict: true, currentHash };
+  }
+
+  const content = rawBuf.toString('utf8');
+  const fm = parseFrontmatter(content);
+  const titulo = firstHeading(content) ?? slug;
+  const now = new Date().toISOString();
+
+  const newFm = buildFrontmatter({
+    origem: nullable(fm.origem) ?? 'manual',
+    zetelOrigem: nullable(fm.zetel_origem),
+    modelo: nullable(fm.modelo),
+    criadaEm: fm.criada_em ?? now,
+    atualizadaEm: now,
+  });
+
+  const trimmedBody = newBody.trim();
+  const newContent = `${newFm}\n\n# ${titulo}\n\n${trimmedBody}\n`;
+  const newBuf = Buffer.from(newContent, 'utf8');
+  writeFileSync(absPath, newBuf);
+
+  const newHash = createHash('sha256').update(newBuf).digest('hex');
+  const newBytes = newBuf.length;
+
+  logger.info('memory updated', { slug_len: slug.length });
+
+  return {
+    slug,
+    titulo,
+    corpo: trimmedBody,
+    escopo: nullable(fm.escopo),
+    origem: nullable(fm.origem),
+    zetelOrigem: nullable(fm.zetel_origem),
+    modelo: nullable(fm.modelo),
+    criadaEm: fm.criada_em ?? null,
+    atualizadaEm: now,
+    contentHash: newHash,
+    bytes: newBytes,
+    long: newBytes > MEMORY_FILE_WARN_BYTES,
+    relPath: `${MEMORY_REL_DIR}/${filename}`,
+    absPath,
+  };
+}
+
+/**
+ * Remove permanentemente uma memória do vault (R9: sem lixeira).
+ * Regra #6: sem conteúdo no log.
+ */
+export function deleteMemory(vaultPath: string, slug: string): void {
+  const dir = memoryDir(vaultPath);
+  unlinkSync(join(dir, `${slug}.md`)); // ENOENT propaga para o handler da rota
+  logger.info('memory deleted', { slug_len: slug.length });
 }
 
 /** Rubrica de sugestão de memória (§11). Sentinelas próprias, distintas das notas. */

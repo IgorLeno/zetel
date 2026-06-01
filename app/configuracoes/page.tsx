@@ -35,6 +35,12 @@ export default function ConfiguracoesPage() {
   const studyGuideModelHistory = parseModelHistory(getSetting('study_guide_model_history'));
   const techDocModelHistory = parseModelHistory(getSetting('tech_doc_model_history'));
   const techDocModel = getSetting('tech_doc_model') ?? '';
+  const chatModel = getSetting('chat_model') ?? '';
+  const noteModel = getSetting('note_model') ?? '';
+  const memoryModel = getSetting('memory_model') ?? '';
+  const chatModelHistory = parseModelHistory(getSetting('chat_model_history'));
+  const noteModelHistory = parseModelHistory(getSetting('note_model_history'));
+  const memoryModelHistory = parseModelHistory(getSetting('memory_model_history'));
 
   return (
     <>
@@ -49,12 +55,18 @@ export default function ConfiguracoesPage() {
             initialModel={model}
             initialStudyGuideModel={studyGuideModel}
             initialTechDocModel={techDocModel}
+            initialChatModel={chatModel}
+            initialNoteModel={noteModel}
+            initialMemoryModel={memoryModel}
             initialHistoryWindow={historyWindow}
             initialStudyGuideMaxTokens={studyGuideMaxTokens}
             initialStudyGuideTimeoutS={studyGuideTimeoutS}
             initialModelHistory={modelHistory}
             initialStudyGuideModelHistory={studyGuideModelHistory}
             initialTechDocModelHistory={techDocModelHistory}
+            initialChatModelHistory={chatModelHistory}
+            initialNoteModelHistory={noteModelHistory}
+            initialMemoryModelHistory={memoryModelHistory}
           />
         </div>
       </div>

@@ -12,24 +12,36 @@ export function ConfiguracoesTabs({
   initialModel,
   initialStudyGuideModel,
   initialTechDocModel,
+  initialChatModel,
+  initialNoteModel,
+  initialMemoryModel,
   initialHistoryWindow,
   initialStudyGuideMaxTokens,
   initialStudyGuideTimeoutS,
   initialModelHistory,
   initialStudyGuideModelHistory,
   initialTechDocModelHistory,
+  initialChatModelHistory,
+  initialNoteModelHistory,
+  initialMemoryModelHistory,
 }: {
   initialVaultPath: string;
   hasKey: boolean;
   initialModel: string;
   initialStudyGuideModel: string;
   initialTechDocModel: string;
+  initialChatModel: string;
+  initialNoteModel: string;
+  initialMemoryModel: string;
   initialHistoryWindow: number;
   initialStudyGuideMaxTokens: number;
   initialStudyGuideTimeoutS: number;
   initialModelHistory: string[];
   initialStudyGuideModelHistory: string[];
   initialTechDocModelHistory: string[];
+  initialChatModelHistory: string[];
+  initialNoteModelHistory: string[];
+  initialMemoryModelHistory: string[];
 }) {
   const [tab, setTab] = useState<Tab>('geral');
 
@@ -59,12 +71,18 @@ export function ConfiguracoesTabs({
           initialModel={initialModel}
           initialStudyGuideModel={initialStudyGuideModel}
           initialTechDocModel={initialTechDocModel}
+          initialChatModel={initialChatModel}
+          initialNoteModel={initialNoteModel}
+          initialMemoryModel={initialMemoryModel}
           initialHistoryWindow={initialHistoryWindow}
           initialStudyGuideMaxTokens={initialStudyGuideMaxTokens}
           initialStudyGuideTimeoutS={initialStudyGuideTimeoutS}
           initialModelHistory={initialModelHistory}
           initialStudyGuideModelHistory={initialStudyGuideModelHistory}
           initialTechDocModelHistory={initialTechDocModelHistory}
+          initialChatModelHistory={initialChatModelHistory}
+          initialNoteModelHistory={initialNoteModelHistory}
+          initialMemoryModelHistory={initialMemoryModelHistory}
         />
       ) : (
         <LixeiraPanel />

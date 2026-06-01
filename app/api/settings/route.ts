@@ -36,6 +36,9 @@ function readSettingsPayload() {
     default_model: defaultModel,
     study_guide_model: getSetting('study_guide_model'),
     tech_doc_model: getSetting('tech_doc_model'),
+    chat_model: getSetting('chat_model'),
+    note_model: getSetting('note_model'),
+    memory_model: getSetting('memory_model'),
     chat_history_window: chatHistoryWindow,
     max_words_per_page: maxWords ? Number.parseInt(maxWords, 10) : null,
     study_guide_max_tokens: clampInt(
@@ -53,6 +56,9 @@ function readSettingsPayload() {
     model_history: parseModelHistory(getSetting('model_history')),
     study_guide_model_history: parseModelHistory(getSetting('study_guide_model_history')),
     tech_doc_model_history: parseModelHistory(getSetting('tech_doc_model_history')),
+    chat_model_history: parseModelHistory(getSetting('chat_model_history')),
+    note_model_history: parseModelHistory(getSetting('note_model_history')),
+    memory_model_history: parseModelHistory(getSetting('memory_model_history')),
   };
 }
 
@@ -67,6 +73,9 @@ export async function PUT(request: Request) {
     default_model?: unknown;
     study_guide_model?: unknown;
     tech_doc_model?: unknown;
+    chat_model?: unknown;
+    note_model?: unknown;
+    memory_model?: unknown;
     chat_history_window?: unknown;
     max_words_per_page?: unknown;
     study_guide_max_tokens?: unknown;
@@ -130,6 +139,27 @@ export async function PUT(request: Request) {
     } else {
       deleteSetting('tech_doc_model');
       updated.push('tech_doc_model');
+    }
+  }
+
+  // Modelos por tarefa (D28): chat_model, note_model, memory_model.
+  // Vazio = limpar (fallback ao modelo padrão global).
+  for (const key of ['chat_model', 'note_model', 'memory_model'] as const) {
+    if (body[key] !== undefined) {
+      if (typeof body[key] !== 'string') {
+        return NextResponse.json({ error: `${key} inválido.` }, { status: 400 });
+      }
+      const val = (body[key] as string).trim();
+      const historyKey = `${key}_history`;
+      if (val) {
+        setSetting(key, val);
+        const hist = prependModelHistory(parseModelHistory(getSetting(historyKey)), val);
+        setSetting(historyKey, JSON.stringify(hist));
+        updated.push(key, historyKey);
+      } else {
+        deleteSetting(key);
+        updated.push(key);
+      }
     }
   }
 

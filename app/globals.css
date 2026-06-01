@@ -943,3 +943,17 @@ body {
 .nota-titulo { font-size: 13.5px; font-weight: 600; color: var(--text); }
 .nota-meta { font-size: 11.5px; color: var(--text-3); }
 .nota-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+
+/* ── Painel de detalhe de memória (Módulo 12) ── */
+.memoria-detail { display: flex; flex-direction: column; gap: 12px; }
+.memoria-detail-header { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.memoria-detail-title { font-size: 15px; font-weight: 700; color: var(--text); flex: 1; min-width: 0; }
+.memoria-detail-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-3); }
+.memoria-detail-meta-item { display: flex; gap: 4px; }
+.memoria-detail-meta-label { font-weight: 600; color: var(--text-2); }
+.memoria-detail-body { font-size: 13px; line-height: 1.6; color: var(--text-2); white-space: pre-wrap; word-break: break-word; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; min-height: 60px; }
+.memoria-detail-edit { width: 100%; font-family: var(--font-ui); font-size: 13px; line-height: 1.5; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); resize: vertical; min-height: 120px; box-sizing: border-box; }
+.memoria-detail-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.memoria-detail-feedback { font-size: 12.5px; color: var(--danger, #dc2626); }
+.memoria-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.memoria-search { flex: 1; min-width: 140px; }

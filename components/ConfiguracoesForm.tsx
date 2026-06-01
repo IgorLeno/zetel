@@ -10,12 +10,21 @@ import {
 } from '@/lib/study-guide-constants';
 
 type Feedback = { kind: 'ok' | 'err'; text: string } | null;
-type HistoryKey = 'model_history' | 'study_guide_model_history' | 'tech_doc_model_history';
+type HistoryKey =
+  | 'model_history'
+  | 'study_guide_model_history'
+  | 'tech_doc_model_history'
+  | 'chat_model_history'
+  | 'note_model_history'
+  | 'memory_model_history';
 
 type SettingsResponse = {
   model_history?: unknown;
   study_guide_model_history?: unknown;
   tech_doc_model_history?: unknown;
+  chat_model_history?: unknown;
+  note_model_history?: unknown;
+  memory_model_history?: unknown;
   history?: unknown;
   error?: string;
 };
@@ -128,24 +137,36 @@ export function ConfiguracoesForm({
   initialModel,
   initialStudyGuideModel,
   initialTechDocModel,
+  initialChatModel,
+  initialNoteModel,
+  initialMemoryModel,
   initialHistoryWindow,
   initialStudyGuideMaxTokens,
   initialStudyGuideTimeoutS,
   initialModelHistory,
   initialStudyGuideModelHistory,
   initialTechDocModelHistory,
+  initialChatModelHistory,
+  initialNoteModelHistory,
+  initialMemoryModelHistory,
 }: {
   initialVaultPath: string;
   hasKey: boolean;
   initialModel: string;
   initialStudyGuideModel: string;
   initialTechDocModel: string;
+  initialChatModel: string;
+  initialNoteModel: string;
+  initialMemoryModel: string;
   initialHistoryWindow: number;
   initialStudyGuideMaxTokens: number;
   initialStudyGuideTimeoutS: number;
   initialModelHistory: string[];
   initialStudyGuideModelHistory: string[];
   initialTechDocModelHistory: string[];
+  initialChatModelHistory: string[];
+  initialNoteModelHistory: string[];
+  initialMemoryModelHistory: string[];
 }) {
   // ── Vault ──
   const [vaultPath, setVaultPath] = useState(initialVaultPath);
@@ -188,6 +209,30 @@ export function ConfiguracoesForm({
   const [savingTechDocModel, setSavingTechDocModel] = useState(false);
   const [testingTechDocModel, setTestingTechDocModel] = useState(false);
 
+  // ── Modelo do Chat ──
+  const [chatModel, setChatModel] = useState(initialChatModel);
+  const [chatModelHistory, setChatModelHistory] = useState(initialChatModelHistory);
+  const [chatModelFeedback, setChatModelFeedback] = useState<Feedback>(null);
+  const [chatModelTestFeedback, setChatModelTestFeedback] = useState<Feedback>(null);
+  const [savingChatModel, setSavingChatModel] = useState(false);
+  const [testingChatModel, setTestingChatModel] = useState(false);
+
+  // ── Modelo de Notas ──
+  const [noteModel, setNoteModel] = useState(initialNoteModel);
+  const [noteModelHistory, setNoteModelHistory] = useState(initialNoteModelHistory);
+  const [noteModelFeedback, setNoteModelFeedback] = useState<Feedback>(null);
+  const [noteModelTestFeedback, setNoteModelTestFeedback] = useState<Feedback>(null);
+  const [savingNoteModel, setSavingNoteModel] = useState(false);
+  const [testingNoteModel, setTestingNoteModel] = useState(false);
+
+  // ── Modelo de Memória ──
+  const [memoryModel, setMemoryModel] = useState(initialMemoryModel);
+  const [memoryModelHistory, setMemoryModelHistory] = useState(initialMemoryModelHistory);
+  const [memoryModelFeedback, setMemoryModelFeedback] = useState<Feedback>(null);
+  const [memoryModelTestFeedback, setMemoryModelTestFeedback] = useState<Feedback>(null);
+  const [savingMemoryModel, setSavingMemoryModel] = useState(false);
+  const [testingMemoryModel, setTestingMemoryModel] = useState(false);
+
   // ── Janela de histórico ──
   const [historyWindow, setHistoryWindow] = useState(String(initialHistoryWindow));
   const [historyWindowFeedback, setHistoryWindowFeedback] = useState<Feedback>(null);
@@ -207,6 +252,9 @@ export function ConfiguracoesForm({
     model_history: null,
     study_guide_model_history: null,
     tech_doc_model_history: null,
+    chat_model_history: null,
+    note_model_history: null,
+    memory_model_history: null,
   });
 
   async function saveVault() {
@@ -361,6 +409,47 @@ export function ConfiguracoesForm({
     );
   }
 
+  async function saveChatModelField() {
+    const trimmed = chatModel.trim();
+    await persistSetting(
+      { chat_model: trimmed },
+      setSavingChatModel,
+      setChatModelFeedback,
+      trimmed ? 'Modelo do Chat salvo.' : 'Modelo do Chat removido.',
+      (data) => {
+        if (Array.isArray(data.chat_model_history)) setChatModelHistory(data.chat_model_history);
+      },
+    );
+  }
+
+  async function saveNoteModelField() {
+    const trimmed = noteModel.trim();
+    await persistSetting(
+      { note_model: trimmed },
+      setSavingNoteModel,
+      setNoteModelFeedback,
+      trimmed ? 'Modelo de Notas salvo.' : 'Modelo de Notas removido.',
+      (data) => {
+        if (Array.isArray(data.note_model_history)) setNoteModelHistory(data.note_model_history);
+      },
+    );
+  }
+
+  async function saveMemoryModelField() {
+    const trimmed = memoryModel.trim();
+    await persistSetting(
+      { memory_model: trimmed },
+      setSavingMemoryModel,
+      setMemoryModelFeedback,
+      trimmed ? 'Modelo de Memória salvo.' : 'Modelo de Memória removido.',
+      (data) => {
+        if (Array.isArray(data.memory_model_history)) {
+          setMemoryModelHistory(data.memory_model_history);
+        }
+      },
+    );
+  }
+
   async function saveHistoryWindowField() {
     const windowNum = Number.parseInt(historyWindow, 10);
     if (!Number.isFinite(windowNum) || windowNum < 1 || windowNum > 50) {
@@ -440,8 +529,14 @@ export function ConfiguracoesForm({
         setModelHistory(data.history);
       } else if (key === 'study_guide_model_history') {
         setStudyGuideModelHistory(data.history);
-      } else {
+      } else if (key === 'tech_doc_model_history') {
         setTechDocModelHistory(data.history);
+      } else if (key === 'chat_model_history') {
+        setChatModelHistory(data.history);
+      } else if (key === 'note_model_history') {
+        setNoteModelHistory(data.history);
+      } else {
+        setMemoryModelHistory(data.history);
       }
     } catch (err) {
       const message =
@@ -580,7 +675,7 @@ export function ConfiguracoesForm({
             id="study-guide-model"
             className="input"
             type="text"
-            placeholder="Mesmo que o modelo padrão"
+            placeholder="mistralai/mistral-small-2603 (padrão sugerido)"
             value={studyGuideModel}
             onChange={(e) => setStudyGuideModel(e.target.value)}
           />
@@ -685,6 +780,165 @@ export function ConfiguracoesForm({
         {historyFeedback.tech_doc_model_history && (
           <p className={`feedback ${historyFeedback.tech_doc_model_history.kind}`}>
             {historyFeedback.tech_doc_model_history.text}
+          </p>
+        )}
+      </div>
+
+      <div className="field">
+        <label className="field-label" htmlFor="chat-model">
+          Modelo do Chat (parceiro de estudos)
+        </label>
+        <div className="field-row">
+          <input
+            id="chat-model"
+            className="input"
+            type="text"
+            placeholder="Mesmo que o modelo padrão"
+            value={chatModel}
+            onChange={(e) => setChatModel(e.target.value)}
+          />
+          <button
+            className="btn"
+            onClick={saveChatModelField}
+            disabled={savingChatModel}
+            type="button"
+          >
+            {savingChatModel ? 'Salvando…' : 'Salvar'}
+          </button>
+          <button
+            className="btn"
+            onClick={() => testModelField(chatModel, setTestingChatModel, setChatModelTestFeedback)}
+            disabled={testingChatModel}
+            type="button"
+          >
+            {testingChatModel ? 'Testando…' : 'Testar'}
+          </button>
+        </div>
+        <p className="field-hint">
+          Modelo usado exclusivamente para o chat com o parceiro. Deixe em branco para usar o
+          modelo padrão.
+        </p>
+        {chatModelFeedback && (
+          <p className={`feedback ${chatModelFeedback.kind}`}>{chatModelFeedback.text}</p>
+        )}
+        {chatModelTestFeedback && (
+          <p className={`feedback ${chatModelTestFeedback.kind}`}>{chatModelTestFeedback.text}</p>
+        )}
+        <ModelHistoryDropdown
+          history={chatModelHistory}
+          onUse={setChatModel}
+          onRemove={(entry) => removeFromHistory('chat_model_history', entry)}
+        />
+        {historyFeedback.chat_model_history && (
+          <p className={`feedback ${historyFeedback.chat_model_history.kind}`}>
+            {historyFeedback.chat_model_history.text}
+          </p>
+        )}
+      </div>
+
+      <div className="field">
+        <label className="field-label" htmlFor="note-model">
+          Modelo de Notas
+        </label>
+        <div className="field-row">
+          <input
+            id="note-model"
+            className="input"
+            type="text"
+            placeholder="Mesmo que o modelo padrão"
+            value={noteModel}
+            onChange={(e) => setNoteModel(e.target.value)}
+          />
+          <button
+            className="btn"
+            onClick={saveNoteModelField}
+            disabled={savingNoteModel}
+            type="button"
+          >
+            {savingNoteModel ? 'Salvando…' : 'Salvar'}
+          </button>
+          <button
+            className="btn"
+            onClick={() => testModelField(noteModel, setTestingNoteModel, setNoteModelTestFeedback)}
+            disabled={testingNoteModel}
+            type="button"
+          >
+            {testingNoteModel ? 'Testando…' : 'Testar'}
+          </button>
+        </div>
+        <p className="field-hint">
+          Modelo reservado para sugestões de notas. Deixe em branco para usar o modelo padrão.
+        </p>
+        {noteModelFeedback && (
+          <p className={`feedback ${noteModelFeedback.kind}`}>{noteModelFeedback.text}</p>
+        )}
+        {noteModelTestFeedback && (
+          <p className={`feedback ${noteModelTestFeedback.kind}`}>{noteModelTestFeedback.text}</p>
+        )}
+        <ModelHistoryDropdown
+          history={noteModelHistory}
+          onUse={setNoteModel}
+          onRemove={(entry) => removeFromHistory('note_model_history', entry)}
+        />
+        {historyFeedback.note_model_history && (
+          <p className={`feedback ${historyFeedback.note_model_history.kind}`}>
+            {historyFeedback.note_model_history.text}
+          </p>
+        )}
+      </div>
+
+      <div className="field">
+        <label className="field-label" htmlFor="memory-model">
+          Modelo de Memória
+        </label>
+        <div className="field-row">
+          <input
+            id="memory-model"
+            className="input"
+            type="text"
+            placeholder="Mesmo que o modelo padrão"
+            value={memoryModel}
+            onChange={(e) => setMemoryModel(e.target.value)}
+          />
+          <button
+            className="btn"
+            onClick={saveMemoryModelField}
+            disabled={savingMemoryModel}
+            type="button"
+          >
+            {savingMemoryModel ? 'Salvando…' : 'Salvar'}
+          </button>
+          <button
+            className="btn"
+            onClick={() =>
+              testModelField(memoryModel, setTestingMemoryModel, setMemoryModelTestFeedback)
+            }
+            disabled={testingMemoryModel}
+            type="button"
+          >
+            {testingMemoryModel ? 'Testando…' : 'Testar'}
+          </button>
+        </div>
+        <p className="field-hint">
+          Modelo reservado para tarefas de memória global. Deixe em branco para usar o modelo
+          padrão.
+        </p>
+        {memoryModelFeedback && (
+          <p className={`feedback ${memoryModelFeedback.kind}`}>{memoryModelFeedback.text}</p>
+        )}
+        {memoryModelTestFeedback && (
+          <p className={`feedback ${memoryModelTestFeedback.kind}`}>
+            {memoryModelTestFeedback.text}
+          </p>
+        )}
+        <ModelHistoryDropdown
+          history={memoryModelHistory}
+          onUse={setMemoryModel}
+          onRemove={(entry) => removeFromHistory('memory_model_history', entry)}
+        />
+        {historyFeedback.memory_model_history && (
+          <p className={`feedback ${historyFeedback.memory_model_history.kind}`}>
+            {historyFeedback.memory_model_history.text}
           </p>
         )}
       </div>

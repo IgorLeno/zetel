@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ChatMessage } from '@/types/chat-message';
 import type { NoteTipo } from './notes-service';
-import { readAllMemoriesContent, listMemoryTitles } from './memory-service';
+import { readAllMemoriesContent, listMemoryTitles, MEMORY_FILE_WARN_BYTES } from './memory-service';
 import { logger } from './logger';
 
 const PAGE_CONTEXT_MAX = 3000;
@@ -26,8 +26,6 @@ export const MEMORY_MARK_END = '<<<FIM_MEMORIA>>>';
  */
 const TURN_TOKEN_BUDGET = 8000;
 const MEMORY_TOKEN_BUDGET = Math.floor(TURN_TOKEN_BUDGET * 0.4); // 3200
-/** Acima disto, a UI sugere consolidar a memória (sem cortar automaticamente). */
-export const MEMORY_FILE_WARN_BYTES = 10_000;
 
 /** Prompt-base do parceiro de estudos (lido de config/prompts/parceiro.md no vault). */
 export const PARCEIRO_PROMPT = `# Prompt do parceiro de estudos

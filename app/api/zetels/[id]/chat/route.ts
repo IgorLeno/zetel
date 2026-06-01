@@ -217,7 +217,7 @@ export async function POST(request: Request, { params }: Ctx) {
 
   const model = resolveChatModel(
     typeof body.model === 'string' ? body.model : undefined,
-    getSetting('default_model'),
+    getSetting('chat_model') || getSetting('default_model'),
     getOpenRouterModel(),
   );
 

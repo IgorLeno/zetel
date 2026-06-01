@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server';
 import { basename } from 'node:path';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
-import { saveMemory, listMemories } from '@/lib/memory-service';
+import { saveMemory, listMemories, MEMORY_FILE_WARN_BYTES } from '@/lib/memory-service';
 import { updateMessageMeta } from '@/lib/chat-service';
-import { MEMORY_FILE_WARN_BYTES } from '@/lib/chat-prompt';
 import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
