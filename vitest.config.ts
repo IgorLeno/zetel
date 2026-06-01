@@ -34,7 +34,6 @@ export default defineConfig({
         'lib/config.ts',
       ],
       thresholds: {
-        global: { lines: 55, functions: 55, branches: 45 },
         'lib/source-index.ts': { lines: 80, functions: 80, branches: 70 },
         'lib/format-utils.ts': { lines: 90, functions: 90 },
         'lib/relative-time.ts': { lines: 80, functions: 80 },

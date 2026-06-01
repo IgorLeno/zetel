@@ -32,8 +32,11 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Tests with coverage
-        run: pnpm exec vitest run --coverage --reporter=verbose
+      - name: Unit tests
+        run: pnpm test:ci
+
+      - name: Coverage
+        run: pnpm test:coverage
 
       - name: Upload coverage
         if: always()
