@@ -23,11 +23,16 @@ next-env.d.ts
 .env.local
 .env*.local
 .env.e2e
+.env.e2e.live
 
 # Playwright
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# E2E live — artefatos e ambiente temporário
+e2e/live/.live-env.json
+test-results/e2e-live/
 
 # Vitest coverage (gerado localmente e no CI)
 coverage/
