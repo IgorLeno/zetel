@@ -47,6 +47,7 @@ coverage/
 *.tsbuildinfo
 
 # Artefatos temporários de análise/spike
+.codegraph/
 dft_reference.html
 *_reference.html
 spikes/plan-disable-unneeded-codex-plugins.md
