@@ -318,6 +318,11 @@ export function getMemory(vaultPath: string, slug: string): MemoryDetail | null 
   const corpo = extractBody(content);
   const hash = createHash('sha256').update(rawBuf).digest('hex');
   const bytes = rawBuf.length;
+  const relPath = `${MEMORY_REL_DIR}/${filename}`;
+
+  if (bytes > MEMORY_FILE_WARN_BYTES) {
+    logger.warn('memory long', { slug_len: slug.length, bytes, rel_path: relPath });
+  }
 
   return {
     slug,
@@ -332,7 +337,7 @@ export function getMemory(vaultPath: string, slug: string): MemoryDetail | null 
     contentHash: hash,
     bytes,
     long: bytes > MEMORY_FILE_WARN_BYTES,
-    relPath: `${MEMORY_REL_DIR}/${filename}`,
+    relPath,
     absPath,
   };
 }

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { join, resolve, sep } from 'node:path';
-import { existsSync } from 'node:fs';
 import { getSetting } from '@/lib/settings';
 import {
   MEMORY_REL_DIR,
@@ -53,13 +52,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   const memoriaDir = getMemoriaDir(vaultPath);
   const check = validateSlug(memoriaDir, slug);
   if (!check.valid) return NextResponse.json({ error: check.reason }, { status: 400 });
-  if (!existsSync(check.absPath)) return NextResponse.json({ error: 'Memória não encontrada.' }, { status: 404 });
 
   try {
     const detail = getMemory(vaultPath, slug);
     if (!detail) return NextResponse.json({ error: 'Memória não encontrada.' }, { status: 404 });
     return NextResponse.json(detail);
   } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') return NextResponse.json({ error: 'Memória não encontrada.' }, { status: 404 });
     logger.error('memory get failed', { error: (err as Error).message });
     return NextResponse.json({ error: 'Falha ao ler a memória.' }, { status: 500 });
   }
@@ -78,7 +78,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
   const memoriaDir = getMemoriaDir(vaultPath);
   const check = validateSlug(memoriaDir, slug);
   if (!check.valid) return NextResponse.json({ error: check.reason }, { status: 400 });
-  if (!existsSync(check.absPath)) return NextResponse.json({ error: 'Memória não encontrada.' }, { status: 404 });
 
   let body: { corpo?: unknown; expectedHash?: unknown; force?: unknown };
   try {
@@ -118,7 +117,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   const memoriaDir = getMemoriaDir(vaultPath);
   const check = validateSlug(memoriaDir, slug);
   if (!check.valid) return NextResponse.json({ error: check.reason }, { status: 400 });
-  if (!existsSync(check.absPath)) return NextResponse.json({ error: 'Memória não encontrada.' }, { status: 404 });
 
   try {
     deleteMemory(vaultPath, slug);

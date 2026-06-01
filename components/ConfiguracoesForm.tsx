@@ -131,6 +131,79 @@ function ModelHistoryDropdown({
   );
 }
 
+function ModelField({
+  id,
+  label,
+  placeholder,
+  hint,
+  value,
+  onChange,
+  onSave,
+  saving,
+  onTest,
+  testing,
+  feedback,
+  testFeedback,
+  history,
+  onUseHistory,
+  onRemoveHistory,
+  historyFeedback,
+}: {
+  id: string;
+  label: string;
+  placeholder: string;
+  hint: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  onTest: () => void;
+  testing: boolean;
+  feedback: Feedback;
+  testFeedback: Feedback;
+  history: string[];
+  onUseHistory: (model: string) => void;
+  onRemoveHistory: (entry: string) => void;
+  historyFeedback: Feedback;
+}) {
+  return (
+    <div className="field">
+      <label className="field-label" htmlFor={id}>
+        {label}
+      </label>
+      <div className="field-row">
+        <input
+          id={id}
+          className="input"
+          type="text"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <button className="btn" onClick={onSave} disabled={saving} type="button">
+          {saving ? 'Salvando…' : 'Salvar'}
+        </button>
+        <button className="btn" onClick={onTest} disabled={testing} type="button">
+          {testing ? 'Testando…' : 'Testar'}
+        </button>
+      </div>
+      <p className="field-hint">{hint}</p>
+      {feedback && <p className={`feedback ${feedback.kind}`}>{feedback.text}</p>}
+      {testFeedback && (
+        <p className={`feedback ${testFeedback.kind}`}>{testFeedback.text}</p>
+      )}
+      <ModelHistoryDropdown
+        history={history}
+        onUse={onUseHistory}
+        onRemove={onRemoveHistory}
+      />
+      {historyFeedback && (
+        <p className={`feedback ${historyFeedback.kind}`}>{historyFeedback.text}</p>
+      )}
+    </div>
+  );
+}
+
 export function ConfiguracoesForm({
   initialVaultPath,
   hasKey,
@@ -784,164 +857,64 @@ export function ConfiguracoesForm({
         )}
       </div>
 
-      <div className="field">
-        <label className="field-label" htmlFor="chat-model">
-          Modelo do Chat (parceiro de estudos)
-        </label>
-        <div className="field-row">
-          <input
-            id="chat-model"
-            className="input"
-            type="text"
-            placeholder="Mesmo que o modelo padrão"
-            value={chatModel}
-            onChange={(e) => setChatModel(e.target.value)}
-          />
-          <button
-            className="btn"
-            onClick={saveChatModelField}
-            disabled={savingChatModel}
-            type="button"
-          >
-            {savingChatModel ? 'Salvando…' : 'Salvar'}
-          </button>
-          <button
-            className="btn"
-            onClick={() => testModelField(chatModel, setTestingChatModel, setChatModelTestFeedback)}
-            disabled={testingChatModel}
-            type="button"
-          >
-            {testingChatModel ? 'Testando…' : 'Testar'}
-          </button>
-        </div>
-        <p className="field-hint">
-          Modelo usado exclusivamente para o chat com o parceiro. Deixe em branco para usar o
-          modelo padrão.
-        </p>
-        {chatModelFeedback && (
-          <p className={`feedback ${chatModelFeedback.kind}`}>{chatModelFeedback.text}</p>
-        )}
-        {chatModelTestFeedback && (
-          <p className={`feedback ${chatModelTestFeedback.kind}`}>{chatModelTestFeedback.text}</p>
-        )}
-        <ModelHistoryDropdown
-          history={chatModelHistory}
-          onUse={setChatModel}
-          onRemove={(entry) => removeFromHistory('chat_model_history', entry)}
-        />
-        {historyFeedback.chat_model_history && (
-          <p className={`feedback ${historyFeedback.chat_model_history.kind}`}>
-            {historyFeedback.chat_model_history.text}
-          </p>
-        )}
-      </div>
+      <ModelField
+        id="chat-model"
+        label="Modelo do Chat (parceiro de estudos)"
+        placeholder="Mesmo que o modelo padrão"
+        hint="Modelo usado exclusivamente para o chat com o parceiro. Deixe em branco para usar o modelo padrão."
+        value={chatModel}
+        onChange={setChatModel}
+        onSave={saveChatModelField}
+        saving={savingChatModel}
+        onTest={() => testModelField(chatModel, setTestingChatModel, setChatModelTestFeedback)}
+        testing={testingChatModel}
+        feedback={chatModelFeedback}
+        testFeedback={chatModelTestFeedback}
+        history={chatModelHistory}
+        onUseHistory={setChatModel}
+        onRemoveHistory={(entry) => removeFromHistory('chat_model_history', entry)}
+        historyFeedback={historyFeedback.chat_model_history ?? null}
+      />
 
-      <div className="field">
-        <label className="field-label" htmlFor="note-model">
-          Modelo de Notas
-        </label>
-        <div className="field-row">
-          <input
-            id="note-model"
-            className="input"
-            type="text"
-            placeholder="Mesmo que o modelo padrão"
-            value={noteModel}
-            onChange={(e) => setNoteModel(e.target.value)}
-          />
-          <button
-            className="btn"
-            onClick={saveNoteModelField}
-            disabled={savingNoteModel}
-            type="button"
-          >
-            {savingNoteModel ? 'Salvando…' : 'Salvar'}
-          </button>
-          <button
-            className="btn"
-            onClick={() => testModelField(noteModel, setTestingNoteModel, setNoteModelTestFeedback)}
-            disabled={testingNoteModel}
-            type="button"
-          >
-            {testingNoteModel ? 'Testando…' : 'Testar'}
-          </button>
-        </div>
-        <p className="field-hint">
-          Modelo reservado para sugestões de notas. Deixe em branco para usar o modelo padrão.
-        </p>
-        {noteModelFeedback && (
-          <p className={`feedback ${noteModelFeedback.kind}`}>{noteModelFeedback.text}</p>
-        )}
-        {noteModelTestFeedback && (
-          <p className={`feedback ${noteModelTestFeedback.kind}`}>{noteModelTestFeedback.text}</p>
-        )}
-        <ModelHistoryDropdown
-          history={noteModelHistory}
-          onUse={setNoteModel}
-          onRemove={(entry) => removeFromHistory('note_model_history', entry)}
-        />
-        {historyFeedback.note_model_history && (
-          <p className={`feedback ${historyFeedback.note_model_history.kind}`}>
-            {historyFeedback.note_model_history.text}
-          </p>
-        )}
-      </div>
+      <ModelField
+        id="note-model"
+        label="Modelo de Notas"
+        placeholder="Mesmo que o modelo padrão"
+        hint="Modelo reservado para sugestões de notas. Deixe em branco para usar o modelo padrão."
+        value={noteModel}
+        onChange={setNoteModel}
+        onSave={saveNoteModelField}
+        saving={savingNoteModel}
+        onTest={() => testModelField(noteModel, setTestingNoteModel, setNoteModelTestFeedback)}
+        testing={testingNoteModel}
+        feedback={noteModelFeedback}
+        testFeedback={noteModelTestFeedback}
+        history={noteModelHistory}
+        onUseHistory={setNoteModel}
+        onRemoveHistory={(entry) => removeFromHistory('note_model_history', entry)}
+        historyFeedback={historyFeedback.note_model_history ?? null}
+      />
 
-      <div className="field">
-        <label className="field-label" htmlFor="memory-model">
-          Modelo de Memória
-        </label>
-        <div className="field-row">
-          <input
-            id="memory-model"
-            className="input"
-            type="text"
-            placeholder="Mesmo que o modelo padrão"
-            value={memoryModel}
-            onChange={(e) => setMemoryModel(e.target.value)}
-          />
-          <button
-            className="btn"
-            onClick={saveMemoryModelField}
-            disabled={savingMemoryModel}
-            type="button"
-          >
-            {savingMemoryModel ? 'Salvando…' : 'Salvar'}
-          </button>
-          <button
-            className="btn"
-            onClick={() =>
-              testModelField(memoryModel, setTestingMemoryModel, setMemoryModelTestFeedback)
-            }
-            disabled={testingMemoryModel}
-            type="button"
-          >
-            {testingMemoryModel ? 'Testando…' : 'Testar'}
-          </button>
-        </div>
-        <p className="field-hint">
-          Modelo reservado para tarefas de memória global. Deixe em branco para usar o modelo
-          padrão.
-        </p>
-        {memoryModelFeedback && (
-          <p className={`feedback ${memoryModelFeedback.kind}`}>{memoryModelFeedback.text}</p>
-        )}
-        {memoryModelTestFeedback && (
-          <p className={`feedback ${memoryModelTestFeedback.kind}`}>
-            {memoryModelTestFeedback.text}
-          </p>
-        )}
-        <ModelHistoryDropdown
-          history={memoryModelHistory}
-          onUse={setMemoryModel}
-          onRemove={(entry) => removeFromHistory('memory_model_history', entry)}
-        />
-        {historyFeedback.memory_model_history && (
-          <p className={`feedback ${historyFeedback.memory_model_history.kind}`}>
-            {historyFeedback.memory_model_history.text}
-          </p>
-        )}
-      </div>
+      <ModelField
+        id="memory-model"
+        label="Modelo de Memória"
+        placeholder="Mesmo que o modelo padrão"
+        hint="Modelo reservado para tarefas de memória global. Deixe em branco para usar o modelo padrão."
+        value={memoryModel}
+        onChange={setMemoryModel}
+        onSave={saveMemoryModelField}
+        saving={savingMemoryModel}
+        onTest={() =>
+          testModelField(memoryModel, setTestingMemoryModel, setMemoryModelTestFeedback)
+        }
+        testing={testingMemoryModel}
+        feedback={memoryModelFeedback}
+        testFeedback={memoryModelTestFeedback}
+        history={memoryModelHistory}
+        onUseHistory={setMemoryModel}
+        onRemoveHistory={(entry) => removeFromHistory('memory_model_history', entry)}
+        historyFeedback={historyFeedback.memory_model_history ?? null}
+      />
 
       <div className="field">
         <label className="field-label" htmlFor="history-window">

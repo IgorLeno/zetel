@@ -211,7 +211,7 @@ export function MemoriaList() {
       const res = await fetch(`/api/memory/${encodeURIComponent(detail.slug)}`, {
         method: 'DELETE',
       });
-      if (res.ok || res.status === 204) {
+      if (res.ok) {
         setMemories((prev) => prev.filter((m) => m.slug !== detail.slug));
         closeDetail();
         showToast('Memória excluída.');
