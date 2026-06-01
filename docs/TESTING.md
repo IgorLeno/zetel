@@ -4,13 +4,13 @@
 
 ```
          ┌─────────────┐
-         │   E2E live  │  (requer OpenRouter + vault real)
+         │   E2E live  │  (opt-in; OpenRouter; ZETEL_HOME isolado — Módulo 12.1)
          ├─────────────┤
-         │  E2E mock   │  (servidor + fixtures; sem LLM)
+         │  E2E legado │  (porta 3000; OpenRouter real no chat; vault do dev)
          ├─────────────┤
-         │ Integration │  (SQLite/vault em tmpdir isolado — Módulo 12.0B)
+         │ Integration │  (SQLite/vault em tmpdir; OpenRouter via vi.mock — 12.0B)
          ├─────────────┤
-         │    Unit     │  (funções puras; sem I/O externo)
+         │    Unit     │  (funções puras; sem I/O externo — 12.0A)
          └─────────────┘
 ```
 
@@ -28,7 +28,8 @@ Os testes unitários (Módulo 12.0A) cobrem funções puras e lógica de negóci
 | `pnpm test:watch` | Executa em modo watch (desenvolvimento) |
 | `pnpm test:coverage` | Executa com relatório de coverage V8 |
 | `pnpm test:ci` | Executa `test:unit` e `test:integration` em sequência (usado no CI) |
-| `pnpm test:e2e` | Executa testes E2E com Playwright (requer servidor) |
+| `pnpm test:e2e` | Executa testes E2E legado com Playwright (projeto `e2e-legacy`, porta 3000) |
+| `pnpm test:e2e:live` | Executa E2E live (`ZETEL_E2E_LIVE=1`, projeto `e2e-live`, porta 3001) |
 
 ---
 
@@ -56,26 +57,30 @@ Domínios cobertos:
 - **Geração de guia** — `tests/integration/study-guide/generate-study-guide.test.ts` e `full-flow.test.ts`: pipeline completo com LLM mockado, artefatos HTML/meta/source
 - **Rastreabilidade** — `tests/integration/study-guide/traceability-pipeline.test.ts`: endurecimento de quiz inválido e cobertura de hashes
 
-### E2E mock (`e2e/`)
+### E2E legado (`e2e/`, projeto `e2e-legacy`)
 
-Testam o app completo via Playwright com servidor real e respostas de chat mockadas:
-- Requerem `pnpm dev` ou `pnpm start` rodando
-- Mockam chamadas ao OpenRouter via intercept
-- Configurados via `.env.e2e`
-- Não dependem de `OPENROUTER_API_KEY`
+Testam o app completo via Playwright na porta 3000:
+- Requerem `pnpm dev` (ou `reuseExistingServer: true` com servidor já na 3000)
+- Usam o vault e a chave do desenvolvedor (`~/.zetel` + `.env.e2e`, tipicamente `E2E_ZETEL_SLUG`)
+- **Não há intercept Playwright** — `chat-basic.spec.ts` e `chat-sse-buffer.spec.ts` chamam OpenRouter real
+- Specs de nota/memória (`note-card`, `note-save`, `memory-basic`) são LLM-dependentes (podem dar skip se o modelo não emitir sentinela)
+- Requerem `OPENROUTER_API_KEY` configurada (via `~/.zetel/config` ou env repassada ao servidor)
+- Não rodam no CI padrão (`ci.yml`)
 
-### E2E live
+### E2E live (`e2e/live/`, projeto `e2e-live`, Módulo 12.1)
 
-Igual ao mock, mas com LLM real:
-- Requerem `OPENROUTER_API_KEY` válida
-- Não rodam no CI padrão
-- Opcionais — validação manual pelo dev
+Opt-in com ambiente isolado e setup programático:
+- Ativação: `ZETEL_E2E_LIVE=1` (`pnpm test:e2e:live`)
+- Porta 3001, `ZETEL_HOME` em `tmpdir()` — não toca `~/.zetel` real
+- Setup cria Zetel via API, gera Documento Técnico e Guia de Estudo com OpenRouter real
+- Budget guard (`ZETEL_E2E_MAX_CALLS`) e coleta de artefatos em falha
+- Workflow manual no GitHub Actions (`.github/workflows/e2e-live.yml`)
 
 ---
 
-## Regras dos testes padrão
+## Regras dos testes padrão (unit + integration)
 
-1. **Nenhuma chamada real ao OpenRouter** — nenhum teste realiza chamada real ao OpenRouter. Imports de `lib/openrouter` são permitidos apenas quando o módulo é mockado com `vi.mock` no próprio teste.
+1. **Nenhuma chamada real ao OpenRouter** — unit e integration não chamam OpenRouter de verdade. Imports de `lib/openrouter` são permitidos apenas quando o módulo é mockado com `vi.mock` no próprio teste. **Exceção:** E2E legado e E2E live usam OpenRouter real por design (fora do `pnpm test:ci`).
 2. **Nunca usar vault real** — testes que precisam de arquivos usam `os.tmpdir()`.
 3. **Nunca tocar `~/.zetel` real** — nenhum teste acessa `DB_PATH`, `CONFIG_PATH` ou `LOG_FILE` do módulo `lib/paths.ts` para leitura/escrita.
 4. **Não importar `getDb()` nos testes unitários** — `lib/db.ts` inicializa SQLite em `~/.zetel/zetel.db`. Integration tests usam o harness `temp-env.ts` com banco injetado.
@@ -112,11 +117,13 @@ Os demais arquivos são reportados sem threshold bloqueante nesta fase.
 
 | | E2E legado (`e2e/`) | E2E live (`e2e/live/`) |
 |---|---|---|
-| OpenRouter | Mockado via intercept Playwright | Real (requer chave) |
+| OpenRouter | Real (chat + nota/memória LLM-dependentes) | Real (setup + specs live) |
 | Porta | 3000 | 3001 |
 | ZETEL_HOME | `~/.zetel` do dev | `tmpdir()` exclusivo |
-| CI padrão | Sim (quando servidor disponível) | Não — opt-in manual |
+| Setup do Zetel | Manual / `E2E_ZETEL_SLUG` | Programático via API (`setup-live.ts`) |
+| CI padrão | Não | Não — `workflow_dispatch` manual |
 | Budget guard | N/A | `ZETEL_E2E_MAX_CALLS` (default 3) |
+| Artefatos de falha | Playwright padrão | `test-results/e2e-live/` + `collect-artifacts.ts` |
 
 ### Isolamento
 

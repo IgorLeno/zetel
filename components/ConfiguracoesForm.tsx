@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { DEFAULT_OPENROUTER_MODEL } from '@/lib/openrouter-constants';
 import {
   STUDY_GUIDE_MAX_TOKENS_MAX,
   STUDY_GUIDE_MAX_TOKENS_MIN,
@@ -526,7 +527,7 @@ export function ConfiguracoesForm({
             id="model"
             className="input"
             type="text"
-            placeholder="anthropic/claude-3.5-haiku"
+            placeholder={DEFAULT_OPENROUTER_MODEL}
             value={model}
             onChange={(e) => setModel(e.target.value)}
           />

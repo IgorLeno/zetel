@@ -81,7 +81,7 @@ verificável** — exatamente o que D26/D27 exigem para o parceiro mapear
 
 | Métrica | Valor |
 |---------|-------|
-| Modelo usado | `anthropic/claude-3.5-haiku` (default `OPENROUTER_MODEL` do config) |
+| Modelo usado | `anthropic/claude-3.5-haiku` (default na época do spike; hoje: `openai/gpt-4o-mini` em `lib/openrouter-constants.ts`) |
 | Blocos no catálogo | 43 |
 | Prompt (estimado) | ~25.771 chars / ~6.443 tokens |
 | **Tokens reais (usage)** | prompt **9.670**, completion **4.042**, total **13.712** |

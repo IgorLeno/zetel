@@ -44,7 +44,7 @@ function resolveModel(cfg) {
   return (
     process.env.GUIA_MODEL?.trim() ||
     cfg.OPENROUTER_MODEL ||
-    'anthropic/claude-3.5-haiku'
+    'openai/gpt-4o-mini'
   );
 }
 

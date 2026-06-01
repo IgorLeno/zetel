@@ -8,13 +8,13 @@
  *
  * Env:
  *   OPENROUTER_API_KEY   (obrigatória)
- *   OPENROUTER_MODEL     (opcional, default: anthropic/claude-3.5-haiku)
+ *   OPENROUTER_MODEL     (opcional, default: openai/gpt-4o-mini)
  */
 
 import OpenAI from 'openai';
 
 const KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = process.env.OPENROUTER_MODEL ?? 'anthropic/claude-3.5-haiku';
+const MODEL = process.env.OPENROUTER_MODEL ?? 'openai/gpt-4o-mini';
 const CMD = process.argv[2];
 
 if (!KEY) {

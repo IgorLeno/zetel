@@ -128,8 +128,8 @@ test.describe('Chat contextual — live com OpenRouter (modo guia-estudo)', () =
       `padrão de chunk partido detectado: "${dup?.[0]}"`,
     ).toBeNull();
 
-    // Sem caracteres de controle C0 inválidos (permite tab, LF, CR)
-    const controlChars = /[ --]/;
+    // Sem caracteres de controle C0 inválidos (mantém whitespace comum: \t \n \r)
+    const controlChars = new RegExp('[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]');
     expect(
       controlChars.test(text),
       'resposta contém caractere de controle C0 inválido',

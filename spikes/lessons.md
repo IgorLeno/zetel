@@ -136,8 +136,9 @@ Tempo total do request: **3 739 ms**.
 
 - `stream_options: { include_usage: true }` é necessário para capturar tokens no
   modo streaming via OpenRouter. Sem isso, o último chunk não carrega `usage`.
-- O modelo default `anthropic/claude-3.5-haiku` foi escolhido por custo-benefício.
-  Overrideable via `OPENROUTER_MODEL` env var.
+- Na época do Spike D o default era `anthropic/claude-3.5-haiku`. **Desde 2026-06-01**
+  o default do produto é `openai/gpt-4o-mini` (`lib/openrouter-constants.ts`).
+  Override via `OPENROUTER_MODEL` em `~/.zetel/config` ou `default_model` em settings.
 - Filtro de modelos baratos: `pricing.prompt < 0.000001` (equivale a < $1/1M tokens).
 
 ---
@@ -885,3 +886,8 @@ Rule: o Guia deve postar `zetel:page-change` com `readingMode:"guia-estudo"`, `p
 
 [2026-05-31] Context: clicar links internos da sidebar do Guia em iframe sandbox podia gerar tentativa insegura de navegação para URL absoluta.
 Rule: links internos continuam como fragmentos relativos (`href="#..."`), mas o script do Guia intercepta o clique, chama `scrollIntoView` e atualiza o estado via `postMessage`, sem relaxar `sandbox="allow-scripts"`.
+
+## Default OpenRouter (2026-06-01)
+
+[2026-06-01] Context: `anthropic/claude-3.5-haiku` era o fallback em `getOpenRouterModel()` e em spikes; custo-benefício inferior a `openai/gpt-4o-mini` para chat/guia.
+Rule: fonte única em `lib/openrouter-constants.ts` (`DEFAULT_OPENROUTER_MODEL = openai/gpt-4o-mini`). `getOpenRouterModel()`, UI (placeholder), E2E live (`.env.e2e.live.example`) e spikes `run.mjs` alinhados. Quem já tem `OPENROUTER_MODEL` no `~/.zetel/config` não é alterado automaticamente.

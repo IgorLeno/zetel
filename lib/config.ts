@@ -1,5 +1,8 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { DEFAULT_OPENROUTER_MODEL } from './openrouter-constants';
 import { CONFIG_PATH, ZETEL_HOME } from './paths';
+
+export { DEFAULT_OPENROUTER_MODEL } from './openrouter-constants';
 
 /**
  * Configuração sensível do Zetel em `~/.zetel/config` (D12 / regra inviolável #13).
@@ -63,5 +66,5 @@ export function getOpenRouterKey(): string | null {
 
 /** Modelo de chat configurado, com default do MVP. */
 export function getOpenRouterModel(): string {
-  return readConfig().OPENROUTER_MODEL || 'anthropic/claude-3.5-haiku';
+  return readConfig().OPENROUTER_MODEL || DEFAULT_OPENROUTER_MODEL;
 }

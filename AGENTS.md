@@ -2,7 +2,9 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 12 (gestão de memória no app).**
+**Estado atual: Módulo 12.1 completo (Fase 1 + Fase 2; E2E live opt-in com budget guard, coleta automática de artefatos, GitHub Actions manual). Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 12 (gestão de memória no app).**
+
+**Módulo 12.1 (E2E Live — Fase 1 + Fase 2) completo.** E2E live é opt-in (`ZETEL_E2E_LIVE=1`); CI padrão nunca usa OpenRouter. Budget guard (`ZETEL_E2E_MAX_CALLS`, default 3) em `setup-live.ts` via `checkBudget` exportada para uso nos specs. Artefatos de falha coletados automaticamente em `test-results/e2e-live/` via `collect-artifacts.ts`. Summarizer opcional em `scripts/e2e-live-summarize.mjs` (funciona sem e com chave). GitHub Actions manual (`workflow_dispatch`) em `.github/workflows/e2e-live.yml` com secret `OPENROUTER_API_KEY` obrigatório. Qualquer mudança em `lib/openrouter.ts`, `lib/study-guide-service.ts`, `lib/chat-prompt.ts` ou `app/api/zetels/[id]/chat/route.ts` deve ser validada com `pnpm test:e2e:live` manualmente quando chave disponível. Gate mínimo permanece: `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`. Ver `docs/TESTING.md` (seção "E2E Live com OpenRouter").
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
@@ -35,7 +37,9 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 **Módulo 11 (Guia de Estudo: experiência interativa) concluído em 2026-05-31; gate 11.4 aprovado; `pnpm build` limpo.** **11.1** — template interativo em `renderStudyGuideHtml`: sidebar sticky (desktop) / nav compacta (mobile), quiz pedagógico (`data-answer-index`, feedback pós-clique, pontuação, reiniciar), glossário pesquisável, highlight de seção via `IntersectionObserver`. **11.2** — schema editorial v2 opcional (`comparison_tabs`, `accordions`, `timelines`, `tables`) + `renderV2Blocks`; compatibilidade retroativa. **11.3** — `buildSystemPrompt` como designer instrucional com blocos v2. **11.4** — validação com Zetel `dft` (reprocessado 28→27 páginas): `deepseek/deepseek-v4-flash`, 100% rastreabilidade (35/35 itens, 0 órfãos, 0 flagged), 4 tipos v2 preenchidos, HTML offline (~51 KB). Ressalva não-bloqueante: compat retroativa v1 não testada por ausência de fixture. Ver `spikes/lessons.md` (Módulos 11.1–11.4).
 
-**Módulo 12.0B (Integration tests + E2E mock) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`).** Entregou: harness `tests/helpers/temp-env.ts` (`makeTempEnv`/`cleanupTempEnv`/`seedZetelWithFile` — SQLite `:memory:` + vault em `tmpdir`, injeção direta de `db`/`vaultPath` **sem** `getDb()` singleton); integration tests em `tests/integration/ingestao/process-zetel.test.ts` (ingestão com páginas/anchor/hash), `tests/integration/study-guide/generate-study-guide.test.ts` + `full-flow.test.ts` (geração de guia com OpenRouter mockado via `vi.mock`) e `traceability-pipeline.test.ts` (endurecimento de quiz + rastreabilidade); E2E mock existente em `e2e/` com intercept Playwright. Ver `docs/TESTING.md`.
+**Módulo 12.1 (E2E Live — Fase 1 + Fase 2) concluído.** Entregou: `ZETEL_HOME` redirecionável por env (`lib/paths.ts`); projeto Playwright `e2e-live` na porta 3001 com `ZETEL_HOME`/`vault` em `tmpdir()`; `pnpm test:e2e:live`; setup programático via API em `e2e/live/helpers/setup-live.ts` (criar Zetel, vault, upload do fixture, processar, Documento Técnico e Guia de Estudo com OpenRouter real); specs `study-guide-live.spec.ts` e `chat-live.spec.ts`; budget guard e coleta de artefatos (`collect-artifacts.ts`); `.env.e2e.live.example`; workflow manual `.github/workflows/e2e-live.yml`. Ver `docs/TESTING.md`.
+
+**Módulo 12.0B (Integration tests + E2E legado) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`).** Entregou: harness `tests/helpers/temp-env.ts` (`makeTempEnv`/`cleanupTempEnv`/`seedZetelWithFile` — SQLite `:memory:` + vault em `tmpdir`, injeção direta de `db`/`vaultPath` **sem** `getDb()` singleton); integration tests em `tests/integration/ingestao/process-zetel.test.ts` (ingestão com páginas/anchor/hash), `tests/integration/study-guide/generate-study-guide.test.ts` + `full-flow.test.ts` (geração de guia com OpenRouter mockado via `vi.mock`) e `traceability-pipeline.test.ts` (endurecimento de quiz + rastreabilidade); E2E legado em `e2e/` (porta 3000, vault/chave do dev via `.env.e2e`) — `chat-basic.spec.ts` e `chat-sse-buffer.spec.ts` usam OpenRouter real; specs de nota/memória são LLM-dependentes. **Não há intercept Playwright** no E2E legado. Ver `docs/TESTING.md`.
 
 **Módulo 12.0A (Fundação de Testes e CI) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage`).** Vitest + coverage V8 configurados; 126 testes unitários (chat-prompt, source-index, ingestão, guia de estudo, zetel-service, utils); CI em `.github/workflows/ci.yml`; `docs/TESTING.md` criado; `validateAndNormalize`, `computeTraceability`, `StudyGuide`, `QuizItem`, `Traceability` exportados com `@internal` de `study-guide-service.ts`.
 
@@ -221,8 +225,9 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **10E** | **Configuração de modelos por tarefa** ✅ (parcial; absorvido no M11/M12) | `study_guide_model` + limites do guia; restante D28 → M12 | 10D |
 | **11** | **Guia de Estudo: experiência interativa** ✅ | Template interativo, schema/prompt v2, validação DFT (gate 11.4) | 10E |
 | **12.0A** | **Fundação de Testes e CI** ✅ | Vitest + coverage V8 + 126 unit tests + CI GitHub Actions | 11 |
-| **12.0B** | **Integration tests + E2E mock** ✅ | Harness HOME/vault temporário; E2E mock sem LLM | 12.0A |
-| **12** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 11 |
+| **12.0B** | **Integration tests + E2E legado** ✅ | Harness tmpdir; integration com `vi.mock`; E2E legado (OpenRouter real no chat) | 12.0A |
+| **12.1** | **E2E Live (opt-in)** ✅ | OpenRouter real isolado; porta 3001; `ZETEL_HOME` em tmpdir; budget guard | 12.0B |
+| **12** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 12.1 |
 | PRD v4 | Voz, TTS e STT | PRD v4 | 12 |
 | PRD v5 | Prompts editáveis e modo internet | PRD v5 | 12 |
 | Futuro | Memória emergente automática | Fase futura | 12 |
@@ -258,14 +263,17 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 
 ---
 
-## Módulo 12.1 — E2E Live (Fase 1 + Fase 2)
+## Módulo 12.1 — E2E Live (referência rápida)
 
-- Módulo 12.1 completo (Fase 1 commitada em 5da4f15/80bdc18; Fase 2 adicionada em seguida).
-- E2E live é opt-in (`ZETEL_E2E_LIVE=1`); CI padrão nunca usa OpenRouter.
-- Budget guard: `ZETEL_E2E_MAX_CALLS` (default 3) abortando com mensagem clara se atingido.
-- Artefatos de falha coletados automaticamente em `test-results/e2e-live/<titulo>/`.
-- GitHub Actions manual (`workflow_dispatch`) em `.github/workflows/e2e-live.yml`.
-- Qualquer mudança em `lib/openrouter.ts`, `lib/study-guide-service.ts`,
-  `lib/chat-prompt.ts` ou `app/api/zetels/[id]/chat/route.ts` deve ser
-  validada com `pnpm test:e2e:live` manualmente quando chave disponível.
-- Gate mínimo permanece: `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`.
+Resumo no topo deste arquivo. Pontos de implementação:
+
+| Item | Arquivo |
+|------|---------|
+| Script live | `package.json` → `test:e2e:live` |
+| Isolamento | `playwright.config.ts` — porta 3001, `ZETEL_HOME` temporário |
+| Override de estado | `lib/paths.ts` — `process.env.ZETEL_HOME` |
+| Setup por API | `e2e/live/helpers/setup-live.ts` |
+| Guia / chat live | `e2e/live/study-guide-live.spec.ts`, `e2e/live/chat-live.spec.ts` |
+| Artefatos de falha | `e2e/live/helpers/collect-artifacts.ts` |
+| Workflow manual | `.github/workflows/e2e-live.yml` |
+| Env de exemplo | `.env.e2e.live.example` |
