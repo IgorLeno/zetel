@@ -2,11 +2,11 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 12.1 completo (Fase 1 + Fase 2; E2E live opt-in com budget guard, coleta automática de artefatos, GitHub Actions manual). Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 12 (gestão de memória no app).**
+**Estado atual: Módulo 12 concluído (gate passado em 2026-06-01; commits 9156d75 + 922cf52). Gate 12 → PRD v4 aprovado. Módulo 12.1 completo (Fase 1 + Fase 2; E2E live opt-in com budget guard, coleta automática de artefatos, GitHub Actions manual). Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 13 — Voz (TTS + STT), etapa 13.1 (spike isolado).**
 
 **Módulo 12.1 (E2E Live — Fase 1 + Fase 2) completo.** E2E live é opt-in (`ZETEL_E2E_LIVE=1`); CI padrão nunca usa OpenRouter. Budget guard (`ZETEL_E2E_MAX_CALLS`, default 3) em `setup-live.ts` via `checkBudget` exportada para uso nos specs. Artefatos de falha coletados automaticamente em `test-results/e2e-live/` via `collect-artifacts.ts`. Summarizer opcional em `scripts/e2e-live-summarize.mjs` (funciona sem e com chave). GitHub Actions manual (`workflow_dispatch`) em `.github/workflows/e2e-live.yml` com secret `OPENROUTER_API_KEY` obrigatório. Qualquer mudança em `lib/openrouter.ts`, `lib/study-guide-service.ts`, `lib/chat-prompt.ts` ou `app/api/zetels/[id]/chat/route.ts` deve ser validada com `pnpm test:e2e:live` manualmente quando chave disponível. Gate mínimo permanece: `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`. Ver `docs/TESTING.md` (seção "E2E Live com OpenRouter").
 
-**Dívida técnica DT-M12-1 (não bloqueia gate):** `note_model` e `memory_model` persistem em settings e na UI, mas não afetam o modelo em runtime — ver tabela abaixo. `chat_model` está wired em `app/api/zetels/[id]/chat/route.ts` (`chat_model` → `default_model` → env). Sugestão de nota/memória no chat usa o mesmo resolvedor (`chat_model`), não `note_model`/`memory_model`. Impacto baixo; absorver em PRD v4 ou patch pré-v4 (fechar D28).
+**Dívida técnica DT-M12-1 (não bloqueia gate):** `note_model` e `memory_model` persistem em settings e na UI, mas não afetam o modelo em runtime — ver tabela abaixo. `chat_model` está wired em `app/api/zetels/[id]/chat/route.ts` (`chat_model` → `default_model` → env). Sugestão de nota/memória no chat usa o mesmo resolvedor (`chat_model`), não `note_model`/`memory_model`. Wiring real exige separar geração de sugestão em chamadas LLM próprias — decisão de produto; dívida herdada no PRD v4 (Parte D); absorver em patch pré-Módulo 13 ou durante 13.x (fechar D28).
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
@@ -35,7 +35,7 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 #### Próximos passos
 - Gate visual/manual do Documento Técnico refinado, se necessário.
-- Próximo passo operacional: **Módulo 12 — gestão completa de memória no app** (PRD v3, ver `prd-v3.md`).
+- Próximo passo operacional: **Módulo 13 — Voz (TTS + STT)**, começando pela etapa **13.1 (spike isolado em `spikes/spike-13-voz/`)** — PRD v4 (aprovado em 2026-06-01). Checkpoint em `spikes/spike-13-voz/README.md` antes de avançar para 13.2.
 
 **Módulo 11 (Guia de Estudo: experiência interativa) concluído em 2026-05-31; gate 11.4 aprovado; `pnpm build` limpo.** **11.1** — template interativo em `renderStudyGuideHtml`: sidebar sticky (desktop) / nav compacta (mobile), quiz pedagógico (`data-answer-index`, feedback pós-clique, pontuação, reiniciar), glossário pesquisável, highlight de seção via `IntersectionObserver`. **11.2** — schema editorial v2 opcional (`comparison_tabs`, `accordions`, `timelines`, `tables`) + `renderV2Blocks`; compatibilidade retroativa. **11.3** — `buildSystemPrompt` como designer instrucional com blocos v2. **11.4** — validação com Zetel `dft` (reprocessado 28→27 páginas): `deepseek/deepseek-v4-flash`, 100% rastreabilidade (35/35 itens, 0 órfãos, 0 flagged), 4 tipos v2 preenchidos, HTML offline (~51 KB). Ressalva não-bloqueante: compat retroativa v1 não testada por ausência de fixture. Ver `spikes/lessons.md` (Módulos 11.1–11.4).
 
@@ -44,6 +44,8 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 **Módulo 12.0B (Integration tests + E2E legado) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`).** Entregou: harness `tests/helpers/temp-env.ts` (`makeTempEnv`/`cleanupTempEnv`/`seedZetelWithFile` — SQLite `:memory:` + vault em `tmpdir`, injeção direta de `db`/`vaultPath` **sem** `getDb()` singleton); integration tests em `tests/integration/ingestao/process-zetel.test.ts` (ingestão com páginas/anchor/hash), `tests/integration/study-guide/generate-study-guide.test.ts` + `full-flow.test.ts` (geração de guia com OpenRouter mockado via `vi.mock`) e `traceability-pipeline.test.ts` (endurecimento de quiz + rastreabilidade); E2E legado em `e2e/` (porta 3000, vault/chave do dev via `.env.e2e`) — `chat-basic.spec.ts` e `chat-sse-buffer.spec.ts` usam OpenRouter real; specs de nota/memória são LLM-dependentes. **Não há intercept Playwright** no E2E legado. Ver `docs/TESTING.md`.
 
 **Módulo 12.0A (Fundação de Testes e CI) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage`).** Vitest + coverage V8 configurados; 126 testes unitários (chat-prompt, source-index, ingestão, guia de estudo, zetel-service, utils); CI em `.github/workflows/ci.yml`; `docs/TESTING.md` criado; `validateAndNormalize`, `computeTraceability`, `StudyGuide`, `QuizItem`, `Traceability` exportados com `@internal` de `study-guide-service.ts`.
+
+**Módulo 12 (Gestão completa de memória no app) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`; 144 testes).** Commits `9156d75` + `922cf52`. Entregou: `app/api/memory/[slug]/route.ts` (GET detalhe / PATCH edição com detecção de conflito via `updatedAt` / DELETE exclusão); `MemoriaList.tsx` expandido com painel de detalhe, formulário de edição in-place e exclusão com confirmação — **encerra dívida M8-1** (gestão completa de memória sem depender do Obsidian); `ModelField` como componente reutilizável em `ConfiguracoesForm.tsx`; `ConfiguracoesTabs.tsx` atualizado; settings adicionais expostos em `app/api/settings/route.ts` (`chat_model`, `note_model`, `memory_model` + históricos). Dívida DT-M12-1 persiste (wiring de `note_model`/`memory_model` em runtime — herdada no PRD v4).
 
 **Módulo 10D (Implementação do guia de estudo) implementado em 2026-05-30; `pnpm build` limpo (compile + lint + types); etapa LLM live requer chave (verificação manual pendente).** Portou o pipeline do spike 10C para produção via `POST /api/zetels/:id/build?mode=guia-estudo` → `generateStudyGuide` (`lib/study-guide-service.ts`). Sem migration SQLite; nenhum contrato existente quebrado; Regras #1/#2 preservadas. Ver `spikes/lessons.md` (Módulo 10D).
 
@@ -185,7 +187,7 @@ Para detalhe completo, ver Partes C e D do PRD. Esta tabela usa as versões **co
 
 | ID | Descrição | Absorver em |
 |----|-----------|-------------|
-| **DT-M12-1** | `note_model` e `memory_model` salvos em settings e expostos na UI, mas **não wired em runtime**: `lib/notes-service.ts` não lê `note_model` (o modelo da nota vem do chat ao salvar); sugestão de memória no chat usa `chat_model` \|\| `default_model` em `app/api/zetels/[id]/chat/route.ts`, não `memory_model`. Operações seguem com modelo global/chat — não é regressão. | PRD v4 ou patch pré-v4 (fechar D28) |
+| **DT-M12-1** | `note_model` e `memory_model` salvos em settings e expostos na UI, mas **não wired em runtime**: sugestão de nota/memória é gerada inline na mesma `streamChat` call do chat, usando `chat_model` ‖ `default_model`; não há chamada LLM separada para essas tarefas. Wiring real exige separar a geração de sugestão em chamadas próprias — decisão de produto. Operações seguem com modelo global/chat — não é regressão. | Patch pré-Módulo 13 ou durante 13.x (fechar D28) |
 
 ---
 
@@ -235,8 +237,11 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **12.0A** | **Fundação de Testes e CI** ✅ | Vitest + coverage V8 + 126 unit tests + CI GitHub Actions | 11 |
 | **12.0B** | **Integration tests + E2E legado** ✅ | Harness tmpdir; integration com `vi.mock`; E2E legado (OpenRouter real no chat) | 12.0A |
 | **12.1** | **E2E Live (opt-in)** ✅ | OpenRouter real isolado; porta 3001; `ZETEL_HOME` em tmpdir; budget guard | 12.0B |
-| **12** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 12.1 |
-| PRD v4 | Voz, TTS e STT | PRD v4 | 12 |
+| **12** | **Gestão completa de memória no app** ✅ | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 12.1 |
+| PRD v4 | Voz, TTS e STT — Gate 12 → PRD v4 aprovado (2026-06-01) | PRD v4 | 12 |
+| **13.1** | **Spike de integração de voz** 🚀 | PRD v4 — TTS streaming + STT webm/opus; zero toque em produção | 12 |
+| **13.2** | **Backend de voz** | PRD v4 — rotas `/api/voice/tts` e `/api/voice/stt` + settings | 13.1 (spike aprovado) |
+| **13.3** | **UI de voz** | PRD v4 — `ChatPanel` (▶ + mic) + Configurações de voz | 13.2 |
 | PRD v5 | Prompts editáveis e modo internet | PRD v5 | 12 |
 | Futuro | Memória emergente automática | Fase futura | 12 |
 
