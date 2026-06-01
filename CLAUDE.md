@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 12.0B (integration tests + E2E mock) ou Módulo 12 (gestão de memória no app).**
+**Estado atual: Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 12 (gestão de memória no app).**
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
@@ -217,7 +217,7 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **10E** | **Configuração de modelos por tarefa** ✅ (parcial; absorvido no M11/M12) | `study_guide_model` + limites do guia; restante D28 → M12 | 10D |
 | **11** | **Guia de Estudo: experiência interativa** ✅ | Template interativo, schema/prompt v2, validação DFT (gate 11.4) | 10E |
 | **12.0A** | **Fundação de Testes e CI** ✅ | Vitest + coverage V8 + 126 unit tests + CI GitHub Actions | 11 |
-| **12.0B** | **Integration tests + E2E mock** | Harness HOME/vault temporário; E2E mock sem LLM | 12.0A |
+| **12.0B** | **Integration tests + E2E mock** ✅ | Harness HOME/vault temporário; E2E mock sem LLM | 12.0A |
 | **12** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 11 |
 | PRD v4 | Voz, TTS e STT | PRD v4 | 12 |
 | PRD v5 | Prompts editáveis e modo internet | PRD v5 | 12 |
