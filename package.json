@@ -10,8 +10,10 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit --reporter=verbose",
+    "test:integration": "vitest run tests/integration --reporter=verbose",
     "test:coverage": "vitest run --coverage",
-    "test:ci": "vitest run --reporter=verbose",
+    "test:ci": "pnpm test:unit && pnpm test:integration",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"

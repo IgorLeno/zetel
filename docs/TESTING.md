@@ -10,11 +10,11 @@
          ├─────────────┤
          │ Integration │  (SQLite/vault em tmpdir isolado — Módulo 12.0B)
          ├─────────────┤
-         │    Unit     │  (funções puras; sem I/O externo) ← aqui estamos
+         │    Unit     │  (funções puras; sem I/O externo)
          └─────────────┘
 ```
 
-Os testes unitários (Módulo 12.0A) cobrem funções puras e lógica de negócio isolada das dependências externas. Integration tests e E2E são implementados a partir do Módulo 12.0B.
+Os testes unitários (Módulo 12.0A) cobrem funções puras e lógica de negócio isolada das dependências externas. Integration tests (Módulo 12.0B) exercitam serviços com SQLite e vault temporários.
 
 ---
 
@@ -22,10 +22,12 @@ Os testes unitários (Módulo 12.0A) cobrem funções puras e lógica de negóci
 
 | Comando | O que faz |
 |---------|-----------|
-| `pnpm test` | Executa todos os testes unitários (sem coverage) |
+| `pnpm test` | Executa todos os testes (unit + integration) |
+| `pnpm test:unit` | Executa apenas `tests/unit/` |
+| `pnpm test:integration` | Executa apenas `tests/integration/` |
 | `pnpm test:watch` | Executa em modo watch (desenvolvimento) |
 | `pnpm test:coverage` | Executa com relatório de coverage V8 |
-| `pnpm test:ci` | Executa com reporter verbose (usado no CI) |
+| `pnpm test:ci` | Executa `test:unit` e `test:integration` em sequência (usado no CI) |
 | `pnpm test:e2e` | Executa testes E2E com Playwright (requer servidor) |
 
 ---
@@ -35,19 +37,24 @@ Os testes unitários (Módulo 12.0A) cobrem funções puras e lógica de negóci
 ### Unit tests (`tests/unit/`)
 
 Testam funções puras ou lógica de negócio sem dependências externas:
-- Nenhuma chamada ao OpenRouter
+- Nenhuma chamada real ao OpenRouter
 - Nenhum acesso a `~/.zetel`
 - Nenhum uso de vault real
 - Banco SQLite não é inicializado
 - Usa Vitest + V8 coverage
 
-### Integration tests (Módulo 12.0B — pendente)
+### Integration tests (`tests/integration/`)
 
-Testam serviços que dependem de SQLite ou filesystem, usando um HOME/vault temporário isolado:
-- `better-sqlite3` em `tmpdir` dedicado
-- Vault criado e destruído por `beforeAll`/`afterAll`
+Testam serviços que dependem de SQLite ou filesystem, usando um HOME/vault temporário isolado via `tests/helpers/temp-env.ts`:
+- `better-sqlite3` em `:memory:` (injetado diretamente — **sem** `getDb()` singleton)
+- Vault criado e destruído por `beforeEach`/`afterEach`
 - Sem vault real, sem `~/.zetel` real
-- Separados em `tests/integration/`
+- OpenRouter mockado com `vi.mock('@/lib/openrouter')` quando necessário
+
+Domínios cobertos:
+- **Ingestão** — `tests/integration/ingestao/process-zetel.test.ts`: `processZetel` grava páginas com anchor/hash idempotente
+- **Geração de guia** — `tests/integration/study-guide/generate-study-guide.test.ts` e `full-flow.test.ts`: pipeline completo com LLM mockado, artefatos HTML/meta/source
+- **Rastreabilidade** — `tests/integration/study-guide/traceability-pipeline.test.ts`: endurecimento de quiz inválido e cobertura de hashes
 
 ### E2E mock (`e2e/`)
 
@@ -68,10 +75,10 @@ Igual ao mock, mas com LLM real:
 
 ## Regras dos testes padrão
 
-1. **Nunca usar OpenRouter** — nenhum teste em `tests/` chama `streamChat`, `requestJson` ou importa `lib/openrouter`.
+1. **Nenhuma chamada real ao OpenRouter** — nenhum teste realiza chamada real ao OpenRouter. Imports de `lib/openrouter` são permitidos apenas quando o módulo é mockado com `vi.mock` no próprio teste.
 2. **Nunca usar vault real** — testes que precisam de arquivos usam `os.tmpdir()`.
-3. **Nunca tocar `~/.zetel` real** — nenhum teste acessa `DB_PATH`, `CONFIG_PATH` ou `LOG_FILE` do módulo `lib/paths.ts`.
-4. **Não importar `getDb()`** nos testes do Módulo 12.0A — `lib/db.ts` inicializa SQLite em `~/.zetel/zetel.db`.
+3. **Nunca tocar `~/.zetel` real** — nenhum teste acessa `DB_PATH`, `CONFIG_PATH` ou `LOG_FILE` do módulo `lib/paths.ts` para leitura/escrita.
+4. **Não importar `getDb()` nos testes unitários** — `lib/db.ts` inicializa SQLite em `~/.zetel/zetel.db`. Integration tests usam o harness `temp-env.ts` com banco injetado.
 
 ---
 
@@ -81,7 +88,7 @@ Igual ao mock, mas com LLM real:
 Exporta `DB_PATH`, `CONFIG_PATH`, `LOG_FILE` etc., todos apontando para `~/.zetel`. Importar este módulo em testes é seguro (apenas define strings), mas **usar esses caminhos para ler/escrever** toca o ambiente real.
 
 ### `lib/db.ts`
-Exporta `getDb()` que abre/cria `~/.zetel/zetel.db` na primeira chamada. **Não importar em testes unitários** — isso criaria o banco real. Integration tests (Módulo 12.0B) usarão um harness com banco em `tmpdir`.
+Exporta `getDb()` que abre/cria `~/.zetel/zetel.db` na primeira chamada. **Não importar em testes unitários** — isso criaria o banco real. Integration tests usam `makeTempEnv()` com banco `:memory:` injetado diretamente nos serviços.
 
 ---
 
@@ -96,15 +103,3 @@ Coverage configurado com V8 via `vitest.config.ts`. Thresholds por arquivo:
 | `lib/relative-time.ts` | 80% | 80% | — |
 
 Os demais arquivos são reportados sem threshold bloqueante nesta fase.
-
----
-
-## Módulo 12.0B (pendente)
-
-O Módulo 12.0B implementará:
-- Integration tests com `better-sqlite3` em `tmpdir`
-- Harness temporário (HOME/vault isolados) para `processZetel`, `generateStudyGuide`, etc.
-- E2E mock com intercept do OpenRouter via Playwright
-- Reorganização dos specs E2E existentes
-
-**Motivo:** os módulos que requerem SQLite ou vault dependem de `~/.zetel` por padrão. O harness precisará de injeção de caminhos ou variáveis de ambiente para redirecionar para `tmpdir` — tarefa de escopo próprio para não quebrar produção.

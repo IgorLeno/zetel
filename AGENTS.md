@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 12.0B (integration tests + E2E mock) ou Módulo 12 (gestão de memória no app).**
+**Estado atual: Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 12 (gestão de memória no app).**
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
@@ -34,6 +34,10 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 - Próximo passo operacional: **Módulo 12 — gestão completa de memória no app** (PRD v3, ver `prd-v3.md`).
 
 **Módulo 11 (Guia de Estudo: experiência interativa) concluído em 2026-05-31; gate 11.4 aprovado; `pnpm build` limpo.** **11.1** — template interativo em `renderStudyGuideHtml`: sidebar sticky (desktop) / nav compacta (mobile), quiz pedagógico (`data-answer-index`, feedback pós-clique, pontuação, reiniciar), glossário pesquisável, highlight de seção via `IntersectionObserver`. **11.2** — schema editorial v2 opcional (`comparison_tabs`, `accordions`, `timelines`, `tables`) + `renderV2Blocks`; compatibilidade retroativa. **11.3** — `buildSystemPrompt` como designer instrucional com blocos v2. **11.4** — validação com Zetel `dft` (reprocessado 28→27 páginas): `deepseek/deepseek-v4-flash`, 100% rastreabilidade (35/35 itens, 0 órfãos, 0 flagged), 4 tipos v2 preenchidos, HTML offline (~51 KB). Ressalva não-bloqueante: compat retroativa v1 não testada por ausência de fixture. Ver `spikes/lessons.md` (Módulos 11.1–11.4).
+
+**Módulo 12.0B (Integration tests + E2E mock) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`).** Entregou: harness `tests/helpers/temp-env.ts` (`makeTempEnv`/`cleanupTempEnv`/`seedZetelWithFile` — SQLite `:memory:` + vault em `tmpdir`, injeção direta de `db`/`vaultPath` **sem** `getDb()` singleton); integration tests em `tests/integration/ingestao/process-zetel.test.ts` (ingestão com páginas/anchor/hash), `tests/integration/study-guide/generate-study-guide.test.ts` + `full-flow.test.ts` (geração de guia com OpenRouter mockado via `vi.mock`) e `traceability-pipeline.test.ts` (endurecimento de quiz + rastreabilidade); E2E mock existente em `e2e/` com intercept Playwright. Ver `docs/TESTING.md`.
+
+**Módulo 12.0A (Fundação de Testes e CI) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage`).** Vitest + coverage V8 configurados; 126 testes unitários (chat-prompt, source-index, ingestão, guia de estudo, zetel-service, utils); CI em `.github/workflows/ci.yml`; `docs/TESTING.md` criado; `validateAndNormalize`, `computeTraceability`, `StudyGuide`, `QuizItem`, `Traceability` exportados com `@internal` de `study-guide-service.ts`.
 
 **Módulo 10D (Implementação do guia de estudo) implementado em 2026-05-30; `pnpm build` limpo (compile + lint + types); etapa LLM live requer chave (verificação manual pendente).** Portou o pipeline do spike 10C para produção via `POST /api/zetels/:id/build?mode=guia-estudo` → `generateStudyGuide` (`lib/study-guide-service.ts`). Sem migration SQLite; nenhum contrato existente quebrado; Regras #1/#2 preservadas. Ver `spikes/lessons.md` (Módulo 10D).
 
@@ -216,6 +220,8 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **10D** | **Implementação do guia de estudo** ✅ | PRD v3 — `guia-estudo.html` + metadados + source map | 10C |
 | **10E** | **Configuração de modelos por tarefa** ✅ (parcial; absorvido no M11/M12) | `study_guide_model` + limites do guia; restante D28 → M12 | 10D |
 | **11** | **Guia de Estudo: experiência interativa** ✅ | Template interativo, schema/prompt v2, validação DFT (gate 11.4) | 10E |
+| **12.0A** | **Fundação de Testes e CI** ✅ | Vitest + coverage V8 + 126 unit tests + CI GitHub Actions | 11 |
+| **12.0B** | **Integration tests + E2E mock** ✅ | Harness HOME/vault temporário; E2E mock sem LLM | 12.0A |
 | **12** | **Gestão completa de memória no app** | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 11 |
 | PRD v4 | Voz, TTS e STT | PRD v4 | 12 |
 | PRD v5 | Prompts editáveis e modo internet | PRD v5 | 12 |
@@ -241,13 +247,11 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 
 ---
 
-**Módulo 12.0A (Fundação de Testes e CI) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage`).** Vitest + coverage V8 configurados; 126 testes unitários (chat-prompt, source-index, ingestão, guia de estudo, zetel-service, utils); CI em `.github/workflows/ci.yml`; `docs/TESTING.md` criado; `validateAndNormalize`, `computeTraceability`, `StudyGuide`, `QuizItem`, `Traceability` exportados com `@internal` de `study-guide-service.ts`. Módulo 12.0B (integration tests com SQLite/vault em `tmpdir` + E2E mock) permanece pendente.
-
 ## Workflow do dev
 
 1. Antes de qualquer módulo: ler a seção correspondente no PRD.
 2. Para mudanças não triviais: entrar em modo plano antes de escrever código.
 3. Antes de declarar módulo concluído: executar o gate específico do PRD (checklists em "Gates de validação entre módulos").
-4. **Gate mínimo obrigatório antes de declarar qualquer correção concluída:** `pnpm build` + `pnpm test:ci` + `pnpm test:coverage`.
+4. **Gate mínimo obrigatório antes de declarar qualquer correção concluída:** `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`.
 5. Antes de qualquer commit: `grep` nos anti-padrões aplicáveis ao que foi implementado.
 6. Ao descobrir uma nova armadilha: adicionar como item numerado na seção "Regras invioláveis" acima — este arquivo é log vivo, não snapshot.
