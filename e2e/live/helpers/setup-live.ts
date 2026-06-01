@@ -72,6 +72,11 @@ function readLiveEnv(): LiveEnvSnapshot {
   return JSON.parse(readFileSync(snapshotPath, 'utf-8')) as LiveEnvSnapshot;
 }
 
+function parseEnvInt(value: string | undefined, fallback: number): number {
+  const n = Number.parseInt(value ?? String(fallback), 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 // ─── Helpers de request ─────────────────────────────────────────────────────
 
 async function apiPost(
@@ -117,8 +122,8 @@ export async function setupLive(request: APIRequestContext): Promise<LiveContext
 
   const modeloChat  = process.env.ZETEL_E2E_MODEL ?? '';
   const modeloGuia  = process.env.ZETEL_E2E_STUDY_GUIDE_MODEL ?? modeloChat;
-  const maxTokens   = parseInt(process.env.ZETEL_E2E_MAX_TOKENS  ?? '2048', 10);
-  const timeoutMs   = parseInt(process.env.ZETEL_E2E_TIMEOUT_MS  ?? '90000', 10);
+  const maxTokens   = parseEnvInt(process.env.ZETEL_E2E_MAX_TOKENS, 2048);
+  const timeoutMs   = parseEnvInt(process.env.ZETEL_E2E_TIMEOUT_MS, 90_000);
 
   let callCount = 0;
 
@@ -194,7 +199,10 @@ export async function setupLive(request: APIRequestContext): Promise<LiveContext
   }
 
   const guiaBody  = await guiaRes.json() as { result?: { model?: string } };
-  const guiaModel = guiaBody.result?.model ?? modeloGuia ?? '(desconhecido)';
+  const guiaModel =
+    guiaBody.result?.model?.trim()
+    || modeloGuia.trim()
+    || '(desconhecido)';
   console.log(`[setup-live] Guia gerado em ${guiaLatencyMs}ms | modelo: ${guiaModel}`);
 
   // artefatosDir = zetels/<slug>/artefatos/ dentro do vault temporário

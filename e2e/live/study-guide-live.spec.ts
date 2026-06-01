@@ -21,7 +21,6 @@ test.describe('Guia de Estudo — geração live com OpenRouter', () => {
     'ZETEL_E2E_LIVE não está ativado — execute com ZETEL_E2E_LIVE=1 para rodar testes live',
   );
 
-  // eslint-disable-next-line prefer-const
   let ctx!: LiveContext;
 
   test.beforeAll(async ({ request }) => {
@@ -98,8 +97,18 @@ test.describe('Guia de Estudo — geração live com OpenRouter', () => {
       readFileSync(metaPath, 'utf-8'),
     ) as Record<string, unknown>;
 
-    expect(meta.model,       'meta.json deve ter campo model').toBeTruthy();
-    expect(meta.generatedAt, 'meta.json deve ter campo generatedAt').toBeTruthy();
-    expect(meta.counts,      'meta.json deve ter campo counts').toBeTruthy();
+    expect(typeof meta.model).toBe('string');
+    expect((meta.model as string).trim().length).toBeGreaterThan(0);
+
+    expect(typeof meta.generatedAt).toBe('string');
+    expect(Number.isNaN(Date.parse(meta.generatedAt as string))).toBe(false);
+
+    expect(meta.counts).toEqual(expect.objectContaining({
+      cards:        expect.any(Number),
+      secoes:       expect.any(Number),
+      glossario:    expect.any(Number),
+      quiz:         expect.any(Number),
+      zettelkasten: expect.any(Number),
+    }));
   });
 });

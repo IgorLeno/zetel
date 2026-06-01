@@ -10,15 +10,13 @@ config({ path: '.env.e2e.live' });
 const isLive = process.env.ZETEL_E2E_LIVE === '1';
 
 // ─── Ambiente live ──────────────────────────────────────────────────────────
-// Computado UMA ÚNICA VEZ — mesmo Date.now() reutilizado em webServer.env
-// e em process.env.ZETEL_E2E_HOME para o globalSetup. Sem divergência.
-const liveHome  = join(tmpdir(), 'zetel-e2e-live-' + Date.now());
-const liveVault = join(liveHome, 'vault');
+// Computado uma vez no runner; workers reutilizam env já definido pelo webServer.
+const liveHome  = process.env.ZETEL_E2E_HOME  ?? join(tmpdir(), 'zetel-e2e-live-' + Date.now());
+const liveVault = process.env.ZETEL_E2E_VAULT ?? join(liveHome, 'vault');
 
 if (isLive) {
-  // Exportar para globalSetup e helpers (mesmo processo do runner)
-  process.env.ZETEL_E2E_HOME  = liveHome;
-  process.env.ZETEL_E2E_VAULT = liveVault;
+  if (!process.env.ZETEL_E2E_HOME)  process.env.ZETEL_E2E_HOME  = liveHome;
+  if (!process.env.ZETEL_E2E_VAULT) process.env.ZETEL_E2E_VAULT = liveVault;
 }
 
 /**
@@ -66,13 +64,13 @@ export default defineConfig({
   ],
 
   webServer: [
-    // ── Servidor legado (porta 3000, reusa se já estiver rodando) ───────────
-    {
+    // ── Servidor legado (porta 3000) — omitido no modo live ─────────────────
+    ...(!isLive ? [{
       command:             'pnpm dev',
       url:                 'http://localhost:3000',
       reuseExistingServer: true,
       timeout:             30_000,
-    },
+    }] : []),
 
     // ── Servidor live (porta 3001, sempre limpo, ZETEL_HOME isolado) ────────
     // "dev" é `next dev`; usamos `pnpm dev:live` → `next dev -p 3001`
