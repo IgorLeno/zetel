@@ -65,7 +65,9 @@ describe('buildSourceIndex', () => {
   });
 
   it('nós com texto vazio são ignorados', () => {
-    const emptyPara: RootContent = { type: 'paragraph', children: [] } as unknown as RootContent;
+    // Forma inválida proposital: parágrafo sem filhos de texto (só para o teste).
+    // @ts-expect-error — MDAST mínimo para exercitar toPlainText vazio
+    const emptyPara: RootContent = { type: 'paragraph', children: [] };
     const file = makeFile('d.md', [emptyPara, paragraphNode('Visível.')]);
     const { blocks } = buildSourceIndex([file]);
     expect(blocks).toHaveLength(1);

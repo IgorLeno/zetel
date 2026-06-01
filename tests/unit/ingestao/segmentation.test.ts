@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { Root } from 'mdast';
+import { remark } from 'remark';
+import remarkFrontmatter from 'remark-frontmatter';
 import {
   makeAnchorFactory,
   parseMarkdownForSegmentation,
@@ -30,10 +33,13 @@ describe('parseMarkdownForSegmentation', () => {
 
 describe('stripInitialYamlFrontmatter', () => {
   it('remove nó yaml no início', () => {
-    const tree = parseMarkdownForSegmentation('---\nkey: val\n---\n\nTexto.');
-    // Antes do strip, o nó yaml já foi removido por parseMarkdownForSegmentation
-    // Testamos diretamente que o resultado não tem yaml
-    expect(tree.children[0]?.type).not.toBe('yaml');
+    const tree = remark()
+      .use(remarkFrontmatter, ['yaml'])
+      .parse('---\nkey: val\n---\n\n# H\n') as Root;
+    expect(tree.children[0]?.type).toBe('yaml');
+    stripInitialYamlFrontmatter(tree);
+    expect(tree.children.some((n) => n.type === 'yaml')).toBe(false);
+    expect(tree.children[0]?.type).toBe('heading');
   });
 
   it('não remove yaml que não está no início', () => {
@@ -53,13 +59,11 @@ describe('segmentFile', () => {
     expect(pages[0].heading).toBe('Título');
   });
 
-  it('page_index começa em startIndex', () => {
+  it('captura heading em página única para conteúdo curto', () => {
     const tree = parseMarkdownForSegmentation('# Seção A\n\nConteúdo A.');
     const anchorOf = makeAnchorFactory(new Set());
     const pages = segmentFile(tree, 'doc', 1000, 5, anchorOf);
-    // segmentFile não retorna pageIndex diretamente, mas pushPage usa startIndex + pages.length
     expect(pages).toHaveLength(1);
-    // O heading deve ser capturado
     expect(pages[0].heading).toBe('Seção A');
   });
 

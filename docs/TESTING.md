@@ -8,7 +8,7 @@
          ├─────────────┤
          │  E2E mock   │  (servidor + fixtures; sem LLM)
          ├─────────────┤
-         │ Integration │  (SQLite/vault em HOME/tmpdir — Módulo 12.0B)
+         │ Integration │  (SQLite/vault em tmpdir isolado — Módulo 12.0B)
          ├─────────────┤
          │    Unit     │  (funções puras; sem I/O externo) ← aqui estamos
          └─────────────┘

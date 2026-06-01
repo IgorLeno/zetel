@@ -29,6 +29,9 @@ next-env.d.ts
 /playwright-report/
 /playwright/.cache/
 
+# Vitest coverage (gerado localmente e no CI)
+coverage/
+
 # OS / editor
 .DS_Store
 *.pem

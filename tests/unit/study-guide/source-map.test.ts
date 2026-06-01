@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -13,9 +13,10 @@ const TMP = join(tmpdir(), `zetel-tests-${Date.now()}`);
 
 afterAll(() => {
   try {
-    const { rmSync } = require('node:fs');
     rmSync(TMP, { recursive: true, force: true });
-  } catch { /* ignora */ }
+  } catch {
+    /* ignora */
+  }
 });
 
 function setupSourceMap(slug: string, map: StudyGuideSourceMap): void {

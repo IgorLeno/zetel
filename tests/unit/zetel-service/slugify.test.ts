@@ -43,13 +43,14 @@ describe('slugify', () => {
     expect(slugify('!@#')).toBe('zetel');
   });
 
-  it('é estável: mesmo input → mesmo output', () => {
-    const name = 'Teoria Funcional da Densidade';
-    expect(slugify(name)).toBe(slugify(name));
+  it('produz slug determinístico conhecido', () => {
+    expect(slugify('Teoria Funcional da Densidade')).toBe('teoria-funcional-da-densidade');
   });
 
-  it('limita a 60 caracteres', () => {
+  it('limita a 60 caracteres sem hífen final', () => {
     const long = 'a'.repeat(80);
-    expect(slugify(long).length).toBeLessThanOrEqual(60);
+    const s = slugify(long);
+    expect(s.length).toBeLessThanOrEqual(60);
+    expect(s.endsWith('-')).toBe(false);
   });
 });

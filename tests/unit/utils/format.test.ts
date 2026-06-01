@@ -59,6 +59,14 @@ describe('formatRelative', () => {
     expect(result).toContain('hora');
   });
 
+  it('retorna formato relativo para 1 a 7 dias', () => {
+    const now = new Date('2026-06-01T12:00:00.000Z');
+    vi.setSystemTime(now);
+    const iso = new Date(now.getTime() - 4 * 24 * 60 * 60_000).toISOString(); // 4 dias atrás
+    const result = formatRelative(iso);
+    expect(result).toMatch(/dia/i);
+  });
+
   it('retorna data formatada para mais de 7 dias', () => {
     const now = new Date('2026-06-01T12:00:00.000Z');
     vi.setSystemTime(now);
