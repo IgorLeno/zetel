@@ -34,8 +34,24 @@ export interface LiveContext {
   artefatosDir: string;
   modeloChat:   string;
   modeloGuia:   string;
-  /** Número de chamadas ao OpenRouter realizadas pelo setup. */
+  /** Número de chamadas ao OpenRouter realizadas (setup + specs). */
   callCount:    number;
+  /** Limite máximo de chamadas ao OpenRouter para esta run. */
+  maxCalls:     number;
+}
+
+// ─── Budget guard ────────────────────────────────────────────────────────────
+
+/**
+ * Lança erro se callCount já atingiu o limite máximo.
+ * Exportada para uso nos specs de chat antes de cada envio de mensagem.
+ */
+export function checkBudget(callCount: number, max: number): void {
+  if (callCount >= max) {
+    throw new Error(
+      'ZETEL_E2E_MAX_CALLS atingido — abortando para evitar gasto excessivo.',
+    );
+  }
 }
 
 // ─── Leitura do ambiente live ───────────────────────────────────────────────
@@ -124,6 +140,7 @@ export async function setupLive(request: APIRequestContext): Promise<LiveContext
   const modeloGuia  = process.env.ZETEL_E2E_STUDY_GUIDE_MODEL ?? modeloChat;
   const maxTokens   = parseEnvInt(process.env.ZETEL_E2E_MAX_TOKENS, 2048);
   const timeoutMs   = parseEnvInt(process.env.ZETEL_E2E_TIMEOUT_MS, 90_000);
+  const maxCalls    = parseEnvInt(process.env.ZETEL_E2E_MAX_CALLS, 3);
 
   let callCount = 0;
 
@@ -181,7 +198,8 @@ export async function setupLive(request: APIRequestContext): Promise<LiveContext
   // ── 7. Build Documento Técnico (determinístico, sem LLM) ──────────────────
   await apiPost(request, `/api/zetels/${zetelId}/build`, {}, 30_000);
 
-  // ── 8. Build Guia de Estudo (LLM — callCount++) ────────────────────────────
+  // ── 8. Build Guia de Estudo (LLM — checkBudget → callCount++) ───────────────
+  checkBudget(callCount, maxCalls);
   callCount += 1;
   const t0 = Date.now();
   const guiaRes = await request.post(
@@ -189,21 +207,33 @@ export async function setupLive(request: APIRequestContext): Promise<LiveContext
     { timeout: timeoutMs },
   );
   const guiaLatencyMs = Date.now() - t0;
+  const guiaStatus    = guiaRes.status();
 
   if (!guiaRes.ok()) {
     const text = await guiaRes.text();
     throw new Error(
-      `[setup-live] build guia-estudo → HTTP ${guiaRes.status()} ` +
+      `[setup-live] build guia-estudo → HTTP ${guiaStatus} ` +
       `(${guiaLatencyMs}ms): ${text.slice(0, 500)}`,
     );
   }
 
-  const guiaBody  = await guiaRes.json() as { result?: { model?: string } };
+  const guiaBody = await guiaRes.json() as {
+    result?: {
+      model?: string;
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+    };
+  };
   const guiaModel =
     guiaBody.result?.model?.trim()
     || modeloGuia.trim()
     || '(desconhecido)';
-  console.log(`[setup-live] Guia gerado em ${guiaLatencyMs}ms | modelo: ${guiaModel}`);
+
+  const usage = guiaBody.result?.usage;
+  console.log(
+    `[setup-live] guia-estudo | modelo: ${guiaModel} | latência: ${guiaLatencyMs}ms | ` +
+    `status: ${guiaStatus} | tokens: ${usage?.prompt_tokens ?? '?'} in / ` +
+    `${usage?.completion_tokens ?? '?'} out (total: ${usage?.total_tokens ?? '?'})`,
+  );
 
   // artefatosDir = zetels/<slug>/artefatos/ dentro do vault temporário
   const artefatosDir = join(liveVault, 'zetels', slug, 'artefatos');
@@ -217,6 +247,7 @@ export async function setupLive(request: APIRequestContext): Promise<LiveContext
     modeloChat:   modeloChat || '(default)',
     modeloGuia:   guiaModel,
     callCount,
+    maxCalls,
   };
 }
 

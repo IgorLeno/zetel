@@ -255,3 +255,17 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 4. **Gate mínimo obrigatório antes de declarar qualquer correção concluída:** `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`.
 5. Antes de qualquer commit: `grep` nos anti-padrões aplicáveis ao que foi implementado.
 6. Ao descobrir uma nova armadilha: adicionar como item numerado na seção "Regras invioláveis" acima — este arquivo é log vivo, não snapshot.
+
+---
+
+## Módulo 12.1 — E2E Live (Fase 1 + Fase 2)
+
+- Módulo 12.1 completo (Fase 1 commitada em 5da4f15/80bdc18; Fase 2 adicionada em seguida).
+- E2E live é opt-in (`ZETEL_E2E_LIVE=1`); CI padrão nunca usa OpenRouter.
+- Budget guard: `ZETEL_E2E_MAX_CALLS` (default 3) abortando com mensagem clara se atingido.
+- Artefatos de falha coletados automaticamente em `test-results/e2e-live/<titulo>/`.
+- GitHub Actions manual (`workflow_dispatch`) em `.github/workflows/e2e-live.yml`.
+- Qualquer mudança em `lib/openrouter.ts`, `lib/study-guide-service.ts`,
+  `lib/chat-prompt.ts` ou `app/api/zetels/[id]/chat/route.ts` deve ser
+  validada com `pnpm test:e2e:live` manualmente quando chave disponível.
+- Gate mínimo permanece: `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`.

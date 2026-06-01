@@ -2,7 +2,9 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 12 (gestão de memória no app).**
+**Estado atual: Módulo 12.1 completo (Fase 1 + Fase 2; E2E live opt-in com budget guard, coleta automática de artefatos, GitHub Actions manual). Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 12 (gestão de memória no app).**
+
+**Módulo 12.1 (E2E Live — Fase 1 + Fase 2) completo.** E2E live é opt-in (`ZETEL_E2E_LIVE=1`); CI padrão nunca usa OpenRouter. Budget guard (`ZETEL_E2E_MAX_CALLS`, default 3) em `setup-live.ts` via `checkBudget` exportada para uso nos specs. Artefatos de falha coletados automaticamente em `test-results/e2e-live/` via `collect-artifacts.ts`. Summarizer opcional em `scripts/e2e-live-summarize.mjs` (funciona sem e com chave). GitHub Actions manual (`workflow_dispatch`) em `.github/workflows/e2e-live.yml` com secret `OPENROUTER_API_KEY` obrigatório. Qualquer mudança em `lib/openrouter.ts`, `lib/study-guide-service.ts`, `lib/chat-prompt.ts` ou `app/api/zetels/[id]/chat/route.ts` deve ser validada com `pnpm test:e2e:live` manualmente quando chave disponível. Gate mínimo permanece: `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`. Ver `docs/TESTING.md` (seção "E2E Live com OpenRouter").
 
 #### Resumo
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).

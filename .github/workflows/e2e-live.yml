@@ -1,0 +1,97 @@
+name: E2E Live (manual)
+
+# Somente manual — nunca push, nunca pull_request.
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Modelo de chat (ex: openai/gpt-4o-mini). Vazio = usa ZETEL_E2E_MODEL padrão.'
+        required: false
+        default: ''
+      study_guide_model:
+        description: 'Modelo do guia de estudo. Vazio = usa model acima.'
+        required: false
+        default: ''
+      fixture:
+        description: 'Fixture a usar (dft-mini)'
+        required: false
+        default: 'dft-mini'
+      max_calls:
+        description: 'Máximo de chamadas ao OpenRouter (budget guard)'
+        required: false
+        default: '3'
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-live:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Verificar secret obrigatório ────────────────────────────────────────
+      - name: Verificar OPENROUTER_API_KEY
+        run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "::error::OPENROUTER_API_KEY não está configurado como secret do repositório."
+            exit 1
+          fi
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # ── Rodar testes E2E live ────────────────────────────────────────────────
+      - name: Run E2E live tests
+        id: e2e
+        run: pnpm test:e2e:live
+        env:
+          ZETEL_E2E_LIVE: '1'
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ZETEL_E2E_MODEL: ${{ inputs.model }}
+          ZETEL_E2E_STUDY_GUIDE_MODEL: ${{ inputs.study_guide_model }}
+          ZETEL_E2E_MAX_CALLS: ${{ inputs.max_calls }}
+          ZETEL_E2E_FIXTURE: ${{ inputs.fixture }}
+
+      # ── Artefatos (sempre, incluindo em sucesso) ─────────────────────────────
+      - name: Upload E2E live results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-live-results-${{ github.run_id }}
+          path: test-results/e2e-live/
+          retention-days: 14
+
+      # ── Summarizer (apenas em falha) ─────────────────────────────────────────
+      - name: Generate failure summary
+        if: failure() && steps.e2e.outcome == 'failure'
+        run: node scripts/e2e-live-summarize.mjs
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ZETEL_E2E_TRIAGE_MODEL: 'openai/gpt-4o-mini'
+
+      - name: Upload failure summary
+        if: failure() && steps.e2e.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-live-summary-${{ github.run_id }}
+          path: |
+            test-results/e2e-live/e2e-live-summary.md
+            test-results/e2e-live/e2e-live-summary.json
+          retention-days: 14

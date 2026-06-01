@@ -13,6 +13,7 @@ import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setupLive, teardownLive, type LiveContext } from './helpers/setup-live';
+import { collectArtifacts } from './helpers/collect-artifacts';
 
 test.describe('Guia de Estudo — geração live com OpenRouter', () => {
   // Pular o describe inteiro se o modo live não estiver ativado
@@ -22,6 +23,9 @@ test.describe('Guia de Estudo — geração live com OpenRouter', () => {
   );
 
   let ctx!: LiveContext;
+
+  const consoleErrors: string[] = [];
+  const networkErrors: string[] = [];
 
   test.beforeAll(async ({ request }) => {
     if (!process.env.OPENROUTER_API_KEY) {
@@ -37,8 +41,22 @@ test.describe('Guia de Estudo — geração live com OpenRouter', () => {
     if (ctx) await teardownLive(ctx);
   });
 
+  test.afterEach(async ({ page }, testInfo) => {
+    if (ctx) {
+      await collectArtifacts(ctx, testInfo, { page, consoleErrors, networkErrors });
+    }
+  });
+
   // ── Teste 1: HTML existe e contém atributos de rastreabilidade ─────────────
-  test('guia-estudo.html existe e contém atributos de rastreabilidade', () => {
+  test('guia-estudo.html existe e contém atributos de rastreabilidade', ({ page }) => {
+    page.on('console', msg => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+    page.on('pageerror', err => consoleErrors.push(err.message));
+    page.on('requestfailed', req =>
+      networkErrors.push(`${req.url()} — ${req.failure()?.errorText ?? 'unknown'}`),
+    );
+
     const htmlPath = join(ctx.artefatosDir, 'guia-estudo.html');
 
     expect(
@@ -65,7 +83,15 @@ test.describe('Guia de Estudo — geração live com OpenRouter', () => {
   });
 
   // ── Teste 2: source.json existe e tem ao menos 1 entrada ──────────────────
-  test('guia-estudo.source.json existe e tem ao menos 1 entrada', () => {
+  test('guia-estudo.source.json existe e tem ao menos 1 entrada', ({ page }) => {
+    page.on('console', msg => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+    page.on('pageerror', err => consoleErrors.push(err.message));
+    page.on('requestfailed', req =>
+      networkErrors.push(`${req.url()} — ${req.failure()?.errorText ?? 'unknown'}`),
+    );
+
     const sourcePath = join(ctx.artefatosDir, 'guia-estudo.source.json');
 
     expect(
@@ -85,7 +111,15 @@ test.describe('Guia de Estudo — geração live com OpenRouter', () => {
   });
 
   // ── Teste 3: meta.json existe com campos obrigatórios ─────────────────────
-  test('guia-estudo.meta.json existe e contém metadados esperados', () => {
+  test('guia-estudo.meta.json existe e contém metadados esperados', ({ page }) => {
+    page.on('console', msg => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+    page.on('pageerror', err => consoleErrors.push(err.message));
+    page.on('requestfailed', req =>
+      networkErrors.push(`${req.url()} — ${req.failure()?.errorText ?? 'unknown'}`),
+    );
+
     const metaPath = join(ctx.artefatosDir, 'guia-estudo.meta.json');
 
     expect(

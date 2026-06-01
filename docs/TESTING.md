@@ -103,3 +103,127 @@ Coverage configurado com V8 via `vitest.config.ts`. Thresholds por arquivo:
 | `lib/relative-time.ts` | 80% | 80% | — |
 
 Os demais arquivos são reportados sem threshold bloqueante nesta fase.
+
+---
+
+## E2E Live com OpenRouter (Módulo 12.1)
+
+### Diferença entre E2E legado e E2E live
+
+| | E2E legado (`e2e/`) | E2E live (`e2e/live/`) |
+|---|---|---|
+| OpenRouter | Mockado via intercept Playwright | Real (requer chave) |
+| Porta | 3000 | 3001 |
+| ZETEL_HOME | `~/.zetel` do dev | `tmpdir()` exclusivo |
+| CI padrão | Sim (quando servidor disponível) | Não — opt-in manual |
+| Budget guard | N/A | `ZETEL_E2E_MAX_CALLS` (default 3) |
+
+### Isolamento
+
+O servidor live roda na porta 3001 via `pnpm dev:live`. O `ZETEL_HOME` é um diretório temporário em `tmpdir()` gerado automaticamente pelo `playwright.config.ts` — nunca usa `~/.zetel` real.
+
+**Limitação conhecida:** não misture `ZETEL_E2E_LIVE=1` com `--project=e2e-legacy` no mesmo comando. Quando o modo live está ativo, o servidor legado (porta 3000) é omitido do array `webServer`.
+
+### Configurar `.env.e2e.live`
+
+Copiar o exemplo e preencher:
+
+```bash
+cp .env.e2e.live.example .env.e2e.live
+# editar .env.e2e.live e adicionar OPENROUTER_API_KEY=sk-or-...
+```
+
+Variáveis disponíveis:
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `OPENROUTER_API_KEY` | — | **Obrigatória** para testes live |
+| `ZETEL_E2E_MODEL` | `''` | Modelo padrão (chat + guia se `_STUDY_GUIDE_MODEL` omitido) |
+| `ZETEL_E2E_STUDY_GUIDE_MODEL` | `ZETEL_E2E_MODEL` | Modelo específico para guia de estudo |
+| `ZETEL_E2E_MAX_CALLS` | `3` | Limite de chamadas ao OpenRouter por run |
+| `ZETEL_E2E_MAX_TOKENS` | `2048` | Tokens máximos para geração do guia |
+| `ZETEL_E2E_TIMEOUT_MS` | `90000` | Timeout de cada chamada LLM em ms |
+| `ZETEL_E2E_FIXTURE` | `dft-mini` | Fixture a usar (nome sem extensão) |
+
+### Escolher modelo barato
+
+Para desenvolvimento, prefira modelos de baixo custo:
+- `openai/gpt-4o-mini` — barato, rápido, bom para validação estrutural
+- `deepseek/deepseek-chat` — custo muito baixo, aceita JSON estruturado
+- `google/gemma-3-12b-it:free` — gratuito no tier free do OpenRouter
+
+### Rodar localmente
+
+**Sem chave** (specs pulam com mensagem clara):
+
+```bash
+pnpm test:e2e:live
+```
+
+**Com chave** (testes live executam de verdade):
+
+```bash
+# garantir que .env.e2e.live tem OPENROUTER_API_KEY
+pnpm test:e2e:live
+```
+
+O output do console registra para cada chamada LLM:
+- modelo usado
+- latência em ms
+- status HTTP
+- tokens in / out
+
+### Rodar pelo GitHub Actions (workflow_dispatch)
+
+1. Acessar **Actions → E2E Live (manual)** no repositório
+2. Clicar em **Run workflow**
+3. Preencher os inputs (model, max_calls etc.)
+4. O secret `OPENROUTER_API_KEY` deve estar configurado nas configurações do repositório
+
+Se o secret não estiver configurado, o workflow falha imediatamente no primeiro step com mensagem clara.
+
+### Artefatos gerados
+
+Em caso de falha, os artefatos são salvos em `test-results/e2e-live/<titulo-do-teste>/`:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `screenshot.png` | Captura de tela no momento da falha |
+| `console-errors.json` | Erros capturados por `page.on('console')` e `pageerror` |
+| `network-errors.json` | Requests falhos capturados por `page.on('requestfailed')` |
+| `chat-response.txt` | Texto da última resposta do assistente (spec de chat) |
+| `artefatos/guia-estudo.html` | HTML do guia gerado |
+| `artefatos/guia-estudo.meta.json` | Metadados do guia |
+| `artefatos/guia-estudo.source.json` | Rastreabilidade guide_block_id → Markdown |
+| `e2e-live-report.json` | Relatório estruturado completo (ver abaixo) |
+
+O `e2e-live-report.json` contém: timestamp, commitSha, fixture, modelos, callCount, maxCalls, título do teste, status, erros, erros de console/rede e lista de artefatos coletados. **Nunca inclui OPENROUTER_API_KEY nem conteúdo real do usuário.**
+
+### Summarizer
+
+Para gerar um resumo de falha após um run:
+
+```bash
+# Usa o relatório mais recente automaticamente
+node scripts/e2e-live-summarize.mjs
+
+# Ou aponta para um relatório específico
+node scripts/e2e-live-summarize.mjs test-results/e2e-live/meu-teste/e2e-live-report.json
+```
+
+Gera `test-results/e2e-live/e2e-live-summary.md` e `e2e-live-summary.json`.
+
+- **Sem chave:** summary estático com os dados do relatório.
+- **Com chave:** análise LLM classifica a falha em uma categoria (`app`, `prompt`, `modelo`, `timeout`, `json-invalido`, `stream-vazio`, `navegacao-ui`, `rastreabilidade`, `outro`) e sugere arquivos prováveis.
+
+### Entregar artefatos para Claude Code / Codex
+
+Após uma run com falha, os artefatos ficam em `test-results/e2e-live/`. Para compartilhar com uma sessão de debugging:
+
+1. Apontar para `e2e-live-report.json` e `e2e-live-summary.json`
+2. Incluir `artefatos/guia-estudo.meta.json` para contexto do modelo e contagens
+3. O `chat-response.txt` é útil para diagnóstico de corrupção de stream
+
+### Nota sobre `OPENROUTER_API_KEY` no CI
+
+O `playwright.config.ts` usa `toStringEnv(process.env)` para passar o ambiente completo ao webServer live. No CI, isso significa que a chave do runner é repassada ao servidor Next.js — **nunca logar o ambiente do servidor em CI** (conforme DT4: logs apenas IDs e contagens).
