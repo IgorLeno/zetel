@@ -39,12 +39,10 @@ const NAV = [
 ];
 
 function syncRailAttribute(collapsed: boolean) {
-  const app = document.querySelector<HTMLElement>('.app');
-  if (!app) return;
   if (collapsed) {
-    app.dataset.rail = 'true';
+    document.querySelector<HTMLElement>('.app')?.setAttribute('data-rail', 'true');
   } else {
-    delete app.dataset.rail;
+    document.querySelector<HTMLElement>('.app')?.removeAttribute('data-rail');
   }
 }
 
