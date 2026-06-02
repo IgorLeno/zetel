@@ -7,6 +7,34 @@ import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
 type VoiceState = 'idle' | 'listening' | 'transcribing' | 'speaking';
+type InputMode = 'text' | 'voice';
+type OutputMode = 'text' | 'audio';
+
+const VOICE_PREFS_KEY = 'zetel_voice_prefs';
+
+function loadVoicePrefs(): { inputMode: InputMode; outputMode: OutputMode } {
+  try {
+    const raw = localStorage.getItem(VOICE_PREFS_KEY);
+    if (!raw) return { inputMode: 'text', outputMode: 'text' };
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== 'object' || parsed === null)
+      return { inputMode: 'text', outputMode: 'text' };
+    const p = parsed as Record<string, unknown>;
+    const inputMode: InputMode = p.inputMode === 'voice' ? 'voice' : 'text';
+    const outputMode: OutputMode = p.outputMode === 'audio' ? 'audio' : 'text';
+    return { inputMode, outputMode };
+  } catch {
+    return { inputMode: 'text', outputMode: 'text' };
+  }
+}
+
+function saveVoicePrefs(inputMode: InputMode, outputMode: OutputMode): void {
+  try {
+    localStorage.setItem(VOICE_PREFS_KEY, JSON.stringify({ inputMode, outputMode }));
+  } catch {
+    /* localStorage indisponível — modo não persiste */
+  }
+}
 
 function parseSseChunk(text: string): {
   chunks: string[];
@@ -89,7 +117,9 @@ export function ChatPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [suggestion, setSuggestion] = useState<{ data: Suggestion; canDiscuss: boolean } | null>(null);
+  const [suggestion, setSuggestion] = useState<{ data: Suggestion; canDiscuss: boolean } | null>(
+    null,
+  );
   const [memorySuggestion, setMemorySuggestion] = useState<{
     data: MemorySuggestionData;
     canDiscuss: boolean;
@@ -99,12 +129,14 @@ export function ChatPanel({
   const [toast, setToast] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
 
-  // Voice UI (Módulo 13.3)
+  // Voice UI (Módulo 13.4 — dois toggles ortogonais: inputMode × outputMode)
   const [voiceStatus, setVoiceStatus] = useState<{ tts: boolean; stt: boolean } | null>(null);
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
-  const [playingMsgId, setPlayingMsgId] = useState<string | null>(null);
-  const [ttsErrorIds, setTtsErrorIds] = useState<Set<string>>(new Set());
   const [recordSecondsLeft, setRecordSecondsLeft] = useState<number | null>(null);
+  // Default 'text'/'text' evita mismatch de hidratação SSR; localStorage é lido no useEffect.
+  const [inputMode, setInputMode] = useState<InputMode>('text');
+  const [outputMode, setOutputMode] = useState<OutputMode>('text');
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const visibleMessages = messages.filter(
     (m) => !(m.role === 'assistant' && m.content.trim().length === 0),
@@ -115,11 +147,12 @@ export function ChatPanel({
   const discussNextMemoryRef = useRef(false);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Container do chip + popover — usado para fechar ao clicar fora.
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   // Voice refs (D33/D38/D42)
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioUrlRef = useRef<string | null>(null);
-  const isAutoVoiceRef = useRef(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -170,6 +203,43 @@ export function ChatPanel({
     };
   }, []);
 
+  // Lê prefs de voz do localStorage ao montar (client-only — evita mismatch SSR)
+  useEffect(() => {
+    const prefs = loadVoicePrefs();
+    setInputMode(prefs.inputMode);
+    setOutputMode(prefs.outputMode);
+  }, []);
+
+  // Degradação silenciosa: se a chave sumiu, volta para modo texto e re-persiste.
+  // voiceStatus chega de forma assíncrona (fetch), após o useEffect de localStorage ter rodado;
+  // portanto inputMode/outputMode da closure já refletem os valores do localStorage.
+  useEffect(() => {
+    if (!voiceStatus) return;
+    let im = inputMode;
+    let om = outputMode;
+    let changed = false;
+    if (im === 'voice' && !voiceStatus.stt) { im = 'text'; changed = true; }
+    if (om === 'audio' && !voiceStatus.tts) { om = 'text'; changed = true; }
+    if (changed) {
+      setInputMode(im);
+      setOutputMode(om);
+      saveVoicePrefs(im, om);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceStatus]);
+
+  // Fechar popover ao clicar fora do container chip+popover
+  useEffect(() => {
+    if (!popoverOpen) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setPopoverOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [popoverOpen]);
+
   // Cleanup audio/recording resources on unmount (D33/D38)
   useEffect(() => {
     return () => {
@@ -194,6 +264,20 @@ export function ChatPanel({
     window.setTimeout(() => setToast(null), 2500);
   }
 
+  // ── Seletores de modo de voz ─────────────────────────────────────────────────
+
+  function chooseInput(mode: InputMode): void {
+    setInputMode(mode);
+    // outputMode da closure é o valor do render atual — correto porque o setter é
+    // chamado por interação do usuário (sempre um render por interação).
+    saveVoicePrefs(mode, outputMode);
+  }
+
+  function chooseOutput(mode: OutputMode): void {
+    setOutputMode(mode);
+    saveVoicePrefs(inputMode, mode);
+  }
+
   // ── Voice functions ──────────────────────────────────────────────────────────
 
   function stopCurrentAudio(): void {
@@ -202,30 +286,16 @@ export function ChatPanel({
       audioRef.current = null;
     }
     if (currentAudioUrlRef.current) {
-      URL.revokeObjectURL(currentAudioUrlRef.current);
+      URL.revokeObjectURL(currentAudioUrlRef.current); // D33
       currentAudioUrlRef.current = null;
     }
-    setPlayingMsgId(null);
-    // If auto-voice TTS was playing, reset voice state (D42)
-    if (isAutoVoiceRef.current) {
-      isAutoVoiceRef.current = false;
-      setVoiceState('idle');
-    }
+    // Usa setter funcional para garantir leitura do estado mais recente (D42)
+    setVoiceState((prev) => (prev === 'speaking' ? 'idle' : prev));
   }
 
-  async function playTts(
-    text: string,
-    opts: { msgId?: string; isAutoVoice?: boolean } = {},
-  ): Promise<void> {
-    const { msgId, isAutoVoice = false } = opts;
-
-    stopCurrentAudio();
-
-    if (msgId) setPlayingMsgId(msgId);
-    if (isAutoVoice) {
-      isAutoVoiceRef.current = true;
-      setVoiceState('speaking');
-    }
+  async function playTts(text: string): Promise<void> {
+    stopCurrentAudio(); // D42: interrompe reprodução anterior antes de iniciar nova
+    setVoiceState('speaking');
 
     try {
       const res = await fetch('/api/voice/tts', {
@@ -243,59 +313,40 @@ export function ChatPanel({
       const audio = new Audio(url);
       audioRef.current = audio;
 
-      const handlePlaybackError = (err?: unknown) => {
+      const handlePlaybackError = () => {
         if (currentAudioUrlRef.current === url) {
-          URL.revokeObjectURL(url);
+          URL.revokeObjectURL(url); // D33
           currentAudioUrlRef.current = null;
         }
         audioRef.current = null;
-        if (msgId) {
-          setPlayingMsgId(null);
-          setTtsErrorIds((prev) => new Set([...prev, msgId]));
-        }
-        if (isAutoVoice) {
-          isAutoVoiceRef.current = false;
-          setVoiceState('idle');
-        }
-        if (err) {
-          console.warn('[voice] Falha ao reproduzir áudio TTS', err);
-        }
+        setVoiceState('idle');
+        // D41: fallback textual garantido — texto já está no chat, retorna ao idle silenciosamente
       };
 
       audio.onended = () => {
         if (currentAudioUrlRef.current !== url) return;
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(url); // D33
         currentAudioUrlRef.current = null;
         audioRef.current = null;
-        if (msgId) setPlayingMsgId(null);
-        if (isAutoVoice) {
-          isAutoVoiceRef.current = false;
-          setVoiceState('idle');
-        }
+        setVoiceState('idle');
       };
 
       audio.onerror = () => {
         handlePlaybackError();
       };
 
-      // Start playback — rejection is explicit (autoplay/policy) and must cleanup UI state.
-      void audio.play().catch((err) => {
-        handlePlaybackError(err);
+      // Start playback — rejeição explícita (autoplay policy) exige limpeza do estado de UI.
+      void audio.play().catch(() => {
+        handlePlaybackError();
       });
     } catch {
-      if (msgId) {
-        setPlayingMsgId(null);
-        setTtsErrorIds((prev) => new Set([...prev, msgId]));
-      }
-      if (isAutoVoice) {
-        isAutoVoiceRef.current = false;
-        setVoiceState('idle');
-      }
+      // D41: TTS falhou — texto já visível no chat, retorna ao idle
+      setVoiceState('idle');
     }
   }
 
   async function startRecording(): Promise<void> {
-    stopCurrentAudio();
+    stopCurrentAudio(); // D42: sem gravação simultânea com reprodução
 
     let stream: MediaStream;
     try {
@@ -398,8 +449,8 @@ export function ChatPanel({
       setInput(text);
       setVoiceState('idle');
 
-      // Auto-send with voice interaction mode (D36)
-      void sendMessage(text, 'voice');
+      // Auto-send; interactionMode é derivado de outputMode dentro de sendMessage
+      void sendMessage(text);
     } catch {
       setVoiceState('idle');
       setError('Erro ao transcrever o áudio.');
@@ -412,7 +463,7 @@ export function ChatPanel({
     } else if (voiceState === 'listening') {
       stopRecording();
     }
-    // transcribing/speaking: button is disabled — no action
+    // transcribing/speaking: botão desabilitado — sem ação
   }
 
   // ── Chat functions ───────────────────────────────────────────────────────────
@@ -436,9 +487,12 @@ export function ChatPanel({
     }
   }
 
-  async function sendMessage(rawText?: string, mode: 'text' | 'voice' = 'text') {
+  async function sendMessage(rawText?: string) {
     const text = (rawText ?? input).trim();
     if (!text || isLoading) return;
+
+    // D36: interactionMode derivado de outputMode — auto-TTS apenas quando outputMode='audio'
+    const mode: 'text' | 'voice' = outputMode === 'audio' ? 'voice' : 'text';
 
     if (rawText === undefined) setInput('');
     setError(null);
@@ -489,8 +543,8 @@ export function ChatPanel({
       // `\n`); o resto fica retido para o próximo chunk.
       let sseBuffer = '';
 
-      const flush = (text: string) => {
-        const parsed = parseSseChunk(text);
+      const flush = (t: string) => {
+        const parsed = parseSseChunk(t);
         if (parsed.error) streamError = parsed.error;
         if (parsed.suggestion) received = parsed.suggestion;
         if (parsed.memorySuggestion) receivedMemory = parsed.memorySuggestion;
@@ -532,9 +586,9 @@ export function ChatPanel({
             canDiscuss: !discussNextMemoryRef.current,
           });
         }
-        // D36: TTS automático apenas quando modo conversa está ativo
+        // D36: TTS automático apenas quando outputMode='audio' (mode='voice')
         if (mode === 'voice' && accumulated.trim()) {
-          void playTts(accumulated, { isAutoVoice: true });
+          void playTts(accumulated);
         }
       }
     } catch {
@@ -663,6 +717,7 @@ export function ChatPanel({
     }
   }
 
+  const voiceAvailable = voiceStatus !== null && (voiceStatus.tts || voiceStatus.stt);
   const micDisabled = voiceState === 'transcribing' || voiceState === 'speaking' || isLoading;
   const inputDisabled = isLoading || voiceState !== 'idle';
 
@@ -691,29 +746,6 @@ export function ChatPanel({
               <div className="msg-bubble" data-testid="msg-bubble" data-role={m.role}>
                 {m.content}
               </div>
-              {m.role === 'assistant' && voiceStatus?.tts && (
-                <button
-                  type="button"
-                  className={`chat-tts-btn${ttsErrorIds.has(m.id) ? ' chat-tts-error' : ''}${playingMsgId === m.id ? ' playing' : ''}`}
-                  title={
-                    playingMsgId === m.id
-                      ? 'Parar reprodução'
-                      : ttsErrorIds.has(m.id)
-                        ? 'Tentar novamente'
-                        : 'Ouvir resposta'
-                  }
-                  disabled={playingMsgId !== null && playingMsgId !== m.id}
-                  onClick={() => {
-                    if (playingMsgId === m.id) {
-                      stopCurrentAudio();
-                    } else {
-                      void playTts(m.content, { msgId: m.id });
-                    }
-                  }}
-                >
-                  {playingMsgId === m.id ? '■' : ttsErrorIds.has(m.id) ? '⚠ ▶' : '▶'}
-                </button>
-              )}
             </div>
           </div>
         ))}
@@ -753,6 +785,73 @@ export function ChatPanel({
       {toast && <div className="chat-toast">{toast}</div>}
 
       <div className="chat-input-row">
+        {/* ── Chip de modo voz + popover (Módulo 13.4) ── */}
+        {voiceAvailable && (
+          <div className="chat-voice-control" ref={popoverRef}>
+            {/* Popover flutuante — aparece acima do composer */}
+            {popoverOpen && (
+              <div className="chat-voice-popover" role="dialog" aria-label="Modo de voz">
+                <div className="chat-voice-row">
+                  <span className="chat-voice-label">Entrada</span>
+                  <div className="chat-voice-seg">
+                    <button
+                      type="button"
+                      className={`chat-voice-opt${inputMode === 'text' ? ' active' : ''}`}
+                      onClick={() => chooseInput('text')}
+                    >
+                      Texto
+                    </button>
+                    <button
+                      type="button"
+                      className={`chat-voice-opt${inputMode === 'voice' ? ' active' : ''}`}
+                      disabled={!voiceStatus?.stt}
+                      title={!voiceStatus?.stt ? 'Chave STT não configurada' : undefined}
+                      onClick={() => chooseInput('voice')}
+                    >
+                      Voz
+                    </button>
+                  </div>
+                </div>
+                <div className="chat-voice-row">
+                  <span className="chat-voice-label">Saída</span>
+                  <div className="chat-voice-seg">
+                    <button
+                      type="button"
+                      className={`chat-voice-opt${outputMode === 'text' ? ' active' : ''}`}
+                      onClick={() => chooseOutput('text')}
+                    >
+                      Texto
+                    </button>
+                    <button
+                      type="button"
+                      className={`chat-voice-opt${outputMode === 'audio' ? ' active' : ''}`}
+                      disabled={!voiceStatus?.tts}
+                      title={!voiceStatus?.tts ? 'Chave TTS não configurada' : undefined}
+                      onClick={() => chooseOutput('audio')}
+                    >
+                      Áudio
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Chip compacto que resume o modo atual e abre o popover */}
+            <button
+              type="button"
+              className={`chat-mode-chip${popoverOpen ? ' open' : ''}`}
+              onClick={() => setPopoverOpen((v) => !v)}
+              title="Configurar entrada e saída de voz"
+              aria-expanded={popoverOpen}
+              aria-haspopup="dialog"
+            >
+              {inputMode === 'voice' ? '🎙' : '💬'}{' '}
+              {inputMode === 'voice' ? 'Voz' : 'Texto'} →{' '}
+              {outputMode === 'audio' ? 'Áudio' : 'Texto'} ▾
+            </button>
+          </div>
+        )}
+
         <div className="chat-input-area">
           <textarea
             ref={inputRef}
@@ -764,11 +863,14 @@ export function ChatPanel({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
           />
-          {voiceStatus?.stt && recordSecondsLeft !== null && (
+          {/* Contador regressivo nos últimos 10s (D34) — visível apenas com entrada por voz */}
+          {inputMode === 'voice' && recordSecondsLeft !== null && (
             <span className="chat-record-countdown">{recordSecondsLeft}s</span>
           )}
         </div>
-        {voiceStatus?.stt && (
+
+        {/* Botão mic — apenas quando inputMode='voice' */}
+        {inputMode === 'voice' && (
           <div className="chat-mic-area">
             <button
               type="button"
@@ -790,6 +892,20 @@ export function ChatPanel({
             </button>
           </div>
         )}
+
+        {/* Botão ⏹ parar reprodução — visível quando falando sem mic (combinação B: Texto→Áudio) */}
+        {voiceState === 'speaking' && inputMode !== 'voice' && (
+          <button
+            type="button"
+            className="chat-stop-btn"
+            onClick={stopCurrentAudio}
+            title="Parar reprodução"
+            aria-label="Parar reprodução"
+          >
+            ⏹
+          </button>
+        )}
+
         <button
           type="button"
           className="btn primary"

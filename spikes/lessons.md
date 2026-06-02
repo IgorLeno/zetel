@@ -891,3 +891,17 @@ Rule: links internos continuam como fragmentos relativos (`href="#..."`), mas o 
 
 [2026-06-01] Context: `anthropic/claude-3.5-haiku` era o fallback em `getOpenRouterModel()` e em spikes; custo-benefício inferior a `openai/gpt-4o-mini` para chat/guia.
 Rule: fonte única em `lib/openrouter-constants.ts` (`DEFAULT_OPENROUTER_MODEL = openai/gpt-4o-mini`). `getOpenRouterModel()`, UI (placeholder), E2E live (`.env.e2e.live.example`) e spikes `run.mjs` alinhados. Quem já tem `OPENROUTER_MODEL` no `~/.zetel/config` não é alterado automaticamente.
+
+## Módulo 13.4 — Dois toggles ortogonais de voz (2026-06-02)
+
+[2026-06-02] Context: 13.3 entregou voz com modelo implícito: ▶ por mensagem (TTS avulso) + mic que sempre auto-enviava com mode='voice' e tocava TTS.
+Mistake: o usuário não conseguia controlar entrada e saída de voz de forma independente (ex: digitar e ouvir a resposta, ou falar e ler).
+Rule: Dois toggles ortogonais explícitos (`inputMode × outputMode`). `interactionMode` e auto-TTS derivam **somente de `outputMode`** (`audio` → `'voice'` + TTS; `text` → sem TTS). `inputMode` controla **apenas** se o mic 🎙 aparece. Isso elimina o botão ▶ por mensagem e o mode param de `sendMessage`, centralizando a regra em um único lugar.
+
+[2026-06-02] Context: tentativa inicial usava setters funcionais (`setInputMode(prev => ...)`) no useEffect de degradação.
+Mistake: setters funcionais não têm acesso ao outro estado simultaneamente, tornando impossível chamar `saveVoicePrefs(im, om)` com os dois valores pós-degradação.
+Rule: para o effect de degradação, ler ambos os estados da closure diretamente (são corretos porque voiceStatus chega async, depois do useEffect de localStorage); calcular os valores degradados em variáveis locais antes de qualquer setState; chamar `saveVoicePrefs` uma única vez com os valores finais.
+
+[2026-06-02] Context: deixei um useEffect com corpo vazio intencional como "placeholder" para persistência pós-degradação.
+Mistake: corpo vazio = lógica que nunca roda. A persistência não ocorria após degradação.
+Rule: nunca deixar useEffect com corpo vazio como placeholder. Se a lógica não cabe no efeito atual, consolidar antes de commitar.

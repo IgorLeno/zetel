@@ -13,20 +13,29 @@ TTS e STT são **mecanismos técnicos**. O produto percebido pelo usuário é: f
 
 ---
 
-## Parte A — Dois recursos distintos
+## Parte A — Modelo de controle de voz: dois toggles ortogonais
 
-### Recurso auxiliar: "Ouvir resposta"
-- Botão ▶ por mensagem do assistente no `ChatPanel`.
-- Acionado manualmente pelo usuário.
-- TTS simples: envia o texto da mensagem → recebe MP3 → reproduz.
-- Não altera a lógica de chat; não afeta o prompt do parceiro.
-- Pode funcionar sem o "Modo conversa" ativo.
+O `ChatPanel` expõe dois estados independentes que o usuário controla via um **chip compacto** no compositor, que abre um popover com dois seletores:
 
-### Recurso principal: "Modo conversa"
-- Microfone PTT (push-to-talk) no rodapé do `ChatPanel`.
-- Fluxo: gravar áudio → STT (transcrição) → texto aparece no chat → envio ao chat com `interactionMode='voice'` → parceiro responde com estilo oral → TTS automático da resposta.
-- **TTS automático acionado apenas quando modo conversa está ativo.**
-- Quando modo conversa está inativo, TTS é sempre manual (botão ▶).
+```
+inputMode:  'text' | 'voice'    // como o usuário envia mensagens
+outputMode: 'text' | 'audio'    // como o parceiro responde
+```
+
+Estado persistido em `localStorage` (`zetel_voice_prefs`). Degrada silenciosamente para `'text'`/`'text'` se a chave OpenAI sumir.
+
+### As quatro combinações
+
+| inputMode | outputMode | Comportamento | `interactionMode` | Auto‑TTS |
+|-----------|-----------|--------------|-------------------|----------|
+| text | text (A) | Chat textual puro | `'text'` | não |
+| text | audio (B) | Digita → Enviar → TTS automático ao fim do SSE | `'voice'` | **sim** |
+| voice | text (C) | 🎙 → STT → transcrição no chat → resposta texto | `'text'` | não |
+| voice | audio (D) | 🎙 → STT → transcrição → SSE → TTS automático → idle | `'voice'` | **sim** |
+
+**Invariante:** `interactionMode` e auto‑TTS dependem **somente de `outputMode`** (`audio` → `'voice'` + TTS; `text` → `'text'` + sem TTS). `inputMode` controla **apenas** se o microfone 🎙 aparece e se o envio é por STT.
+
+O texto **sempre** aparece no chat — voz é camada de entrada e/ou saída, nunca substitui o registro textual (D40).
 
 ---
 
@@ -115,7 +124,7 @@ O modo voz **não altera** o contrato de contexto existente. O body de chat cont
 | D33 | Reprodução no frontend: Blob URL (`fetch → blob → createObjectURL → new Audio(url)`). Mais simples e universal que MediaSource; adequado para respostas < 30s. Limpeza de `URL.createObjectURL` após reprodução. |
 | D34 | STT: aceitar `audio/webm;codecs=opus` (Chrome/Edge/Firefox) e `audio/mp4` (Safari) diretamente — Whisper aceita esses formatos sem conversão. Duração máxima: 120s com indicador visual nos últimos 10s. |
 | D35 | `ffmpeg` no servidor: não necessário — Whisper aceita webm/opus nativo. Avaliar `@ffmpeg/ffmpeg` (WASM) somente se Safari/MP4/AAC criar problema em 13.4. |
-| D36 | Auto-play TTS: acionado automaticamente **apenas** quando modo conversa está ativo. Chat textual normal: TTS sempre manual (botão ▶). |
+| D36 | Auto-play TTS: acionado automaticamente **apenas** quando `outputMode='audio'` (`interactionMode='voice'`). Combinações A e C (outputMode='text') nunca disparam TTS automático. |
 | D37 | Parâmetro de idioma STT: `language: 'pt'` — evita detecção automática errática. |
 | D38 | Persistência de áudio: zero — áudio descartado após reprodução/transcrição. |
 | D39 | Sem log de áudio ou transcrição em `~/.zetel/logs/`. Somente IDs e contagens (Regra #6/DT4). |
@@ -157,20 +166,24 @@ Sem SQL novo. Sem alteração de contrato SSE. Fallback textual implícito (resp
 ### 13.3 — UI de voz
 
 Entregáveis no `ChatPanel`:
-- Botão ▶ por mensagem do assistente (TTS simples, manual).
-- Microfone PTT no rodapé (ícone mic; clique inicia gravação, clique novamente para; ou hold-to-talk).
+- Microfone PTT no rodapé (ícone mic; clique inicia gravação, clique novamente para; hold-to-talk).
 - Estados visuais: **ouvindo** (gravando) / **transcrevendo** (STT em curso) / **pensando** (SSE em curso) / **falando** (TTS em reprodução).
 - Transcrição do usuário aparece no campo de input (e no chat) antes ou imediatamente ao envio.
 - TTS automático da resposta acionado apenas quando modo conversa está ativo.
 - Indicador visual de duração (últimos 10s dos 120s máximos de STT).
 
-### 13.4 — Polimento
+### 13.4 — Polimento *(concluído)*
 
-- Interrupção de áudio em curso ao iniciar nova gravação ou ao usuário clicar em "parar".
-- Fallback visual se TTS falhar (ícone de erro; resposta textual já disponível no chat).
-- Limpeza de `URL.createObjectURL` após reprodução (evitar vazamento de memória).
-- Garantir que não há duas reproduções simultâneas.
-- Teste manual com documento real aberto (Zetel DFT ou equivalente) — qualidade conversacional avaliada por Igor.
+Entregáveis:
+- **Chip de modo de voz** no compositor: `inputMode × outputMode` com popover flutuante (seletores Entrada: Texto|Voz / Saída: Texto|Áudio). Substitui o modelo implícito por dois toggles ortogonais explícitos.
+- **Remoção do botão ▶ por mensagem** — sem "Ouvir resposta" avulso; TTS da resposta é sempre escopado por `outputMode`.
+- **Persistência** em `localStorage` (`zetel_voice_prefs`); degradação silenciosa se a chave sumir.
+- **Gating por `/api/voice/status`**: chip oculto quando ambos `false`; "Voz"/"Áudio" desabilitados com tooltip quando a chave correspondente está ausente.
+- **Botão ⏹** no rodapé durante reprodução (cobre combinação B — Texto→Áudio, onde não há mic visível).
+- Interrupção de áudio ao iniciar nova gravação (`stopCurrentAudio` no início de `startRecording`).
+- Limpeza de `URL.createObjectURL` após reprodução/erro (D33). Sem duas reproduções simultâneas (D42).
+- TTS falha → retorna a `idle` silenciosamente — texto já visível no chat (D41).
+- Teste manual com documento real — qualidade conversacional avaliada por Igor.
 
 ---
 
@@ -182,7 +195,7 @@ O gate não é apenas técnico. Para Igor aprovar 13.2, os seguintes critérios 
 2. **Markdown ausente no modo voz** — com `interactionMode = 'voice'`, o parceiro não gera tabelas, listas aninhadas ou headers.
 3. **Contexto preservado** — `pageIndex`, `readingMode`, `guideBlockId`, `guideSectionId`, `guideBlockTitle`, `guideBlockIndex`, `guideBlockTotal` são enviados integralmente — mesma payload do chat textual.
 4. **Transcrição visível** — a transcrição do usuário aparece no chat antes ou imediatamente ao envio.
-5. **TTS automático escopado** — TTS da resposta é automático **apenas** no modo conversa; chat textual normal não tem auto-play.
+5. **TTS automático escopado** — TTS da resposta é automático **apenas** quando `outputMode='audio'`; combinações A e C (saída texto) não disparam TTS.
 6. **Fallback textual garantido** — se TTS falhar, a resposta textual já está no chat; zero perda de conteúdo.
 7. **Texto como registro canônico** — transcrição e resposta textual são os dados gravados em `chat_messages`; áudio descartado após uso.
 

@@ -447,7 +447,7 @@ body {
   flex-shrink: 0;
 }
 
-/* msg-content-wrap: coluna para empilhar bubble + botão TTS */
+/* msg-content-wrap: coluna para empilhar o bubble (e possíveis metadados futuros) */
 .msg-content-wrap {
   display: flex;
   flex-direction: column;
@@ -568,37 +568,135 @@ body {
   color: var(--accent);
 }
 
-/* Botão ▶ por mensagem do assistente (Recurso 1) */
-.chat-tts-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-3);
-  padding: 2px 5px;
-  font-size: 11px;
-  line-height: 1;
-  border-radius: 3px;
-  margin-top: 3px;
-  transition: color 0.15s, background 0.15s;
+/* ── Controle de modo voz: chip + popover (Módulo 13.4) ── */
+
+/* Container relativo para posicionamento do popover */
+.chat-voice-control {
+  position: relative;
+  flex-shrink: 0;
 }
 
-.chat-tts-btn:hover:not(:disabled) {
-  color: var(--accent);
+/* Chip compacto que exibe o modo atual e abre o popover */
+.chat-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   background: var(--bg-card);
+  color: var(--text-2);
+  font-size: 11.5px;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
-.chat-tts-btn:disabled {
+.chat-mode-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chat-mode-chip.open {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-card));
+  color: var(--accent);
+}
+
+/* Popover flutuante acima do composer */
+.chat-voice-popover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 10px);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 200px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Linha "Entrada / Saída" dentro do popover */
+.chat-voice-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chat-voice-label {
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* Controle segmentado (Texto | Voz) e (Texto | Áudio) */
+.chat-voice-seg {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.chat-voice-opt {
+  flex: 1;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  line-height: 1.4;
+}
+
+.chat-voice-opt + .chat-voice-opt {
+  border-left: 1px solid var(--border);
+}
+
+.chat-voice-opt:hover:not(:disabled):not(.active) {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.chat-voice-opt.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.chat-voice-opt:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.chat-tts-btn.playing {
+/* Botão ⏹ parar reprodução — combinação B (Texto→Áudio, sem mic visível) */
+.chat-stop-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
   color: var(--accent);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-/* Ícone de erro discreto — fallback textual já visível (D41) */
-.chat-tts-btn.chat-tts-error {
-  color: var(--danger, #ef4444);
+.chat-stop-btn:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+  border-color: var(--accent);
 }
 
 .artefatos-panel { width: 100%; }
