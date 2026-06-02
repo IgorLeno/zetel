@@ -731,47 +731,47 @@ export function ChatPanel({
   const inputDisabled = isLoading || voiceState !== 'idle';
 
   /* SVG icons — inline to keep the component self-contained */
-  const IcMic = (
+  const icMic = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <rect x="5" y="1" width="6" height="9" rx="3" strokeLinecap="round"/>
       <path d="M3 8a5 5 0 0 0 10 0" strokeLinecap="round"/>
       <path d="M8 13v2" strokeLinecap="round"/>
     </svg>
   );
-  const IcStop = (
+  const icStop = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <rect x="3" y="3" width="10" height="10" rx="2"/>
     </svg>
   );
-  const IcSpeaker = (
+  const icSpeaker = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <path d="M3 6H1v4h2l4 3V3L3 6z" strokeLinejoin="round"/>
       <path d="M11 5c1 1 1.5 2 1.5 3S12 11 11 12" strokeLinecap="round"/>
       <path d="M13 3c2 2 2 8 0 10" strokeLinecap="round"/>
     </svg>
   );
-  const IcSend = (
+  const icSend = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <path d="M14 8L2 2l3 6-3 6 12-6z" strokeLinejoin="round"/>
     </svg>
   );
-  const IcText = (
+  const icText = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <path d="M2 4h12M2 8h8M2 12h10" strokeLinecap="round"/>
     </svg>
   );
-  const IcType = (
+  const icType = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <rect x="1" y="3" width="14" height="10" rx="2"/>
       <path d="M5 9h6M8 7v4" strokeLinecap="round"/>
     </svg>
   );
-  const IcTrash = (
+  const icTrash = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <path d="M3 5h10M6 5V3h4v2M5 5l1 8h4l1-8" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
-  const IcCheck = (
+  const icCheck = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <path d="M3 8l4 4 6-7" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
@@ -831,7 +831,7 @@ export function ChatPanel({
           onClick={() => void clearHistory()}
           title="Limpar histórico"
         >
-          {IcTrash}
+          {icTrash}
           {clearing ? 'Limpando…' : 'Limpar'}
         </button>
       </header>
@@ -965,11 +965,11 @@ export function ChatPanel({
                               setPopoverOpen(false);
                             }}
                           >
-                            {active && <span className="mc-check">{IcCheck}</span>}
+                            {active && <span className="mc-check">{icCheck}</span>}
                             <span className="mc-io">
-                              {m.inMode === 'voice' ? IcMic : IcText}
+                              {m.inMode === 'voice' ? icMic : icText}
                               <span className="ar">→</span>
-                              {m.outMode === 'audio' ? IcSpeaker : IcType}
+                              {m.outMode === 'audio' ? icSpeaker : icType}
                             </span>
                             <span className="mc-desc">{m.desc}</span>
                           </button>
@@ -987,9 +987,9 @@ export function ChatPanel({
                   aria-expanded={popoverOpen}
                   aria-haspopup="dialog"
                 >
-                  <span className="io">{inputMode === 'voice' ? IcMic : IcText}</span>
+                  <span className="io">{inputMode === 'voice' ? icMic : icText}</span>
                   <span className="arrow">→</span>
-                  <span className="io">{outputMode === 'audio' ? IcSpeaker : IcType}</span>
+                  <span className="io">{outputMode === 'audio' ? icSpeaker : icType}</span>
                   <svg className="caret" viewBox="0 0 12 12" aria-hidden>
                     <path d="M2 4l4 4 4-4" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
@@ -1017,7 +1017,7 @@ export function ChatPanel({
                 aria-label={voiceState === 'listening' ? 'Parar gravação' : 'Gravar voz'}
                 onClick={handleMicClick}
               >
-                {voiceState === 'listening' ? IcStop : voiceState === 'speaking' ? IcSpeaker : IcMic}
+                {voiceState === 'listening' ? icStop : voiceState === 'speaking' ? icSpeaker : icMic}
               </button>
             )}
 
@@ -1030,7 +1030,7 @@ export function ChatPanel({
                 title="Parar reprodução"
                 aria-label="Parar reprodução"
               >
-                {IcStop}
+                {icStop}
               </button>
             )}
 
@@ -1040,7 +1040,7 @@ export function ChatPanel({
               disabled={isLoading || !input.trim() || voiceState !== 'idle'}
               onClick={() => void sendMessage()}
             >
-              {isLoading ? <span className="streaming-cursor" aria-hidden /> : IcSend}
+              {isLoading ? <span className="streaming-cursor" aria-hidden /> : icSend}
               {!isLoading && 'Enviar'}
             </button>
           </div>

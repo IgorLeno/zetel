@@ -281,7 +281,7 @@ export function LeituraPanel({
         {showIframe && (
           <button
             type="button"
-            className={`icon-btn${chatOpen ? ' on' : ''}`}
+            className={`toolbar-icon-btn${chatOpen ? ' on' : ''}`}
             title={chatOpen ? 'Fechar parceiro' : 'Abrir parceiro de estudos'}
             aria-label={chatOpen ? 'Fechar parceiro' : 'Abrir parceiro de estudos'}
             onClick={() => setChatOpen((o) => !o)}

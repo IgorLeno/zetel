@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import { getZetelBySlug } from '@/lib/zetel-service';
+import { ChevronLeftIcon } from '@/components/icons/ChevronLeftIcon';
 import { ZetelTabs } from '@/components/ZetelTabs';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,7 @@ export default async function ZetelDetailPage({
       <>
         <header className="topbar">
           <Link className="crumb" href="/zetel">
-            <svg viewBox="0 0 16 16"><path d="M10 12L6 8l4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <ChevronLeftIcon />
             Zetels
           </Link>
         </header>
@@ -49,7 +50,7 @@ export default async function ZetelDetailPage({
     <>
       <header className="topbar">
         <Link className="crumb" href="/zetel">
-          <svg viewBox="0 0 16 16"><path d="M10 12L6 8l4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <ChevronLeftIcon />
           Zetels
         </Link>
         <span className="crumb-sep">/</span>

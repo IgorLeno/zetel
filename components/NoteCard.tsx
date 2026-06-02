@@ -55,7 +55,6 @@ export function NoteCard({
           rows={5}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          style={{ margin: '0 14px 8px', width: 'calc(100% - 28px)' }}
         />
       ) : (
         <div className="sugg-body">{suggestion.corpo}</div>

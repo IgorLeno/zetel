@@ -1,144 +1,128 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 const root = process.cwd();
-const css = readFileSync(join(root, 'app/globals.css'), 'utf8');
-const leituraPanel = readFileSync(join(root, 'components/LeituraPanel.tsx'), 'utf8');
-const chatPanel = readFileSync(join(root, 'components/ChatPanel.tsx'), 'utf8');
-const noteCard = readFileSync(join(root, 'components/NoteCard.tsx'), 'utf8');
-const memoryCard = readFileSync(join(root, 'components/MemoryCard.tsx'), 'utf8');
-const renderService = readFileSync(join(root, 'lib/render-service.ts'), 'utf8');
-const studyGuide = readFileSync(join(root, 'lib/study-guide-service.ts'), 'utf8');
-const zetelDetailPage = readFileSync(join(root, 'app/zetel/[slug]/page.tsx'), 'utf8');
 
-function assertIncludes(haystack: string, needle: string, message: string) {
-  if (!haystack.includes(needle)) throw new Error(message);
+const sources = {
+  css: join(root, 'app/globals.css'),
+  leituraPanel: join(root, 'components/LeituraPanel.tsx'),
+  chatPanel: join(root, 'components/ChatPanel.tsx'),
+  noteCard: join(root, 'components/NoteCard.tsx'),
+  memoryCard: join(root, 'components/MemoryCard.tsx'),
+  renderService: join(root, 'lib/render-service.ts'),
+  studyGuide: join(root, 'lib/study-guide-service.ts'),
+  zetelDetailPage: join(root, 'app/zetel/[slug]/page.tsx'),
+} as const;
+
+type SourceKey = keyof typeof sources;
+
+const files: Partial<Record<SourceKey, string>> = {};
+const missing: SourceKey[] = [];
+
+function readSource(key: SourceKey): string {
+  const content = files[key];
+  if (content === undefined) {
+    throw new Error(`Missing contract source "${key}" (${sources[key]})`);
+  }
+  return content;
 }
-function assertNotIncludes(haystack: string, needle: string, message: string) {
-  if (haystack.includes(needle)) throw new Error(message);
-}
-function assertMatch(haystack: string, pattern: RegExp, message: string) {
-  if (!pattern.test(haystack)) throw new Error(message);
-}
+
+beforeAll(() => {
+  for (const [key, path] of Object.entries(sources) as [SourceKey, string][]) {
+    if (!existsSync(path)) {
+      missing.push(key);
+      continue;
+    }
+    try {
+      files[key] = readFileSync(path, 'utf8');
+    } catch (error) {
+      missing.push(key);
+      throw new Error(
+        `Failed to read contract source "${key}" (${path}): ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+});
 
 describe('Module 14.3 design system contract', () => {
+  it('loads all contract sources', () => {
+    expect(missing, `Missing contract sources: ${missing.join(', ')}`).toEqual([]);
+  });
+
   it('Zone A — topbar: page.tsx uses crumb/doc-title/pill classes', () => {
-    assertIncludes(zetelDetailPage, 'crumb', 'topbar contract: missing class "crumb" in page.tsx');
-    assertIncludes(zetelDetailPage, 'doc-title', 'topbar contract: missing class "doc-title" in page.tsx');
-    assertIncludes(zetelDetailPage, 'pill', 'topbar contract: missing class "pill" in page.tsx');
+    const zetelDetailPage = readSource('zetelDetailPage');
+    expect(zetelDetailPage, 'topbar contract: missing class "crumb" in page.tsx').toContain('crumb');
+    expect(zetelDetailPage, 'topbar contract: missing class "doc-title" in page.tsx').toContain('doc-title');
+    expect(zetelDetailPage, 'topbar contract: missing class "pill" in page.tsx').toContain('pill');
   });
 
   it('Zone A — topbar: globals.css has .topbar / .crumb / .doc-title / .pill rules', () => {
-    assertIncludes(css, '.topbar', 'topbar contract: missing .topbar in globals.css');
-    assertIncludes(css, '.crumb', 'topbar contract: missing .crumb in globals.css');
-    assertIncludes(css, '.doc-title', 'topbar contract: missing .doc-title in globals.css');
-    assertMatch(css, /\.pill\s*\{/, 'topbar contract: missing .pill rule in globals.css');
+    const css = readSource('css');
+    expect(css, 'topbar contract: missing .topbar in globals.css').toContain('.topbar');
+    expect(css, 'topbar contract: missing .crumb in globals.css').toContain('.crumb');
+    expect(css, 'topbar contract: missing .doc-title in globals.css').toContain('.doc-title');
+    expect(css, 'topbar contract: missing .pill rule in globals.css').toMatch(/\.pill\s*\{/);
   });
 
   it('Zone B — leitura toolbar: uses .segmented/.seg-opt and .ghost-btn', () => {
-    assertIncludes(
-      leituraPanel,
-      'segmented',
-      'toolbar contract: missing class "segmented" in LeituraPanel',
-    );
-    assertIncludes(
-      leituraPanel,
-      'seg-opt',
-      'toolbar contract: missing class "seg-opt" in LeituraPanel',
-    );
-    assertIncludes(
-      leituraPanel,
-      'ghost-btn',
-      'toolbar contract: missing class "ghost-btn" in LeituraPanel',
-    );
-    assertIncludes(css, '.segmented', 'toolbar contract: missing .segmented in globals.css');
-    assertIncludes(css, '.seg-opt', 'toolbar contract: missing .seg-opt in globals.css');
-    assertIncludes(css, '.ghost-btn', 'toolbar contract: missing .ghost-btn in globals.css');
+    const leituraPanel = readSource('leituraPanel');
+    const css = readSource('css');
+    expect(leituraPanel, 'toolbar contract: missing class "segmented" in LeituraPanel').toContain('segmented');
+    expect(leituraPanel, 'toolbar contract: missing class "seg-opt" in LeituraPanel').toContain('seg-opt');
+    expect(leituraPanel, 'toolbar contract: missing class "ghost-btn" in LeituraPanel').toContain('ghost-btn');
+    expect(css, 'toolbar contract: missing .segmented in globals.css').toContain('.segmented');
+    expect(css, 'toolbar contract: missing .seg-opt in globals.css').toContain('.seg-opt');
+    expect(css, 'toolbar contract: missing .ghost-btn in globals.css').toContain('.ghost-btn');
   });
 
   it('Zone B — chat: has context-chip', () => {
-    assertIncludes(
-      chatPanel,
-      'context-chip',
-      'chat contract: missing context-chip in ChatPanel',
-    );
-    assertIncludes(css, '.context-chip', 'chat contract: missing .context-chip in globals.css');
+    const chatPanel = readSource('chatPanel');
+    const css = readSource('css');
+    expect(chatPanel, 'chat contract: missing context-chip in ChatPanel').toContain('context-chip');
+    expect(css, 'chat contract: missing .context-chip in globals.css').toContain('.context-chip');
   });
 
   it('Zone B — chat: has mode-pop / mode-cell composer bar', () => {
-    assertIncludes(chatPanel, 'mode-pop', 'chat contract: missing mode-pop popover in ChatPanel');
-    assertIncludes(chatPanel, 'mode-cell', 'chat contract: missing mode-cell in ChatPanel');
-    assertIncludes(chatPanel, 'composer-bar', 'chat contract: missing composer-bar in ChatPanel');
-    assertIncludes(css, '.mode-pop', 'chat contract: missing .mode-pop in globals.css');
-    assertIncludes(css, '.mode-cell', 'chat contract: missing .mode-cell in globals.css');
-    assertIncludes(css, '.composer-bar', 'chat contract: missing .composer-bar in globals.css');
+    const chatPanel = readSource('chatPanel');
+    const css = readSource('css');
+    expect(chatPanel, 'chat contract: missing mode-pop popover in ChatPanel').toContain('mode-pop');
+    expect(chatPanel, 'chat contract: missing mode-cell in ChatPanel').toContain('mode-cell');
+    expect(chatPanel, 'chat contract: missing composer-bar in ChatPanel').toContain('composer-bar');
+    expect(css, 'chat contract: missing .mode-pop in globals.css').toContain('.mode-pop');
+    expect(css, 'chat contract: missing .mode-cell in globals.css').toContain('.mode-cell');
+    expect(css, 'chat contract: missing .composer-bar in globals.css').toContain('.composer-bar');
   });
 
   it('Zone B — chat: no raw emoji in composer logic (uses SVG icons)', () => {
-    // The mic/send/stop buttons must use SVG, not emoji glyphs
-    assertNotIncludes(
-      chatPanel,
-      '🎙',
-      'chat contract: emoji 🎙 must be replaced with SVG in ChatPanel',
-    );
-    assertNotIncludes(
-      chatPanel,
-      '⏹',
-      'chat contract: emoji ⏹ must be replaced with SVG in ChatPanel',
-    );
-    assertNotIncludes(
-      chatPanel,
-      '🔊',
-      'chat contract: emoji 🔊 must be replaced with SVG in ChatPanel',
-    );
-    assertNotIncludes(
-      chatPanel,
-      '💬',
-      'chat contract: emoji 💬 must be replaced with SVG in ChatPanel',
-    );
+    const chatPanel = readSource('chatPanel');
+    expect(chatPanel, 'chat contract: emoji 🎙 must be replaced with SVG in ChatPanel').not.toContain('🎙');
+    expect(chatPanel, 'chat contract: emoji ⏹ must be replaced with SVG in ChatPanel').not.toContain('⏹');
+    expect(chatPanel, 'chat contract: emoji 🔊 must be replaced with SVG in ChatPanel').not.toContain('🔊');
+    expect(chatPanel, 'chat contract: emoji 💬 must be replaced with SVG in ChatPanel').not.toContain('💬');
   });
 
   it('Zone B — suggestion cards use .sugg-card classes', () => {
-    assertIncludes(noteCard, 'sugg-card', 'card contract: missing sugg-card in NoteCard');
-    assertIncludes(memoryCard, 'sugg-card', 'card contract: missing sugg-card in MemoryCard');
-    assertIncludes(memoryCard, 'sugg-card mem', 'card contract: missing "sugg-card mem" in MemoryCard');
-    assertIncludes(css, '.sugg-card', 'card contract: missing .sugg-card in globals.css');
+    const noteCard = readSource('noteCard');
+    const memoryCard = readSource('memoryCard');
+    const css = readSource('css');
+    expect(noteCard, 'card contract: missing sugg-card in NoteCard').toContain('sugg-card');
+    expect(memoryCard, 'card contract: missing sugg-card in MemoryCard').toContain('sugg-card');
+    expect(memoryCard, 'card contract: missing "sugg-card mem" in MemoryCard').toContain('sugg-card mem');
+    expect(css, 'card contract: missing .sugg-card in globals.css').toContain('.sugg-card');
   });
 
   it('Zone C — render-service iframe template uses violet accent, not old blue', () => {
-    assertNotIncludes(
-      renderService,
-      '#58a6ff',
-      'iframe contract: old blue accent #58a6ff must not be present in render-service',
-    );
-    assertNotIncludes(
-      renderService,
-      '#0969da',
-      'iframe contract: old blue accent #0969da must not be present in render-service',
-    );
-    assertIncludes(
-      renderService,
-      '#7d7bff',
-      'iframe contract: violet accent #7d7bff must be present in render-service',
-    );
+    const renderService = readSource('renderService');
+    expect(renderService, 'iframe contract: old blue accent #58a6ff must not be present in render-service').not.toContain('#58a6ff');
+    expect(renderService, 'iframe contract: old blue accent #0969da must not be present in render-service').not.toContain('#0969da');
+    expect(renderService, 'iframe contract: violet accent #7d7bff must be present in render-service').toContain('#7d7bff');
   });
 
   it('Zone C — study-guide-service iframe template uses violet accent, not old blue', () => {
-    assertNotIncludes(
-      studyGuide,
-      '#58a6ff',
-      'iframe contract: old blue accent #58a6ff must not be present in study-guide-service',
-    );
-    assertNotIncludes(
-      studyGuide,
-      '#0969da',
-      'iframe contract: old blue accent #0969da must not be present in study-guide-service',
-    );
-    assertIncludes(
-      studyGuide,
-      '#7d7bff',
-      'iframe contract: violet accent #7d7bff must be present in study-guide-service',
-    );
+    const studyGuide = readSource('studyGuide');
+    expect(studyGuide, 'iframe contract: old blue accent #58a6ff must not be present in study-guide-service').not.toContain('#58a6ff');
+    expect(studyGuide, 'iframe contract: old blue accent #0969da must not be present in study-guide-service').not.toContain('#0969da');
+    expect(studyGuide, 'iframe contract: violet accent #7d7bff must be present in study-guide-service').toContain('#7d7bff');
   });
 });
