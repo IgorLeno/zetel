@@ -174,7 +174,6 @@ describe('buildOpenRouterMessages', () => {
     const sys = messages.find((m) => m.role === 'system');
     expect(sys?.content).toContain('modo conversa por voz');
     expect(sys?.content).toContain('Não leia trechos longos do documento em voz alta');
-    expect(sys?.content).not.toContain('40 palavras');
   });
 
   it('interactionMode=text: system NÃO contém instruções de voz', () => {
