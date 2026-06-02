@@ -162,4 +162,44 @@ describe('buildOpenRouterMessages', () => {
     expect(sys?.content).toContain('Nota A');
     expect(sys?.content).toContain('Nota B');
   });
+
+  it('interactionMode=voice: system contém instruções de estilo oral', () => {
+    const { messages } = buildOpenRouterMessages({
+      displayName: 'Z',
+      pageContent: null,
+      history: [],
+      userMessage: 'u',
+      interactionMode: 'voice',
+    });
+    const sys = messages.find((m) => m.role === 'system');
+    expect(sys?.content).toContain('modo conversa por voz');
+    expect(sys?.content).toContain('Não leia trechos longos do documento em voz alta');
+    expect(sys?.content).not.toContain('40 palavras');
+  });
+
+  it('interactionMode=text: system NÃO contém instruções de voz', () => {
+    const { messages } = buildOpenRouterMessages({
+      displayName: 'Z',
+      pageContent: null,
+      history: [],
+      userMessage: 'u',
+      interactionMode: 'text',
+    });
+    const sys = messages.find((m) => m.role === 'system');
+    expect(sys?.content).not.toContain('modo conversa por voz');
+  });
+
+  it('sem interactionMode: system idêntico ao interactionMode=text', () => {
+    const base = {
+      displayName: 'Z',
+      pageContent: null,
+      history: [],
+      userMessage: 'u',
+    };
+    const { messages: withText } = buildOpenRouterMessages({ ...base, interactionMode: 'text' });
+    const { messages: withNone } = buildOpenRouterMessages(base);
+    const sysText = withText.find((m) => m.role === 'system')?.content;
+    const sysNone = withNone.find((m) => m.role === 'system')?.content;
+    expect(sysText).toBe(sysNone);
+  });
 });

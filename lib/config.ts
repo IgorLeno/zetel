@@ -64,6 +64,11 @@ export function getOpenRouterKey(): string | null {
   return readConfig().OPENROUTER_API_KEY || null;
 }
 
+/** Chave OpenAI para TTS/STT (D30). Para leitura unificada use `readVoiceKey()` em `lib/openai-voice.ts`. */
+export function getVoiceKey(): string | null {
+  return readConfig().openai_tts_key || null;
+}
+
 /** Modelo de chat configurado, com default do MVP. */
 export function getOpenRouterModel(): string {
   return readConfig().OPENROUTER_MODEL || DEFAULT_OPENROUTER_MODEL;

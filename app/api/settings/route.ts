@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOpenRouterModel, writeConfig } from '@/lib/config';
+import { getOpenRouterModel, getVoiceKey, writeConfig } from '@/lib/config';
 import { deleteSetting, getSetting, setSetting } from '@/lib/settings';
 import {
   DEFAULT_STUDY_GUIDE_MAX_TOKENS,
@@ -59,7 +59,16 @@ function readSettingsPayload() {
     chat_model_history: parseModelHistory(getSetting('chat_model_history')),
     note_model_history: parseModelHistory(getSetting('note_model_history')),
     memory_model_history: parseModelHistory(getSetting('memory_model_history')),
+    tts_voice: getSetting('tts_voice') ?? 'nova',
+    tts_model: getSetting('tts_model') ?? 'tts-1',
+    openai_tts_key: maskKey(getVoiceKey()),
   };
+}
+
+/** Mascara a chave: retorna null se ausente, '****<últimos 4 chars>' caso contrário. */
+function maskKey(key: string | null): string | null {
+  if (!key) return null;
+  return '****' + key.slice(-4);
 }
 
 /** GET /api/settings */
@@ -80,6 +89,9 @@ export async function PUT(request: Request) {
     max_words_per_page?: unknown;
     study_guide_max_tokens?: unknown;
     study_guide_timeout_s?: unknown;
+    tts_voice?: unknown;
+    tts_model?: unknown;
+    openai_tts_key?: unknown;
   };
   try {
     body = await request.json();
@@ -229,6 +241,41 @@ export async function PUT(request: Request) {
     }
     setSetting('study_guide_timeout_s', String(Math.trunc(n)));
     updated.push('study_guide_timeout_s');
+  }
+
+  if (body.tts_voice !== undefined) {
+    if (typeof body.tts_voice !== 'string') {
+      return NextResponse.json({ error: 'tts_voice inválido.' }, { status: 400 });
+    }
+    const val = body.tts_voice.trim();
+    if (val) {
+      setSetting('tts_voice', val);
+    } else {
+      deleteSetting('tts_voice');
+    }
+    updated.push('tts_voice');
+  }
+
+  if (body.tts_model !== undefined) {
+    if (typeof body.tts_model !== 'string') {
+      return NextResponse.json({ error: 'tts_model inválido.' }, { status: 400 });
+    }
+    const val = body.tts_model.trim();
+    if (val) {
+      setSetting('tts_model', val);
+    } else {
+      deleteSetting('tts_model');
+    }
+    updated.push('tts_model');
+  }
+
+  if (body.openai_tts_key !== undefined) {
+    if (typeof body.openai_tts_key !== 'string' || !body.openai_tts_key.trim()) {
+      return NextResponse.json({ error: 'Chave OpenAI inválida.' }, { status: 400 });
+    }
+    // Nunca logada nem devolvida crua (D30 / Regra #13).
+    writeConfig('openai_tts_key', body.openai_tts_key.trim());
+    updated.push('openai_tts_key');
   }
 
   if (updated.length === 0) {

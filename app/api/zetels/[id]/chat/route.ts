@@ -129,6 +129,7 @@ export async function POST(request: Request, { params }: Ctx) {
     guideBlockTitle?: unknown;
     guideBlockIndex?: unknown;
     guideBlockTotal?: unknown;
+    interactionMode?: unknown;
   };
   try {
     body = await request.json();
@@ -160,6 +161,8 @@ export async function POST(request: Request, { params }: Ctx) {
   if (!zetel) {
     return NextResponse.json({ error: 'Zetel não encontrado.' }, { status: 404 });
   }
+
+  const interactionMode: 'text' | 'voice' = body.interactionMode === 'voice' ? 'voice' : 'text';
 
   const readingMode = body.readingMode === 'guia-estudo' ? 'guia-estudo' : 'tecnico';
   const guideBlockId = optionalShortString(body.guideBlockId, 120);
@@ -267,6 +270,7 @@ export async function POST(request: Request, { params }: Ctx) {
     memoryRubric,
     existingTitles,
     vaultPath: vaultPath ?? undefined,
+    interactionMode,
   });
   if (memoryWarnings.truncatedCount > 0) {
     // Regra #6: só contagem, nunca conteúdo.

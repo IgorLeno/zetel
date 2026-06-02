@@ -147,6 +147,16 @@ export function truncatePageContext(text: string): string {
   return text.slice(0, PAGE_CONTEXT_MAX) + '...';
 }
 
+/** Instruções de estilo oral injetadas quando interactionMode='voice' (PRD v4 Parte C). */
+const VOICE_STYLE_PROMPT = `Você está em modo conversa por voz. Adapte seu estilo:
+- Responda como conversa falada, não como artigo escrito.
+- Use frases curtas e diretas.
+- Evite tabelas, listas longas e Markdown estrutural.
+- Explique em passos pequenos, um de cada vez.
+- Quando fizer sentido, termine com uma pergunta curta para manter a conversa.
+- Use o documento aberto como base, mas fale naturalmente.
+- Não leia trechos longos do documento em voz alta.`;
+
 export function buildOpenRouterMessages(opts: {
   displayName: string;
   pageContent: string | null;
@@ -160,9 +170,15 @@ export function buildOpenRouterMessages(opts: {
   vaultPath?: string;
   /** Prompt-base do parceiro (lido de config/prompts/parceiro.md). Se ausente, usa default embutido. */
   partnerPrompt?: string;
+  /** Modo de interação: 'voice' injeta instruções de estilo oral no system prompt. Default: 'text'. */
+  interactionMode?: 'text' | 'voice';
 }): { messages: OpenRouterMessage[]; memoryWarnings: MemoryWarnings } {
   const basePrompt = opts.partnerPrompt ?? PARCEIRO_PROMPT;
   let systemContent = `${basePrompt}\n\nZetel atual: "${opts.displayName}".`;
+
+  if (opts.interactionMode === 'voice') {
+    systemContent += `\n\n${VOICE_STYLE_PROMPT}`;
+  }
 
   // Ordem §8.7: prompt do parceiro → rubricas → memória global → (página/histórico).
   if (opts.noteRubric) {
