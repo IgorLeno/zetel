@@ -95,8 +95,8 @@ export function LeituraPanel({
   const buttonLabel =
     selectedMode === 'guia-estudo'
       ? guiaBuilt
-        ? 'Regenerar Guia de Estudo'
-        : 'Gerar Guia de Estudo'
+        ? '↺ Regenerar'
+        : 'Gerar Guia'
       : tecnicoBuilt
         ? 'Atualizar leitura'
         : 'Preparar leitura';
@@ -212,54 +212,59 @@ export function LeituraPanel({
     }
   }
 
+  const statusChip = building ? (
+    <span className="status-chip busy">
+      {buildingMode === 'guia-estudo' ? 'Gerando…' : 'Construindo…'}
+    </span>
+  ) : selectedMode === 'tecnico' && tecnicoBuilt && readingStale ? (
+    <span className="status-chip warn">Desatualizado</span>
+  ) : selectedMode === 'tecnico' && tecnicoBuilt && !readingStale ? (
+    <span className="status-chip ok">Pronto</span>
+  ) : selectedMode === 'guia-estudo' && guiaBuilt ? (
+    <span className="status-chip ok">Pronto</span>
+  ) : null;
+
   return (
     <div className="leitura-panel">
       <div className="leitura-toolbar">
-        <div className="mode-switch" role="radiogroup" aria-label="Modo de leitura">
+        <div className="toolbar-start">
+          <div className="mode-switch" role="radiogroup" aria-label="Modo de leitura">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={selectedMode === 'tecnico'}
+              className={`mode-option${selectedMode === 'tecnico' ? ' active' : ''}`}
+              disabled={building}
+              onClick={() => setSelectedMode('tecnico')}
+            >
+              Documento Técnico
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={selectedMode === 'guia-estudo'}
+              className={`mode-option${selectedMode === 'guia-estudo' ? ' active' : ''}`}
+              disabled={building}
+              title="Gerado por IA a partir do material"
+              onClick={() => setSelectedMode('guia-estudo')}
+            >
+              Guia de Estudo
+            </button>
+          </div>
+          {statusChip}
           <button
             type="button"
-            role="radio"
-            aria-checked={selectedMode === 'tecnico'}
-            className={`mode-option${selectedMode === 'tecnico' ? ' active' : ''}`}
+            className={buttonPrimary ? 'btn primary' : 'btn'}
             disabled={building}
-            onClick={() => setSelectedMode('tecnico')}
+            onClick={onBuild}
           >
-            Documento Técnico
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={selectedMode === 'guia-estudo'}
-            className={`mode-option${selectedMode === 'guia-estudo' ? ' active' : ''}`}
-            disabled={building}
-            title="Gerado por IA a partir do material"
-            onClick={() => setSelectedMode('guia-estudo')}
-          >
-            Guia de Estudo
+            {buttonLabel}
           </button>
         </div>
-        <button
-          type="button"
-          className={buttonPrimary ? 'btn primary' : 'btn'}
-          disabled={building}
-          onClick={onBuild}
-        >
-          {building
-            ? buildingMode === 'guia-estudo'
-              ? 'Gerando guia…'
-              : 'Construindo…'
-            : buttonLabel}
-        </button>
         {showIframe && (
-          <button type="button" className="btn" onClick={() => setChatOpen((o) => !o)}>
+          <button type="button" className="btn btn-sm" onClick={() => setChatOpen((o) => !o)}>
             {chatOpen ? 'Fechar chat' : 'Interagir'}
           </button>
-        )}
-        {selectedMode === 'tecnico' && tecnicoBuilt && !readingStale && !building && (
-          <span className="feedback ok">Leitura pronta para uso.</span>
-        )}
-        {selectedMode === 'guia-estudo' && guiaBuilt && !building && (
-          <span className="feedback ok">Guia de estudo pronto.</span>
         )}
       </div>
       {error && <p className="feedback err">{error}</p>}

@@ -86,11 +86,14 @@ body {
 .sidebar {
   width: 232px;
   min-width: 232px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: var(--bg-side);
   border-right: 1px solid var(--border);
   overflow: hidden;
+  position: relative;
+  transition: width .22s ease, min-width .22s ease;
 }
 
 .sidebar-logo {
@@ -99,6 +102,8 @@ body {
   gap: 9px;
   padding: 18px 16px 14px;
   border-bottom: 1px solid var(--border-light);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .logo-mark {
@@ -113,9 +118,9 @@ body {
 }
 
 .logo-mark svg { width: 16px; height: 16px; }
-.logo-text { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+.logo-text { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); white-space: nowrap; overflow: hidden; transition: opacity .15s ease, max-width .22s ease; max-width: 180px; }
 
-.sidebar-nav { padding: 10px 8px; flex: 1; }
+.sidebar-nav { padding: 10px 8px; flex: 1; overflow: hidden; }
 
 .nav-section-label {
   font-size: 10.5px;
@@ -124,6 +129,10 @@ body {
   text-transform: uppercase;
   color: var(--text-3);
   padding: 12px 10px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity .15s ease, max-height .22s ease;
+  max-height: 40px;
 }
 
 .nav-item {
@@ -136,8 +145,16 @@ body {
   font-size: 13.5px;
   font-weight: 450;
   cursor: pointer;
-  transition: background .12s, color .12s;
+  transition: background .12s, color .12s, gap .22s ease, padding .22s ease, justify-content .22s ease;
   user-select: none;
+  overflow: hidden;
+}
+
+.nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity .15s ease, max-width .22s ease;
+  max-width: 160px;
 }
 
 .nav-item:hover { background: var(--bg-hover); color: var(--text); }
@@ -150,9 +167,81 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: padding .22s ease;
 }
 
-.footer-label { font-size: 12px; color: var(--text-3); }
+.footer-label { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; transition: opacity .15s ease, max-width .22s ease; max-width: 80px; }
+
+/* Sidebar toggle button */
+.sidebar-toggle {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  z-index: 2;
+  border-radius: 0;
+  transition: color .12s, background .12s;
+}
+.sidebar-toggle:hover { color: var(--text-2); }
+.sidebar-toggle svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+
+/* Collapsed state — driven by html attribute set before paint */
+html[data-sidebar-collapsed="true"] .sidebar {
+  width: 64px;
+  min-width: 64px;
+}
+html[data-sidebar-collapsed="true"] .logo-text,
+html[data-sidebar-collapsed="true"] .nav-label,
+html[data-sidebar-collapsed="true"] .footer-label {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+html[data-sidebar-collapsed="true"] .nav-section-label {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+html[data-sidebar-collapsed="true"] .theme-toggle span {
+  display: none;
+}
+html[data-sidebar-collapsed="true"] .nav-item {
+  justify-content: center;
+  gap: 0;
+  padding: 8px 0;
+}
+html[data-sidebar-collapsed="true"] .sidebar-logo {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  gap: 0;
+}
+html[data-sidebar-collapsed="true"] .sidebar-footer {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+html[data-sidebar-collapsed="true"] .theme-toggle {
+  padding: 6px;
+  border: none;
+  background: none;
+}
+html[data-sidebar-collapsed="true"] .theme-toggle:hover {
+  background: var(--bg-hover);
+  border-radius: var(--radius);
+}
 
 .theme-toggle {
   display: flex;
@@ -229,10 +318,32 @@ body {
 .leitura-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
+}
+
+.toolbar-start {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
   flex-wrap: wrap;
 }
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.status-chip.ok   { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+.status-chip.warn { background: color-mix(in srgb, var(--warning, #f59e0b) 14%, transparent); color: var(--warning, #f59e0b); }
+.status-chip.busy { background: var(--accent-dim); color: var(--accent); }
 
 .mode-switch,
 .artifact-switch {
@@ -1005,22 +1116,23 @@ body {
 /* ── Abas (Configurações e detalhe do Zetel) ── */
 .tabs {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .tab {
-  padding: 9px 14px;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--text-2);
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--text-3);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: color .12s, border-color .12s;
+  white-space: nowrap;
 }
-.tab:hover { color: var(--text); }
-.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab:hover { color: var(--text-2); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 550; }
 
 .back-link { font-size: 13px; color: var(--text-2); }
 .back-link:hover { color: var(--text); }

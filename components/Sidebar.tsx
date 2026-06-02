@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 
 const NAV = [
@@ -39,6 +40,24 @@ const NAV = [
 
 export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    setCollapsed(document.documentElement.dataset.sidebarCollapsed === 'true');
+  }, []);
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem('zetel_sidebar_collapsed', next ? 'true' : 'false');
+    } catch (_) {}
+    if (next) {
+      document.documentElement.dataset.sidebarCollapsed = 'true';
+    } else {
+      delete document.documentElement.dataset.sidebarCollapsed;
+    }
+  }
 
   return (
     <aside className="sidebar">
@@ -65,7 +84,7 @@ export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
           return (
             <Link key={item.href} href={item.href} className={`nav-item${active ? ' active' : ''}`}>
               <svg viewBox="0 0 16 16">{item.icon}</svg>
-              {item.label}
+              <span className="nav-label">{item.label}</span>
             </Link>
           );
         })}
@@ -75,6 +94,24 @@ export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
         <span className="footer-label">v0.1.0</span>
         <ThemeToggle initialTheme={theme} />
       </div>
+
+      <button
+        type="button"
+        className="sidebar-toggle"
+        aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+        aria-expanded={!collapsed}
+        onClick={toggleCollapsed}
+      >
+        <svg viewBox="0 0 12 12">
+          {collapsed ? (
+            /* → chevron: points right, click to expand */
+            <path d="M4 10L8 6 4 2" strokeLinecap="round" strokeLinejoin="round" />
+          ) : (
+            /* ← chevron: points left, click to collapse */
+            <path d="M8 10L4 6 8 2" strokeLinecap="round" strokeLinejoin="round" />
+          )}
+        </svg>
+      </button>
     </aside>
   );
 }

@@ -845,18 +845,21 @@ function renderGuideNav(guia: StudyGuide): string {
     ...(guia.timelines ?? []).map((item, i) => navLink(`timeline-${i + 1}`, item.titulo)),
     ...(guia.tables ?? []).map((item, i) => navLink(`editorial-table-${i + 1}`, item.titulo)),
   ].join('\n');
-  return `<aside class="guide-sidebar" aria-label="Navegação do guia">
-    <nav class="guide-nav">
-      ${navLink('capa', 'Capa')}
-      ${navLink('conceitos-chave', 'Conceitos-chave')}
-      ${navLink('secoes', 'Seções')}
-      ${sectionLinks}
-      ${v2Links}
-      ${navLink('glossario', 'Glossário')}
-      ${navLink('quiz', 'Quiz')}
-      ${navLink('zettelkasten', 'Perguntas Zettelkasten')}
-    </nav>
-  </aside>`;
+  return `<div class="guide-topbar">
+    <button class="guide-toc-btn" aria-expanded="false" aria-controls="guide-toc" type="button">Índice ▾</button>
+    <div id="guide-toc" class="guide-toc-panel" hidden>
+      <nav class="guide-nav" aria-label="Navegação do guia">
+        ${navLink('capa', 'Capa')}
+        ${navLink('conceitos-chave', 'Conceitos-chave')}
+        ${navLink('secoes', 'Seções')}
+        ${sectionLinks}
+        ${v2Links}
+        ${navLink('glossario', 'Glossário')}
+        ${navLink('quiz', 'Quiz')}
+        ${navLink('zettelkasten', 'Perguntas Zettelkasten')}
+      </nav>
+    </div>
+  </div>`;
 }
 
 function renderTableHead(colunas: string[]): string {
@@ -1129,12 +1132,19 @@ function guideCss(): string {
   html{scroll-behavior:smooth}
   body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);
     color:var(--text);line-height:1.65;margin:0;padding:0}
-  .guide-shell{display:grid;grid-template-columns:248px minmax(0,860px);gap:32px;max-width:1200px;
-    margin:0 auto;padding:32px 24px 80px}
-  .guide-sidebar{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;
-    border:1px solid var(--border);border-radius:8px;background:var(--card);box-shadow:0 14px 34px var(--shadow)}
-  .guide-nav{display:flex;flex-direction:column;padding:10px}
-  .guide-nav a{display:block;color:var(--muted);text-decoration:none;border-radius:6px;padding:9px 10px;
+  .guide-topbar{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);
+    padding:8px 20px;display:flex;align-items:center}
+  .guide-toc-btn{background:var(--card);border:1px solid var(--border);border-radius:6px;
+    padding:5px 12px;color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+    white-space:nowrap}
+  .guide-toc-btn:hover,.guide-toc-btn:focus{border-color:var(--accent);color:var(--accent);outline:none}
+  .guide-toc-panel{position:absolute;top:calc(100% + 4px);left:20px;min-width:220px;max-height:60vh;
+    overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:8px;
+    box-shadow:0 14px 34px var(--shadow);z-index:20}
+  .guide-toc-panel[hidden]{display:none}
+  .guide-shell{max-width:900px;margin:0 auto;padding:32px 24px 80px}
+  .guide-nav{display:flex;flex-direction:column;padding:8px}
+  .guide-nav a{display:block;color:var(--muted);text-decoration:none;border-radius:6px;padding:8px 10px;
     font-size:13px;line-height:1.35}
   .guide-nav a:hover,.guide-nav a:focus{color:var(--text);background:var(--sub);outline:none}
   .guide-nav a.is-active{color:var(--accent);background:var(--sub);font-weight:700}
@@ -1224,11 +1234,9 @@ function guideCss(): string {
   footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px;
     padding-top:20px;border-top:1px solid var(--border)}
   @media (max-width:767px){
-    .guide-shell{display:block;padding:0 18px 64px}
-    .guide-sidebar{position:sticky;top:0;z-index:10;margin:0 -18px 24px;border-radius:0;border-width:0 0 1px;
-      max-height:none;overflow-x:auto;box-shadow:none}
-    .guide-nav{flex-direction:row;gap:4px;padding:8px 12px}
-    .guide-nav a{white-space:nowrap}
+    .guide-shell{padding:0 16px 64px}
+    .guide-topbar{padding:8px 16px}
+    .guide-toc-panel{left:16px;right:16px;min-width:0}
     header.capa{padding-top:28px}
     header.capa h1{font-size:28px}
     .quiz-head{grid-template-columns:1fr;gap:8px}
@@ -1254,6 +1262,36 @@ function guideNavScript(): string {
       document.documentElement.setAttribute('data-theme', d.theme);
     }
   });
+
+  // ── Guide TOC dropdown ──────────────────────────────────────────────────────
+  var tocBtn = document.querySelector('.guide-toc-btn');
+  var tocPanel = document.getElementById('guide-toc');
+  function closeToc(){
+    if (!tocPanel || !tocBtn) return;
+    tocPanel.setAttribute('hidden', '');
+    tocBtn.setAttribute('aria-expanded', 'false');
+    tocBtn.textContent = 'Índice ▾';
+  }
+  if (tocBtn && tocPanel) {
+    tocBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var isOpen = !tocPanel.hasAttribute('hidden');
+      if (isOpen) {
+        closeToc();
+      } else {
+        tocPanel.removeAttribute('hidden');
+        tocBtn.setAttribute('aria-expanded', 'true');
+        tocBtn.textContent = 'Índice ▴';
+      }
+    });
+    document.addEventListener('click', function(e){
+      if (!tocPanel.hasAttribute('hidden') &&
+          !tocBtn.contains(e.target) && !tocPanel.contains(e.target)) {
+        closeToc();
+      }
+    });
+  }
+  // ───────────────────────────────────────────────────────────────────────────
 
   bySel('.comparison-tabs').forEach(function(group){
     var buttons = Array.prototype.slice.call(group.querySelectorAll('[data-tab-target]'));
@@ -1412,6 +1450,7 @@ function guideNavScript(): string {
   bySel('[data-nav-target]').forEach(function(a){
     a.addEventListener('click', function(e){
       e.preventDefault();
+      closeToc();
       var id = a.getAttribute('data-nav-target');
       var target = id ? document.getElementById(id) : null;
       if (target) {
@@ -1517,8 +1556,8 @@ export function renderStudyGuideHtml(
 <script>${guideHeadScript()}</script>
 </head>
 <body>
+  ${renderGuideNav(guia)}
   <div class="guide-shell">
-    ${renderGuideNav(guia)}
     <main class="guide-main">
       <header id="capa" class="capa" data-nav-section="capa">
         <span class="brand">⚡ Zetel · Guia de Estudo</span>
