@@ -553,7 +553,7 @@ body {
 
 @keyframes mic-pulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--danger-alpha); }
-  50%       { box-shadow: 0 0 0 5px color-mix(in srgb, var(--danger-alpha) 0%, transparent); }
+  50%       { box-shadow: 0 0 0 5px transparent; }
 }
 
 @media (prefers-reduced-motion: reduce) {

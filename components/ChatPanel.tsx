@@ -263,10 +263,9 @@ export function ChatPanel({
       };
 
       audio.onended = () => {
-        if (currentAudioUrlRef.current === url) {
-          URL.revokeObjectURL(url);
-          currentAudioUrlRef.current = null;
-        }
+        if (currentAudioUrlRef.current !== url) return;
+        URL.revokeObjectURL(url);
+        currentAudioUrlRef.current = null;
         audioRef.current = null;
         if (msgId) setPlayingMsgId(null);
         if (isAutoVoice) {
