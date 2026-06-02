@@ -40,29 +40,33 @@ export function NoteCard({
   const [draft, setDraft] = useState(suggestion.corpo);
 
   return (
-    <div className={`note-card note-card--${suggestion.tipo}`} data-testid="note-card">
-      <div className="note-card-head">
-        <span className="note-card-badge">{TIPO_LABEL[suggestion.tipo]}</span>
-        <span className="note-card-title">{suggestion.titulo}</span>
+    <div className="sugg-card" data-testid="note-card">
+      <div className="sugg-top">
+        <span className="sugg-badge">
+          <svg viewBox="0 0 16 16"><path d="M4 2h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M5 6h6M5 9h4" strokeLinecap="round"/></svg>
+          {TIPO_LABEL[suggestion.tipo]}
+        </span>
       </div>
+      <div className="sugg-title">{suggestion.titulo}</div>
 
       {editing ? (
         <textarea
           className="note-card-edit"
-          rows={6}
+          rows={5}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          style={{ margin: '0 14px 8px', width: 'calc(100% - 28px)' }}
         />
       ) : (
-        <div className="note-card-body">{suggestion.corpo}</div>
+        <div className="sugg-body">{suggestion.corpo}</div>
       )}
 
-      <div className="note-card-actions">
+      <div className="sugg-actions">
         {editing ? (
           <>
             <button
               type="button"
-              className="btn btn-sm primary"
+              className="xbtn primary"
               disabled={busy || !draft.trim()}
               onClick={() => onSave(draft)}
               data-testid="note-action-save"
@@ -71,7 +75,7 @@ export function NoteCard({
             </button>
             <button
               type="button"
-              className="btn btn-sm"
+              className="xbtn ghost"
               disabled={busy}
               onClick={() => {
                 setDraft(suggestion.corpo);
@@ -85,7 +89,7 @@ export function NoteCard({
           <>
             <button
               type="button"
-              className="btn btn-sm primary"
+              className="xbtn primary"
               disabled={busy}
               onClick={() => onSave(suggestion.corpo)}
               data-testid="note-action-save"
@@ -94,7 +98,7 @@ export function NoteCard({
             </button>
             <button
               type="button"
-              className="btn btn-sm"
+              className="xbtn"
               disabled={busy}
               onClick={() => setEditing(true)}
               data-testid="note-action-edit"
@@ -104,7 +108,7 @@ export function NoteCard({
             {canDiscuss && (
               <button
                 type="button"
-                className="btn btn-sm"
+                className="xbtn"
                 disabled={busy}
                 onClick={onDiscuss}
                 data-testid="note-action-discuss"
@@ -114,7 +118,7 @@ export function NoteCard({
             )}
             <button
               type="button"
-              className="btn btn-sm"
+              className="xbtn ghost"
               disabled={busy}
               onClick={onReject}
               data-testid="note-action-reject"

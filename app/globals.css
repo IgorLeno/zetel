@@ -362,6 +362,61 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   overflow: hidden;
 }
 
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 22px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  transition: color var(--t-fast), background var(--t-fast);
+  white-space: nowrap;
+}
+.crumb:hover { color: var(--text); background: var(--hover); }
+.crumb svg {
+  width: 14px; height: 14px;
+  stroke: currentColor; fill: none; stroke-width: 1.8;
+}
+
+.crumb-sep { color: var(--text-4); font-size: 13px; user-select: none; }
+
+.doc-title { font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.pill .dot { width: 5px; height: 5px; border-radius: 99px; background: currentColor; flex-shrink: 0; }
+.pill.ok   { color: var(--ok); background: var(--ok-tint); }
+.pill.warn { color: var(--warn); background: var(--warn-tint); }
+.pill.busy { color: var(--accent); background: var(--accent-tint); }
+
+/* Keep legacy .page-header as alias so other pages still work */
 .page-header {
   display: flex;
   align-items: center;
@@ -1488,3 +1543,268 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 .memoria-detail-feedback { font-size: 12.5px; color: var(--danger, #dc2626); }
 .memoria-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .memoria-search { flex: 1; min-width: 140px; }
+
+/* ══════════════════════════════════════════════════════════
+   Module 14.3 — Toolbar, Chat & Suggestion Card Redesign
+══════════════════════════════════════════════════════════ */
+
+/* ── Segmented control (replaces mode-switch) ── */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+}
+
+.seg-opt {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: color var(--t-fast), background var(--t-fast);
+  white-space: nowrap;
+}
+.seg-opt svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+.seg-opt:hover:not(.active):not(:disabled) { color: var(--text-2); }
+.seg-opt.active {
+  color: var(--text);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-sm);
+}
+.seg-opt:disabled { color: var(--text-4); cursor: not-allowed; }
+
+/* ── Ghost button (for toolbar build/regenerate actions) ── */
+.ghost-btn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  white-space: nowrap;
+}
+.ghost-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+.ghost-btn:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.ghost-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ghost-btn.spin svg { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── icon-btn (topbar / toolbar toggle buttons) ── */
+.icon-btn {
+  width: 34px; height: 34px; border-radius: var(--r-sm);
+  display: grid; place-items: center; color: var(--text-3);
+  border: 1px solid transparent;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.icon-btn:hover { background: var(--hover); color: var(--text); }
+.icon-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+.icon-btn.on { color: var(--accent); background: var(--accent-tint); }
+
+/* ── Chat head sub-title ── */
+.ht { min-width: 0; flex: 1; }
+.ht .chat-panel-title,
+.ht .chat-head-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-head-sub { font-size: 11.5px; color: var(--text-3); }
+
+/* ── mini-btn (inside chat header) ── */
+.mini-btn {
+  height: 28px; padding: 0 10px; border-radius: var(--r-sm);
+  font-size: 12px; font-weight: 550;
+  color: var(--text-3); display: inline-flex; align-items: center; gap: 6px;
+  transition: background var(--t-fast), color var(--t-fast);
+  white-space: nowrap; flex-shrink: 0;
+}
+.mini-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.mini-btn:hover { background: var(--hover); color: var(--text); }
+
+/* ── Context chip ── */
+.context-chip {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px 14px 0;
+  padding: 8px 11px; border-radius: var(--r-sm);
+  background: var(--accent-tint2);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  font-size: 12px; color: var(--text-2); flex-shrink: 0;
+}
+.context-chip svg {
+  width: 13px; height: 13px;
+  stroke: var(--accent); fill: none; stroke-width: 1.8; flex-shrink: 0;
+}
+.context-chip b { color: var(--text); font-weight: 600; }
+
+/* ── Chat empty state + suggested prompts ── */
+.chat-empty {
+  margin: auto; text-align: center; color: var(--text-3); padding: 24px;
+}
+.ce-ic {
+  width: 44px; height: 44px; margin: 0 auto 14px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--border-soft);
+  display: grid; place-items: center;
+}
+.ce-ic svg { width: 22px; height: 22px; stroke: var(--text-3); fill: none; stroke-width: 1.6; }
+.ce-t { font-size: 13.5px; color: var(--text-2); font-weight: 550; margin-bottom: 4px; }
+.ce-s { font-size: 12.5px; color: var(--text-3); line-height: 1.5; }
+.suggested { display: flex; flex-direction: column; gap: 7px; margin-top: 18px; }
+.suggested button {
+  text-align: left; padding: 9px 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--border-soft); background: var(--surface-2);
+  font-size: 12.5px; color: var(--text-2);
+  transition: border-color var(--t-fast), color var(--t-fast), background var(--t-fast);
+}
+.suggested button:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--text); background: var(--accent-tint2);
+}
+
+/* ── Message .who label ── */
+.who {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-4); margin: 0 2px 5px;
+  display: block;
+}
+
+/* ── Composer bar (inside .composer-box) ── */
+.composer { padding: 10px 12px 12px; border-top: 1px solid var(--border-soft); flex-shrink: 0; }
+.composer-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px 8px 10px;
+}
+.composer-bar .grow { flex: 1; }
+
+/* ── Mode chip + popover (replaces chat-voice-control) ── */
+.mode-control { position: relative; }
+
+.mode-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 30px; padding: 0 11px; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-2); font-size: 12px; font-weight: 550; white-space: nowrap;
+  transition: border-color var(--t-fast), color var(--t-fast), background var(--t-fast);
+}
+.mode-chip:hover,
+.mode-chip.open { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--text); }
+.mode-chip.open { background: var(--accent-tint2); }
+.mode-chip .io { display: inline-flex; align-items: center; gap: 4px; }
+.mode-chip svg.ic { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+.mode-chip .arrow { color: var(--text-4); font-size: 11px; }
+.mode-chip .caret { width: 11px; height: 11px; stroke: var(--text-3); fill: none; stroke-width: 2; transition: transform var(--t-fast); }
+.mode-chip.open .caret { transform: rotate(180deg); }
+
+.mode-pop {
+  position: absolute; bottom: calc(100% + 10px); left: 0; z-index: 30;
+  width: 264px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); box-shadow: var(--shadow-lg);
+  padding: 6px; animation: popin var(--t-fast);
+  transform-origin: bottom left;
+}
+@keyframes popin { from { transform: translateY(6px) scale(.98); opacity: 0; } }
+.mode-pop h4 {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-4); padding: 8px 8px 6px;
+}
+.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 0 2px 2px; }
+
+.mode-cell {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  padding: 11px 12px; border-radius: var(--r-sm); border: 1px solid var(--border-soft);
+  background: var(--surface-2); text-align: left;
+  transition: all var(--t-fast); position: relative;
+}
+.mode-cell:hover:not(:disabled) { border-color: var(--border); background: var(--hover); }
+.mode-cell.active { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: var(--accent-tint2); }
+.mode-cell:disabled { opacity: .42; cursor: not-allowed; }
+.mc-io { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text); }
+.mc-io svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.mc-io .ar { color: var(--text-4); }
+.mc-desc { font-size: 10.5px; color: var(--text-3); line-height: 1.35; }
+.mc-check { position: absolute; top: 8px; right: 8px; color: var(--accent); }
+.mc-check svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.2; }
+.mode-note { font-size: 10.5px; color: var(--text-4); padding: 8px 8px 4px; line-height: 1.4; }
+
+/* ── Mic / Send / Stop buttons (inside composer-bar) ── */
+.mic-btn {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+  display: grid; place-items: center; transition: all var(--t-fast);
+}
+.mic-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+.mic-btn:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); }
+.mic-btn:disabled { opacity: .5; cursor: not-allowed; }
+.mic-btn.rec {
+  border-color: var(--danger); color: var(--danger); background: var(--danger-tint);
+  animation: micpulse 1.4s ease-in-out infinite;
+}
+@keyframes micpulse {
+  0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 40%, transparent); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .mic-btn.rec { animation: none; } }
+
+.send-btn {
+  height: 34px; padding: 0 14px; border-radius: 99px; flex-shrink: 0;
+  background: var(--accent); color: var(--accent-ink);
+  font-size: 13px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 36%, transparent);
+  transition: background var(--t-fast), transform var(--t-fast), opacity var(--t-fast);
+}
+.send-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+.send-btn:hover:not(:disabled) { background: var(--accent-strong); }
+.send-btn:active:not(:disabled) { transform: scale(.96); }
+.send-btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+
+/* ── Recording waveform ── */
+.rec-meta {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 16px 0; font-size: 11.5px; color: var(--danger); flex-shrink: 0;
+}
+.rec-meta .wave { display: inline-flex; gap: 2px; align-items: center; }
+.rec-meta .wave i { width: 2px; height: 8px; border-radius: 2px; background: currentColor; animation: wave 1s ease-in-out infinite; }
+.rec-meta .wave i:nth-child(2) { animation-delay: .15s; }
+.rec-meta .wave i:nth-child(3) { animation-delay: .3s; }
+.rec-meta .wave i:nth-child(4) { animation-delay: .45s; }
+@keyframes wave { 0%,100% { height: 5px; } 50% { height: 13px; } }
+
+/* ── Suggestion cards (.sugg-card) ── */
+.sugg-card {
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--surface-2); overflow: hidden; align-self: stretch;
+}
+.sugg-card.mem { border-color: color-mix(in srgb, var(--memory) 34%, transparent); }
+.sugg-top { display: flex; align-items: center; gap: 8px; padding: 11px 14px 9px; }
+.sugg-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--accent);
+}
+.sugg-card.mem .sugg-badge { color: var(--memory); }
+.sugg-badge svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.sugg-title { padding: 0 14px; font-size: 13.5px; font-weight: 650; color: var(--text); }
+.sugg-body { padding: 6px 14px 12px; font-size: 12.5px; color: var(--text-2); line-height: 1.55; }
+.sugg-actions { display: flex; gap: 7px; padding: 0 14px 13px; flex-wrap: wrap; }
+
+/* ── xbtn (small action buttons inside cards) ── */
+.xbtn {
+  height: 28px; padding: 0 11px; border-radius: var(--r-sm); font-size: 12px; font-weight: 550;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+  transition: all var(--t-fast); white-space: nowrap;
+}
+.xbtn:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.xbtn:disabled { opacity: .5; cursor: not-allowed; }
+.xbtn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.xbtn.primary:hover:not(:disabled) { background: var(--accent-strong); }
+.xbtn.ghost { border-color: transparent; background: transparent; color: var(--text-3); }
+.xbtn.ghost:hover:not(:disabled) { color: var(--text); background: var(--hover); }

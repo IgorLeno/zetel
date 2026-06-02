@@ -30,9 +30,10 @@ export default async function ZetelDetailPage({
   if (!zetel || zetel.trashedAt) {
     return (
       <>
-        <header className="page-header">
-          <Link className="back-link" href="/zetel">
-            ← Zetels
+        <header className="topbar">
+          <Link className="crumb" href="/zetel">
+            <svg viewBox="0 0 16 16"><path d="M10 12L6 8l4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Zetels
           </Link>
         </header>
         <div className="page-body">
@@ -46,15 +47,17 @@ export default async function ZetelDetailPage({
 
   return (
     <>
-      <header className="page-header">
-        <Link className="back-link" href="/zetel">
-          ← Zetels
+      <header className="topbar">
+        <Link className="crumb" href="/zetel">
+          <svg viewBox="0 0 16 16"><path d="M10 12L6 8l4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Zetels
         </Link>
-        <span className="page-title">{zetel.displayName}</span>
+        <span className="crumb-sep">/</span>
+        <span className="doc-title">{zetel.displayName}</span>
         {zetel.readingStale ? (
-          <span className="badge warn">Leitura desatualizada</span>
+          <span className="pill warn"><span className="dot" />Desatualizado</span>
         ) : zetel.lastBuiltAt ? (
-          <span className="badge ok">Leitura atualizada</span>
+          <span className="pill ok"><span className="dot" />Atualizado</span>
         ) : null}
       </header>
       <div className="page-body page-body--zetel">

@@ -224,16 +224,27 @@ export function LeituraPanel({
     <span className="status-chip ok">Pronto</span>
   ) : null;
 
+  const guideProgress =
+    selectedMode === 'guia-estudo' &&
+    currentGuideBlockIndex !== null &&
+    currentGuideBlockTotal !== null &&
+    currentGuideBlockTotal > 0 ? (
+      <span className="pill busy">
+        <span className="dot" />
+        {currentGuideBlockIndex + 1}/{currentGuideBlockTotal}
+      </span>
+    ) : null;
+
   return (
     <div className="leitura-panel">
       <div className="leitura-toolbar">
         <div className="toolbar-start">
-          <div className="mode-switch" role="radiogroup" aria-label="Modo de leitura">
+          <div className="segmented" role="radiogroup" aria-label="Modo de leitura">
             <button
               type="button"
               role="radio"
               aria-checked={selectedMode === 'tecnico'}
-              className={`mode-option${selectedMode === 'tecnico' ? ' active' : ''}`}
+              className={`seg-opt${selectedMode === 'tecnico' ? ' active' : ''}`}
               disabled={building}
               onClick={() => setSelectedMode('tecnico')}
             >
@@ -243,7 +254,7 @@ export function LeituraPanel({
               type="button"
               role="radio"
               aria-checked={selectedMode === 'guia-estudo'}
-              className={`mode-option${selectedMode === 'guia-estudo' ? ' active' : ''}`}
+              className={`seg-opt${selectedMode === 'guia-estudo' ? ' active' : ''}`}
               disabled={building}
               title="Gerado por IA a partir do material"
               onClick={() => setSelectedMode('guia-estudo')}
@@ -252,18 +263,33 @@ export function LeituraPanel({
             </button>
           </div>
           {statusChip}
+          {guideProgress}
           <button
             type="button"
-            className={buttonPrimary ? 'btn primary' : 'btn'}
+            className={`ghost-btn${building ? ' spin' : ''}`}
             disabled={building}
             onClick={onBuild}
           >
+            {building ? (
+              <svg viewBox="0 0 16 16"><path d="M8 2a6 6 0 1 0 6 6" strokeLinecap="round"/></svg>
+            ) : (
+              <svg viewBox="0 0 16 16"><path d="M2 8a6 6 0 1 0 6-6" strokeLinecap="round"/><path d="M2 2v4h4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            )}
             {buttonLabel}
           </button>
         </div>
         {showIframe && (
-          <button type="button" className="btn btn-sm" onClick={() => setChatOpen((o) => !o)}>
-            {chatOpen ? 'Fechar chat' : 'Interagir'}
+          <button
+            type="button"
+            className={`icon-btn${chatOpen ? ' on' : ''}`}
+            title={chatOpen ? 'Fechar parceiro' : 'Abrir parceiro de estudos'}
+            aria-label={chatOpen ? 'Fechar parceiro' : 'Abrir parceiro de estudos'}
+            onClick={() => setChatOpen((o) => !o)}
+          >
+            <svg viewBox="0 0 16 16">
+              <rect x="2" y="2" width="12" height="10" rx="2"/>
+              <path d="M5 13l1.5-2M11 13l-1.5-2" strokeLinecap="round"/>
+            </svg>
           </button>
         )}
       </div>

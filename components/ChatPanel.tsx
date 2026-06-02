@@ -730,6 +730,72 @@ export function ChatPanel({
   const micDisabled = voiceState === 'transcribing' || voiceState === 'speaking' || isLoading;
   const inputDisabled = isLoading || voiceState !== 'idle';
 
+  /* SVG icons — inline to keep the component self-contained */
+  const IcMic = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <rect x="5" y="1" width="6" height="9" rx="3" strokeLinecap="round"/>
+      <path d="M3 8a5 5 0 0 0 10 0" strokeLinecap="round"/>
+      <path d="M8 13v2" strokeLinecap="round"/>
+    </svg>
+  );
+  const IcStop = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <rect x="3" y="3" width="10" height="10" rx="2"/>
+    </svg>
+  );
+  const IcSpeaker = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <path d="M3 6H1v4h2l4 3V3L3 6z" strokeLinejoin="round"/>
+      <path d="M11 5c1 1 1.5 2 1.5 3S12 11 11 12" strokeLinecap="round"/>
+      <path d="M13 3c2 2 2 8 0 10" strokeLinecap="round"/>
+    </svg>
+  );
+  const IcSend = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <path d="M14 8L2 2l3 6-3 6 12-6z" strokeLinejoin="round"/>
+    </svg>
+  );
+  const IcText = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <path d="M2 4h12M2 8h8M2 12h10" strokeLinecap="round"/>
+    </svg>
+  );
+  const IcType = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <rect x="1" y="3" width="14" height="10" rx="2"/>
+      <path d="M5 9h6M8 7v4" strokeLinecap="round"/>
+    </svg>
+  );
+  const IcTrash = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <path d="M3 5h10M6 5V3h4v2M5 5l1 8h4l1-8" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+  const IcCheck = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <path d="M3 8l4 4 6-7" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
+  const MODES: { inMode: InputMode; outMode: OutputMode; label: string; desc: string }[] = [
+    { inMode: 'text',  outMode: 'text',  label: 'Texto → Texto',  desc: 'Escreve e lê a resposta.' },
+    { inMode: 'text',  outMode: 'audio', label: 'Texto → Áudio',  desc: 'Escreve e ouve a resposta.' },
+    { inMode: 'voice', outMode: 'text',  label: 'Voz → Texto',    desc: 'Fala e lê a resposta.' },
+    { inMode: 'voice', outMode: 'audio', label: 'Voz → Áudio',    desc: 'Conversa por voz, mãos livres.' },
+  ];
+
+  const sectionLabel = currentGuideBlockTitle
+    ? currentGuideBlockTitle
+    : currentPageIndex !== null
+    ? `Página ${currentPageIndex + 1}`
+    : 'página atual';
+
+  const SUGGESTED = [
+    'Resuma esta seção como uma nota',
+    'Explique com uma analogia',
+    'Quais são os conceitos-chave?',
+  ];
+
   return (
     <aside className="chat-panel">
       <header className="chat-panel-header">
@@ -753,26 +819,57 @@ export function ChatPanel({
               />
             </svg>
           </span>
-          <span className="chat-panel-title">Parceiro de estudos</span>
+          <div className="ht">
+            <div className="chat-panel-title">Parceiro de estudos</div>
+            <div className="chat-head-sub">{sectionLabel}</div>
+          </div>
         </div>
         <button
           type="button"
-          className="btn btn-sm"
+          className="mini-btn"
           disabled={clearing}
           onClick={() => void clearHistory()}
+          title="Limpar histórico"
         >
+          {IcTrash}
           {clearing ? 'Limpando…' : 'Limpar'}
         </button>
       </header>
 
+      {/* Context chip — shows what the partner is reading */}
+      <div className="context-chip">
+        <svg viewBox="0 0 16 16" aria-hidden>
+          <path d="M4 2h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" strokeLinejoin="round"/>
+          <path d="M5 6h6M5 9h4" strokeLinecap="round"/>
+        </svg>
+        Lendo · <b>{sectionLabel}</b>
+      </div>
+
       <div className="chat-messages" ref={messagesRef} data-testid="chat-messages">
         {!loaded && <p className="chat-placeholder">Carregando histórico…</p>}
         {loaded && visibleMessages.length === 0 && !streaming && (
-          <p className="chat-placeholder">Pergunte sobre a página atual.</p>
+          <div className="chat-empty">
+            <div className="ce-ic">
+              <svg viewBox="0 0 24 24" aria-hidden>
+                <path d="M12 2a8 8 0 0 1 8 8c0 5-5 10-8 12C9 20 4 17 4 10a8 8 0 0 1 8-8z" strokeLinejoin="round"/>
+                <path d="M12 7v5M12 15h.01" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <div className="ce-t">Pergunte sobre o que está lendo</div>
+            <div className="ce-s">O parceiro conhece a seção aberta. Peça resumos, analogias ou transforme ideias em notas.</div>
+            <div className="suggested">
+              {SUGGESTED.map((s) => (
+                <button key={s} type="button" onClick={() => void sendMessage(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         {visibleMessages.map((m) => (
           <div key={m.id} className={`msg ${m.role === 'user' ? 'msg-user' : 'msg-assistant'}`}>
             <div className="msg-content-wrap">
+              {m.role === 'assistant' && <span className="who">Parceiro</span>}
               <div className="msg-bubble" data-testid="msg-bubble" data-role={m.role}>
                 {m.content}
               </div>
@@ -782,6 +879,7 @@ export function ChatPanel({
         {streaming && (
           <div className="msg msg-assistant">
             <div className="msg-content-wrap">
+              <span className="who">Parceiro</span>
               <div className="msg-bubble streaming" data-testid="msg-bubble" data-role="streaming">
                 {streaming}
                 <span className="streaming-cursor" aria-hidden />
@@ -814,138 +912,139 @@ export function ChatPanel({
 
       {toast && <div className="chat-toast">{toast}</div>}
 
-      <div className="chat-input-row">
-        {/* ── Chip de modo voz + popover (Módulo 13.4) ── */}
-        {voiceAvailable && (
-          <div className="chat-voice-control" ref={popoverRef}>
-            {/* Popover flutuante — aparece acima do composer */}
-            {popoverOpen && (
-              <div className="chat-voice-popover" role="dialog" aria-label="Modo de voz">
-                <div className="chat-voice-row">
-                  <span className="chat-voice-label">Entrada</span>
-                  <div className="chat-voice-seg">
-                    <button
-                      type="button"
-                      className={`chat-voice-opt${inputMode === 'text' ? ' active' : ''}`}
-                      onClick={() => chooseInput('text')}
-                    >
-                      Texto
-                    </button>
-                    <button
-                      type="button"
-                      className={`chat-voice-opt${inputMode === 'voice' ? ' active' : ''}`}
-                      disabled={!voiceStatus?.stt}
-                      title={!voiceStatus?.stt ? 'Chave STT não configurada' : undefined}
-                      onClick={() => chooseInput('voice')}
-                    >
-                      Voz
-                    </button>
+      {/* Countdown bar — visible only when recording near limit (D34) */}
+      {inputMode === 'voice' && recordSecondsLeft !== null && (
+        <div className="rec-meta">
+          <span className="wave"><i/><i/><i/><i/></span>
+          Ouvindo… {recordSecondsLeft}s
+        </div>
+      )}
+
+      {/* Composer — mic/mode/send live inside the box */}
+      <div className="composer">
+        <div className="composer-box">
+          <textarea
+            ref={inputRef}
+            className="chat-input composer-input"
+            rows={2}
+            placeholder={inputMode === 'voice' ? 'Toque no microfone para falar…' : 'Pergunte sobre esta página…'}
+            value={input}
+            disabled={inputDisabled}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKeyDown}
+          />
+          <div className="composer-bar">
+            {/* Mode chip + popover (Módulo 13.4) */}
+            {voiceAvailable && (
+              <div className="mode-control" ref={popoverRef}>
+                {popoverOpen && (
+                  <div className="mode-pop" role="dialog" aria-label="Modo de conversa">
+                    <h4>Modo de conversa</h4>
+                    <div className="mode-grid">
+                      {MODES.map((m) => {
+                        const active = m.inMode === inputMode && m.outMode === outputMode;
+                        const disabledVoiceIn = m.inMode === 'voice' && !voiceStatus?.stt;
+                        const disabledAudioOut = m.outMode === 'audio' && !voiceStatus?.tts;
+                        const isDisabled = disabledVoiceIn || disabledAudioOut;
+                        return (
+                          <button
+                            key={m.label}
+                            type="button"
+                            className={`mode-cell${active ? ' active' : ''}`}
+                            disabled={isDisabled}
+                            title={
+                              disabledVoiceIn
+                                ? 'Chave STT não configurada'
+                                : disabledAudioOut
+                                ? 'Chave TTS não configurada'
+                                : undefined
+                            }
+                            onClick={() => {
+                              chooseInput(m.inMode);
+                              chooseOutput(m.outMode);
+                              setPopoverOpen(false);
+                            }}
+                          >
+                            {active && <span className="mc-check">{IcCheck}</span>}
+                            <span className="mc-io">
+                              {m.inMode === 'voice' ? IcMic : IcText}
+                              <span className="ar">→</span>
+                              {m.outMode === 'audio' ? IcSpeaker : IcType}
+                            </span>
+                            <span className="mc-desc">{m.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mode-note">Entrada e saída são independentes.</p>
                   </div>
-                </div>
-                <div className="chat-voice-row">
-                  <span className="chat-voice-label">Saída</span>
-                  <div className="chat-voice-seg">
-                    <button
-                      type="button"
-                      className={`chat-voice-opt${outputMode === 'text' ? ' active' : ''}`}
-                      onClick={() => chooseOutput('text')}
-                    >
-                      Texto
-                    </button>
-                    <button
-                      type="button"
-                      className={`chat-voice-opt${outputMode === 'audio' ? ' active' : ''}`}
-                      disabled={!voiceStatus?.tts}
-                      title={!voiceStatus?.tts ? 'Chave TTS não configurada' : undefined}
-                      onClick={() => chooseOutput('audio')}
-                    >
-                      Áudio
-                    </button>
-                  </div>
-                </div>
+                )}
+                <button
+                  type="button"
+                  className={`mode-chip${popoverOpen ? ' open' : ''}`}
+                  onClick={() => setPopoverOpen((v) => !v)}
+                  title="Configurar modo de conversa"
+                  aria-expanded={popoverOpen}
+                  aria-haspopup="dialog"
+                >
+                  <span className="io">{inputMode === 'voice' ? IcMic : IcText}</span>
+                  <span className="arrow">→</span>
+                  <span className="io">{outputMode === 'audio' ? IcSpeaker : IcType}</span>
+                  <svg className="caret" viewBox="0 0 12 12" aria-hidden>
+                    <path d="M2 4l4 4 4-4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
               </div>
             )}
 
-            {/* Chip compacto que resume o modo atual e abre o popover */}
-            <button
-              type="button"
-              className={`chat-mode-chip${popoverOpen ? ' open' : ''}`}
-              onClick={() => setPopoverOpen((v) => !v)}
-              title="Configurar entrada e saída de voz"
-              aria-expanded={popoverOpen}
-              aria-haspopup="dialog"
-            >
-              {inputMode === 'voice' ? '🎙' : '💬'}{' '}
-              {inputMode === 'voice' ? 'Voz' : 'Texto'} →{' '}
-              {outputMode === 'audio' ? 'Áudio' : 'Texto'} ▾
-            </button>
-          </div>
-        )}
+            <div className="grow" />
 
-        <div className="chat-input-area">
-          <div className="composer-box">
-            <textarea
-              ref={inputRef}
-              className="chat-input composer-input"
-              rows={2}
-              placeholder="Pergunte sobre a página atual…"
-              value={input}
-              disabled={inputDisabled}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-            />
-          </div>
-          {/* Contador regressivo nos últimos 10s (D34) — visível apenas com entrada por voz */}
-          {inputMode === 'voice' && recordSecondsLeft !== null && (
-            <span className="chat-record-countdown">{recordSecondsLeft}s</span>
-          )}
-        </div>
-
-        {/* Botão mic — apenas quando inputMode='voice' */}
-        {inputMode === 'voice' && (
-          <div className="chat-mic-area">
-            <button
-              type="button"
-              className={`chat-mic-btn${voiceState === 'listening' ? ' listening' : voiceState === 'speaking' ? ' speaking' : ''}`}
-              disabled={micDisabled}
-              title={
-                voiceState === 'listening'
-                  ? 'Parar gravação'
-                  : voiceState === 'transcribing'
+            {/* Mic button — visible when inputMode='voice' */}
+            {inputMode === 'voice' && (
+              <button
+                type="button"
+                className={`mic-btn${voiceState === 'listening' ? ' rec' : ''}`}
+                disabled={micDisabled}
+                title={
+                  voiceState === 'listening'
+                    ? 'Parar gravação'
+                    : voiceState === 'transcribing'
                     ? 'Transcrevendo…'
                     : voiceState === 'speaking'
-                      ? 'Reproduzindo'
-                      : 'Gravar voz'
-              }
-              aria-label={voiceState === 'listening' ? 'Parar gravação' : 'Gravar voz'}
-              onClick={handleMicClick}
+                    ? 'Reproduzindo'
+                    : 'Gravar voz'
+                }
+                aria-label={voiceState === 'listening' ? 'Parar gravação' : 'Gravar voz'}
+                onClick={handleMicClick}
+              >
+                {voiceState === 'listening' ? IcStop : voiceState === 'speaking' ? IcSpeaker : IcMic}
+              </button>
+            )}
+
+            {/* Stop TTS button — visible when speaking */}
+            {voiceState === 'speaking' && (
+              <button
+                type="button"
+                className="mic-btn rec"
+                onClick={stopCurrentAudio}
+                title="Parar reprodução"
+                aria-label="Parar reprodução"
+              >
+                {IcStop}
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="send-btn"
+              disabled={isLoading || !input.trim() || voiceState !== 'idle'}
+              onClick={() => void sendMessage()}
             >
-              {voiceState === 'listening' ? '⏹' : voiceState === 'speaking' ? '🔊' : '🎙'}
+              {isLoading ? <span className="streaming-cursor" aria-hidden /> : IcSend}
+              {!isLoading && 'Enviar'}
             </button>
           </div>
-        )}
-
-        {/* Botão ⏹ parar reprodução — visível sempre que há TTS em reprodução */}
-        {voiceState === 'speaking' && (
-          <button
-            type="button"
-            className="chat-stop-btn"
-            onClick={stopCurrentAudio}
-            title="Parar reprodução"
-            aria-label="Parar reprodução"
-          >
-            ⏹
-          </button>
-        )}
-
-        <button
-          type="button"
-          className="btn primary"
-          disabled={isLoading || !input.trim() || voiceState !== 'idle'}
-          onClick={() => void sendMessage()}
-        >
-          {isLoading ? '…' : 'Enviar →'}
-        </button>
+        </div>
       </div>
     </aside>
   );

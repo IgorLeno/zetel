@@ -437,34 +437,35 @@ async function pageNodesToHtml(
 
 /** Vars do tema escuro, reusadas em :root e [data-theme="dark"]. */
 const DARK_VARS = `
-  --bg-page:#0d1117; --bg-card:#161b22; --bg-subcard:#21262d;
-  --border:rgba(255,255,255,.08); --border-strong:rgba(255,255,255,.14);
-  --text:#e6edf3; --text-secondary:#8b949e; --text-muted:#6e7681;
-  --accent:#58a6ff; --accent-soft:rgba(88,166,255,.15); --accent-hover:rgba(88,166,255,.10);
-  --code-bg:#161b22; --quote-bg:rgba(88,166,255,.08); --math-bg:rgba(88,166,255,.07);
-  --math-border:rgba(88,166,255,.22); --table-zebra:rgba(255,255,255,.035);
-  --cover-mark-bg:#58a6ff; --cover-mark-fg:#0d1117;
-  --warning-bg:#3d3520; --warning-border:#8a7020;`;
+  --bg-page:#0d0d11; --bg-card:#15151b; --bg-subcard:#1b1b22;
+  --border:rgba(255,255,255,.07); --border-strong:rgba(255,255,255,.12);
+  --text:#e9e9ee; --text-secondary:#9fa0ab; --text-muted:#686974;
+  --accent:#7d7bff; --accent-soft:rgba(125,123,255,.16); --accent-hover:rgba(125,123,255,.10);
+  --code-bg:#131318; --quote-bg:rgba(125,123,255,.09); --math-bg:rgba(125,123,255,.08);
+  --math-border:rgba(125,123,255,.26); --table-zebra:rgba(255,255,255,.03);
+  --cover-mark-bg:#7d7bff; --cover-mark-fg:#ffffff;
+  --warning-bg:#2a2310; --warning-border:#6b5a10;`;
 
 /** Vars do tema claro, aplicadas via [data-theme="light"] e fallback prefers. */
 const LIGHT_VARS = `
-  --bg-page:#ffffff; --bg-card:#f6f8fa; --bg-subcard:#eaeef2;
-  --border:rgba(31,35,40,.12); --border-strong:rgba(31,35,40,.18);
-  --text:#1f2328; --text-secondary:#57606a; --text-muted:#6e7781;
-  --accent:#0969da; --accent-soft:rgba(9,105,218,.15); --accent-hover:rgba(9,105,218,.10);
-  --code-bg:#f6f8fa; --quote-bg:rgba(9,105,218,.07); --math-bg:rgba(9,105,218,.055);
-  --math-border:rgba(9,105,218,.20); --table-zebra:rgba(31,35,40,.035);
-  --cover-mark-bg:#0969da; --cover-mark-fg:#ffffff;
-  --warning-bg:#fff8c5; --warning-border:#d4a72c;`;
+  --bg-page:#f4f4f1; --bg-card:#ffffff; --bg-subcard:#f7f7f4;
+  --border:rgba(20,20,30,.10); --border-strong:rgba(20,20,30,.16);
+  --text:#1b1b1f; --text-secondary:#5b5b62; --text-muted:#8c8c92;
+  --accent:#7d7bff; --accent-soft:rgba(125,123,255,.14); --accent-hover:rgba(125,123,255,.09);
+  --code-bg:#f7f7f4; --quote-bg:rgba(125,123,255,.07); --math-bg:rgba(125,123,255,.06);
+  --math-border:rgba(125,123,255,.22); --table-zebra:rgba(20,20,30,.028);
+  --cover-mark-bg:#7d7bff; --cover-mark-fg:#ffffff;
+  --warning-bg:#fefce8; --warning-border:#ca9f0c;`;
 
 function buildViewerCss(): string {
   return `
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
       ${DARK_VARS}
-      --font-ui:system-ui,-apple-system,'Segoe UI',sans-serif;
+      --font-ui:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+      --font-read:'Literata',Georgia,'Times New Roman',serif;
       --font-code:'JetBrains Mono','Fira Code','Cascadia Code',monospace;
-      --radius-card:8px; --radius-subcard:6px;
+      --radius-card:10px; --radius-subcard:7px;
     }
     [data-theme="dark"]{${DARK_VARS}}
     [data-theme="light"]{${LIGHT_VARS}}
@@ -482,11 +483,11 @@ function buildViewerCss(): string {
     #reader{flex:1;overflow-y:auto;min-height:0;padding-bottom:5rem}
     article.page{display:none;width:min(860px,calc(100% - 48px));max-width:860px;margin-inline:auto;padding:34px 0 44px;color:var(--text);text-wrap:pretty}
     article.page.active{display:block}
-    article.page h1,article.page h2,article.page h3{font-family:var(--font-ui);text-wrap:pretty}
-    article.page h1{font-size:30px;line-height:1.12;margin:0 0 20px;font-weight:750;color:var(--accent)}
-    article.page h2{font-size:21px;line-height:1.28;margin:0 0 18px;font-weight:700;color:var(--accent)}
-    article.page h3{font-size:14px;line-height:1.35;margin:24px 0 9px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary)}
-    article.page p{margin-bottom:15px;line-height:1.72}
+    article.page h1,article.page h2,article.page h3{font-family:var(--font-read);text-wrap:pretty}
+    article.page h1{font-size:30px;line-height:1.12;margin:0 0 20px;font-weight:700;color:var(--accent)}
+    article.page h2{font-size:21px;line-height:1.28;margin:0 0 18px;font-weight:650;color:var(--accent)}
+    article.page h3{font-size:15px;line-height:1.35;margin:24px 0 9px;font-weight:650;letter-spacing:.02em;text-transform:uppercase;color:var(--text-secondary)}
+    article.page p{font-family:var(--font-read);margin-bottom:16px;line-height:1.78;font-size:16px}
     article.page ul,article.page ol{padding-left:24px;margin-bottom:15px}
     article.page li{margin-bottom:7px;padding-left:2px}
     article.page li>ul,article.page li>ol{margin-top:7px;margin-bottom:8px;padding-left:24px}

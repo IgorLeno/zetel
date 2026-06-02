@@ -39,29 +39,33 @@ export function MemoryCard({
   const [draft, setDraft] = useState(suggestion.corpo);
 
   return (
-    <div className="memory-card" data-testid="memory-card">
-      <div className="memory-card-head">
-        <span className="memory-card-badge">Memória global</span>
-        <span className="memory-card-title">{suggestion.titulo}</span>
+    <div className="sugg-card mem" data-testid="memory-card">
+      <div className="sugg-top">
+        <span className="sugg-badge">
+          <svg viewBox="0 0 16 16"><path d="M8 2a5 5 0 0 1 5 5c0 3.5-5 8-5 8S3 10.5 3 7a5 5 0 0 1 5-5z"/><circle cx="8" cy="7" r="1.5"/></svg>
+          Memória global
+        </span>
       </div>
+      <div className="sugg-title">{suggestion.titulo}</div>
 
       {editing ? (
         <textarea
-          className="memory-card-edit"
-          rows={6}
+          className="note-card-edit"
+          rows={5}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          style={{ margin: '0 14px 8px', width: 'calc(100% - 28px)' }}
         />
       ) : (
-        <div className="memory-card-body">{suggestion.corpo}</div>
+        <div className="sugg-body">{suggestion.corpo}</div>
       )}
 
-      <div className="memory-card-actions">
+      <div className="sugg-actions">
         {editing ? (
           <>
             <button
               type="button"
-              className="btn btn-sm primary"
+              className="xbtn primary"
               disabled={busy || !draft.trim()}
               onClick={() => onSave(suggestion.titulo, draft)}
               data-testid="memory-action-save-edit"
@@ -70,7 +74,7 @@ export function MemoryCard({
             </button>
             <button
               type="button"
-              className="btn btn-sm"
+              className="xbtn ghost"
               disabled={busy}
               onClick={() => {
                 setDraft(suggestion.corpo);
@@ -84,7 +88,7 @@ export function MemoryCard({
           <>
             <button
               type="button"
-              className="btn btn-sm primary"
+              className="xbtn primary"
               disabled={busy}
               onClick={() => onSave(suggestion.titulo, suggestion.corpo)}
               data-testid="memory-action-save"
@@ -93,7 +97,7 @@ export function MemoryCard({
             </button>
             <button
               type="button"
-              className="btn btn-sm"
+              className="xbtn"
               disabled={busy}
               onClick={() => setEditing(true)}
               data-testid="memory-action-edit"
@@ -103,7 +107,7 @@ export function MemoryCard({
             {canDiscuss && (
               <button
                 type="button"
-                className="btn btn-sm"
+                className="xbtn"
                 disabled={busy}
                 onClick={onDiscuss}
                 data-testid="memory-action-discuss"
@@ -113,7 +117,7 @@ export function MemoryCard({
             )}
             <button
               type="button"
-              className="btn btn-sm"
+              className="xbtn ghost"
               disabled={busy}
               onClick={onReject}
               data-testid="memory-action-reject"
