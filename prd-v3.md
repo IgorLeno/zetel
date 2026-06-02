@@ -471,9 +471,12 @@ Path safety idêntico ao GET. Apagar com `fs.unlink`. Responder `204 No Content`
 
 # Parte H — Roadmap pós-v3
 
-## PRD v4 — Voz (TTS + STT)
+## PRD v4 — Modo Conversa por Voz sobre o documento aberto
 
-Perguntas que o PRD v4 precisará responder antes de ser executável:
+> ⚠ **Superado por `prd-v4.md`** — consultar `prd-v4.md` para a spec executável (decisões D29–D42,
+> contrato `interactionMode`, etapas 13.1–13.4). O stub abaixo é mantido como histórico.
+
+Perguntas originais que motivaram a criação do PRD v4 (respondidas em `prd-v4.md`):
 - Qual provedor? Streaming obrigatório?
 - Áudio gerado cacheado ou descartado após reprodução?
 - Gravação STT: formato, duração máxima, descarte após transcrição?

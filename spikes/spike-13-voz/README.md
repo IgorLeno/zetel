@@ -207,6 +207,22 @@ O parâmetro `language: 'pt'` (D38) força PT-BR, evitando detecção automátic
 
 ---
 
+## Critérios de qualidade conversacional
+
+> O gate do spike não é apenas técnico. Para aprovar 13.2, Igor deve confirmar também
+> estes critérios de qualidade conversacional — que definem o Módulo 13 como
+> **Modo Conversa por Voz** e não apenas TTS/STT avulsos.
+
+- [ ] **Brevidade oral** — resposta falada deve ser mais curta que resposta textual equivalente; o parceiro fala frases curtas, não lê parágrafos
+- [ ] **Markdown ausente no modo voz** — com `interactionMode = 'voice'`, o parceiro evita tabelas, listas aninhadas e headers (Markdown estrutural)
+- [ ] **Contexto do documento preservado** — `pageIndex`, `readingMode`, `guideBlockId`, `guideSectionId`, `guideBlockTitle`, `guideBlockIndex`, `guideBlockTotal` enviados integralmente no modo voz — mesma payload do chat textual
+- [ ] **Transcrição visível** — a transcrição do usuário aparece no chat como mensagem antes ou imediatamente ao envio
+- [ ] **TTS automático escopado** — TTS da resposta é automático **apenas** quando modo conversa está ativo; chat textual normal não tem auto-play
+- [ ] **Fallback textual obrigatório** — se TTS falhar, a resposta textual já está no chat; zero perda de conteúdo para o usuário
+- [ ] **Texto como registro canônico** — transcrição e resposta textual são os dados gravados em `chat_messages`; áudio descartado após uso
+
+---
+
 ## Go / No-Go para Módulo 13.2
 
 **Status:** ⏳ **Aguardando execução live (chave OpenAI necessária).**
@@ -217,6 +233,7 @@ Para fechar o gate do spike antes de avançar para 13.2, preencher:
 - [ ] `run-stt.mjs` executado → HTTP 200, transcrição PT-BR impressa, tamanho registrado
 - [ ] README atualizado com valores numéricos reais (TTFS, tamanho webm, qualidade STT)
 - [ ] Igor revisa e aprova → **GO para 13.2**
+- [ ] Igor revisou os **Critérios de qualidade conversacional** (seção acima) e confirmou GO para 13.2
 
 > **Regra:** Claude Code não avança para 13.2 antes da aprovação explícita de Igor
 > neste README. (PRD v4, etapa 13.1: "O Claude Code não avança para 13.2 antes da

@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 12 concluído (gate passado em 2026-06-01; commits 9156d75 + 922cf52). Gate 12 → PRD v4 aprovado. Módulo 12.1 completo (Fase 1 + Fase 2; E2E live opt-in com budget guard, coleta automática de artefatos, GitHub Actions manual). Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 13 — Voz (TTS + STT), etapa 13.1 (spike isolado).**
+**Estado atual: Módulo 12 concluído (gate passado em 2026-06-01; commits 9156d75 + 922cf52). Gate 12 → PRD v4 aprovado. Módulo 12.1 completo (Fase 1 + Fase 2; E2E live opt-in com budget guard, coleta automática de artefatos, GitHub Actions manual). Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: Módulo 13 — Modo Conversa por Voz sobre o documento aberto (spike 13.1 estruturalmente completo; aguarda execução live com chave OpenAI, valores numéricos no README e aprovação de Igor nos critérios de qualidade conversacional; arquitetura decidida: STT separado → rota de chat textual existente → TTS — não gpt-audio-mini).**
 
 **Módulo 12.1 (E2E Live — Fase 1 + Fase 2) completo.** E2E live é opt-in (`ZETEL_E2E_LIVE=1`); CI padrão nunca usa OpenRouter. Budget guard (`ZETEL_E2E_MAX_CALLS`, default 3) em `setup-live.ts` via `checkBudget` exportada para uso nos specs. Artefatos de falha coletados automaticamente em `test-results/e2e-live/` via `collect-artifacts.ts`. Summarizer opcional em `scripts/e2e-live-summarize.mjs` (funciona sem e com chave). GitHub Actions manual (`workflow_dispatch`) em `.github/workflows/e2e-live.yml` com secret `OPENROUTER_API_KEY` obrigatório. Qualquer mudança em `lib/openrouter.ts`, `lib/study-guide-service.ts`, `lib/chat-prompt.ts` ou `app/api/zetels/[id]/chat/route.ts` deve ser validada com `pnpm test:e2e:live` manualmente quando chave disponível. Gate mínimo permanece: `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`. Ver `docs/TESTING.md` (seção "E2E Live com OpenRouter").
 
@@ -35,7 +35,7 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 #### Próximos passos
 - Gate visual/manual do Documento Técnico refinado, se necessário.
-- Próximo passo operacional: **Módulo 13 — Voz (TTS + STT)**, começando pela etapa **13.1 (spike isolado em `spikes/spike-13-voz/`)** — PRD v4 (aprovado em 2026-06-01). Checkpoint em `spikes/spike-13-voz/README.md` antes de avançar para 13.2.
+- Próximo passo operacional: **Módulo 13 — Modo Conversa por Voz sobre o documento aberto** — PRD v4 (`prd-v4.md`). Spike 13.1 (`spikes/spike-13-voz/`) estruturalmente completo; gate 13.1 → 13.2 requer: (a) execução live com `OPENAI_API_KEY` (TTFS + qualidade STT), (b) valores numéricos registrados no README, (c) aprovação de Igor nos critérios de qualidade conversacional. Arquitetura decidida: STT separado → rota de chat textual existente com `interactionMode='voice'` → TTS da resposta (não gpt-audio-mini).
 
 **Módulo 11 (Guia de Estudo: experiência interativa) concluído em 2026-05-31; gate 11.4 aprovado; `pnpm build` limpo.** **11.1** — template interativo em `renderStudyGuideHtml`: sidebar sticky (desktop) / nav compacta (mobile), quiz pedagógico (`data-answer-index`, feedback pós-clique, pontuação, reiniciar), glossário pesquisável, highlight de seção via `IntersectionObserver`. **11.2** — schema editorial v2 opcional (`comparison_tabs`, `accordions`, `timelines`, `tables`) + `renderV2Blocks`; compatibilidade retroativa. **11.3** — `buildSystemPrompt` como designer instrucional com blocos v2. **11.4** — validação com Zetel `dft` (reprocessado 28→27 páginas): `deepseek/deepseek-v4-flash`, 100% rastreabilidade (35/35 itens, 0 órfãos, 0 flagged), 4 tipos v2 preenchidos, HTML offline (~51 KB). Ressalva não-bloqueante: compat retroativa v1 não testada por ausência de fixture. Ver `spikes/lessons.md` (Módulos 11.1–11.4).
 
@@ -87,6 +87,7 @@ Módulo 1 (Fundação) concluído em 2026-05-29: scaffold Next.js 15 + TS strict
 |---------|-------|
 | `piped-pondering-dahl2.md` | PRD v2 completo (Partes A–D, D1–D15, DT1–DT5) — fonte autoritativa do MVP textual (Módulos 1–8) |
 | `prd-v3.md` | PRD v3 — Módulos 9 e 10 como histórico; fonte autoritativa dos **Módulos 11 e 12** e das decisões D16–D28 |
+| `prd-v4.md` | PRD v4 — fonte autoritativa do **Módulo 13 (voz)**: dois recursos, arquitetura, contrato `interactionMode`, decisões D29–D42, etapas 13.1–13.4 |
 | `spikes/lessons.md` | Calibrações e dívidas técnicas do Módulo 0 — leitura obrigatória antes do Módulo 1 |
 | `estamos-construindo-um-projeto-humble-harbor.md` | Histórico: 5 ajustes de consistência aplicados ao PRD em 2026-05-28 |
 | `zetel-prd-v1.md` (fora deste diretório) | Histórico; não consultar para decisões |
@@ -238,10 +239,11 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **12.0B** | **Integration tests + E2E legado** ✅ | Harness tmpdir; integration com `vi.mock`; E2E legado (OpenRouter real no chat) | 12.0A |
 | **12.1** | **E2E Live (opt-in)** ✅ | OpenRouter real isolado; porta 3001; `ZETEL_HOME` em tmpdir; budget guard | 12.0B |
 | **12** | **Gestão completa de memória no app** ✅ | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 12.1 |
-| PRD v4 | Voz, TTS e STT — Gate 12 → PRD v4 aprovado (2026-06-01) | PRD v4 | 12 |
-| **13.1** | **Spike de integração de voz** 🚀 | PRD v4 — TTS streaming + STT webm/opus; zero toque em produção | 12 |
-| **13.2** | **Backend de voz** | PRD v4 — rotas `/api/voice/tts` e `/api/voice/stt` + settings | 13.1 (spike aprovado) |
-| **13.3** | **UI de voz** | PRD v4 — `ChatPanel` (▶ + mic) + Configurações de voz | 13.2 |
+| PRD v4 | Módulo 13 — Modo Conversa por Voz — Gate 12 → PRD v4 aprovado (2026-06-01) | `prd-v4.md` | 12 |
+| **13.1** | **Spike técnico + critérios conversacionais** 🚀 | TTS streaming + STT webm/opus; critérios de qualidade conversacional; zero toque em produção | 12 |
+| **13.2** | **Backend de voz** | `/api/voice/stt` + `/api/voice/tts`; `interactionMode` em `chat/route.ts`; estilo oral em `buildOpenRouterMessages()` | 13.1 (aprovado por Igor) |
+| **13.3** | **UI de voz** | Botão ▶ por mensagem; microfone PTT; estados visuais; transcrição no input; TTS automático só no modo conversa | 13.2 |
+| **13.4** | **Polimento de voz** | Interrupção de áudio; fallback visual TTS; limpeza `createObjectURL`; sem reproduções simultâneas; teste manual com doc real | 13.3 |
 | PRD v5 | Prompts editáveis e modo internet | PRD v5 | 12 |
 | Futuro | Memória emergente automática | Fase futura | 12 |
 
