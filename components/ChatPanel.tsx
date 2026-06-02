@@ -6,6 +6,7 @@ import { NoteCard, type Suggestion } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
+type VoiceState = 'idle' | 'listening' | 'transcribing' | 'speaking';
 
 function parseSseChunk(text: string): {
   chunks: string[];
@@ -97,6 +98,14 @@ export function ChatPanel({
   const [memoryBusy, setMemoryBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
+
+  // Voice UI (Módulo 13.3)
+  const [voiceStatus, setVoiceStatus] = useState<{ tts: boolean; stt: boolean } | null>(null);
+  const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+  const [playingMsgId, setPlayingMsgId] = useState<string | null>(null);
+  const [ttsErrorIds, setTtsErrorIds] = useState<Set<string>>(new Set());
+  const [recordSecondsLeft, setRecordSecondsLeft] = useState<number | null>(null);
+
   const visibleMessages = messages.filter(
     (m) => !(m.role === 'assistant' && m.content.trim().length === 0),
   );
@@ -107,11 +116,21 @@ export function ChatPanel({
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Voice refs (D33/D38/D42)
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentAudioUrlRef = useRef<string | null>(null);
+  const isAutoVoiceRef = useRef(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const scrollToBottom = useCallback(() => {
     const el = messagesRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, []);
 
+  // Load chat history
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -132,6 +151,40 @@ export function ChatPanel({
     };
   }, [zetelId]);
 
+  // Fetch voice availability once on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/voice/status');
+        if (!cancelled && res.ok) {
+          const data = (await res.json()) as { tts: boolean; stt: boolean };
+          setVoiceStatus(data);
+        }
+      } catch {
+        /* voice indisponível — controles ocultos (D41) */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Cleanup audio/recording resources on unmount (D33/D38)
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) audioRef.current.pause();
+      if (currentAudioUrlRef.current) URL.revokeObjectURL(currentAudioUrlRef.current);
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (recordStreamRef.current) {
+        recordStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages, streaming, suggestion, memorySuggestion, scrollToBottom]);
@@ -140,6 +193,221 @@ export function ChatPanel({
     setToast(msg);
     window.setTimeout(() => setToast(null), 2500);
   }
+
+  // ── Voice functions ──────────────────────────────────────────────────────────
+
+  function stopCurrentAudio(): void {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (currentAudioUrlRef.current) {
+      URL.revokeObjectURL(currentAudioUrlRef.current);
+      currentAudioUrlRef.current = null;
+    }
+    setPlayingMsgId(null);
+    // If auto-voice TTS was playing, reset voice state (D42)
+    if (isAutoVoiceRef.current) {
+      isAutoVoiceRef.current = false;
+      setVoiceState('idle');
+    }
+  }
+
+  async function playTts(
+    text: string,
+    opts: { msgId?: string; isAutoVoice?: boolean } = {},
+  ): Promise<void> {
+    const { msgId, isAutoVoice = false } = opts;
+
+    stopCurrentAudio();
+
+    if (msgId) setPlayingMsgId(msgId);
+    if (isAutoVoice) {
+      isAutoVoiceRef.current = true;
+      setVoiceState('speaking');
+    }
+
+    try {
+      const res = await fetch('/api/voice/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!res.ok) throw new Error(`TTS ${res.status}`);
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      currentAudioUrlRef.current = url;
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        if (currentAudioUrlRef.current === url) {
+          URL.revokeObjectURL(url);
+          currentAudioUrlRef.current = null;
+        }
+        audioRef.current = null;
+        if (msgId) setPlayingMsgId(null);
+        if (isAutoVoice) {
+          isAutoVoiceRef.current = false;
+          setVoiceState('idle');
+        }
+      };
+
+      audio.onerror = () => {
+        if (currentAudioUrlRef.current === url) {
+          URL.revokeObjectURL(url);
+          currentAudioUrlRef.current = null;
+        }
+        audioRef.current = null;
+        if (msgId) {
+          setPlayingMsgId(null);
+          setTtsErrorIds((prev) => new Set([...prev, msgId]));
+        }
+        if (isAutoVoice) {
+          isAutoVoiceRef.current = false;
+          setVoiceState('idle');
+        }
+      };
+
+      // Start playback — state cleanup handled by event handlers above (D33)
+      void audio.play();
+    } catch {
+      if (msgId) {
+        setPlayingMsgId(null);
+        setTtsErrorIds((prev) => new Set([...prev, msgId]));
+      }
+      if (isAutoVoice) {
+        isAutoVoiceRef.current = false;
+        setVoiceState('idle');
+      }
+    }
+  }
+
+  async function startRecording(): Promise<void> {
+    stopCurrentAudio();
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setError('Não foi possível acessar o microfone.');
+      return;
+    }
+
+    recordStreamRef.current = stream;
+
+    const mimeType =
+      typeof MediaRecorder !== 'undefined' &&
+      MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/mp4';
+
+    const recorder = new MediaRecorder(stream, { mimeType });
+    audioChunksRef.current = [];
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      recordStreamRef.current?.getTracks().forEach((t) => t.stop());
+      recordStreamRef.current = null;
+      void handleRecordingStop(mimeType);
+    };
+
+    mediaRecorderRef.current = recorder;
+    recorder.start();
+    setVoiceState('listening');
+    setError(null);
+
+    // Auto-stop after 120s; countdown in last 10s (D34)
+    let elapsed = 0;
+    recordTimerRef.current = setInterval(() => {
+      elapsed++;
+      const remaining = 120 - elapsed;
+      if (remaining <= 10) setRecordSecondsLeft(remaining);
+      if (remaining <= 0) {
+        if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+        recordTimerRef.current = null;
+        stopRecording();
+      }
+    }, 1000);
+  }
+
+  function stopRecording(): void {
+    if (recordTimerRef.current) {
+      clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+    setRecordSecondsLeft(null);
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+      mediaRecorderRef.current = null;
+    }
+  }
+
+  async function handleRecordingStop(mimeType: string): Promise<void> {
+    setVoiceState('transcribing');
+
+    const chunks = audioChunksRef.current;
+    audioChunksRef.current = [];
+
+    if (chunks.length === 0) {
+      setVoiceState('idle');
+      return;
+    }
+
+    const blob = new Blob(chunks, { type: mimeType });
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const file = new File([blob], `recording.${ext}`, { type: mimeType });
+    const form = new FormData();
+    form.append('audio', file);
+
+    try {
+      const res = await fetch('/api/voice/stt', { method: 'POST', body: form });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setVoiceState('idle');
+        setError(data.error ?? 'Erro ao transcrever o áudio.');
+        return;
+      }
+
+      const data = (await res.json()) as { text?: string };
+      const text = data.text?.trim() ?? '';
+
+      if (!text) {
+        setVoiceState('idle');
+        setError('Não foi possível transcrever. Tente novamente.');
+        return;
+      }
+
+      // D40: transcrição visível no textarea antes do envio
+      setInput(text);
+      setVoiceState('idle');
+
+      // Auto-send with voice interaction mode (D36)
+      void sendMessage(text, 'voice');
+    } catch {
+      setVoiceState('idle');
+      setError('Erro ao transcrever o áudio.');
+    }
+  }
+
+  function handleMicClick(): void {
+    if (voiceState === 'idle') {
+      void startRecording();
+    } else if (voiceState === 'listening') {
+      stopRecording();
+    }
+    // transcribing/speaking: button is disabled — no action
+  }
+
+  // ── Chat functions ───────────────────────────────────────────────────────────
 
   async function clearHistory() {
     if (!confirm('Apagar todo o histórico deste Zetel?')) return;
@@ -160,7 +428,7 @@ export function ChatPanel({
     }
   }
 
-  async function sendMessage(rawText?: string) {
+  async function sendMessage(rawText?: string, mode: 'text' | 'voice' = 'text') {
     const text = (rawText ?? input).trim();
     if (!text || isLoading) return;
 
@@ -187,6 +455,7 @@ export function ChatPanel({
           guideBlockTitle: currentGuideBlockTitle,
           guideBlockIndex: currentGuideBlockIndex,
           guideBlockTotal: currentGuideBlockTotal,
+          interactionMode: mode,
         }),
       });
 
@@ -254,6 +523,10 @@ export function ChatPanel({
             data: receivedMemory,
             canDiscuss: !discussNextMemoryRef.current,
           });
+        }
+        // D36: TTS automático apenas quando modo conversa está ativo
+        if (mode === 'voice' && accumulated.trim()) {
+          void playTts(accumulated, { isAutoVoice: true });
         }
       }
     } catch {
@@ -382,6 +655,9 @@ export function ChatPanel({
     }
   }
 
+  const micDisabled = voiceState === 'transcribing' || voiceState === 'speaking' || isLoading;
+  const inputDisabled = isLoading || voiceState !== 'idle';
+
   return (
     <aside className="chat-panel">
       <header className="chat-panel-header">
@@ -403,16 +679,43 @@ export function ChatPanel({
         )}
         {visibleMessages.map((m) => (
           <div key={m.id} className={`msg ${m.role === 'user' ? 'msg-user' : 'msg-assistant'}`}>
-            <div className="msg-bubble" data-testid="msg-bubble" data-role={m.role}>
-              {m.content}
+            <div className="msg-content-wrap">
+              <div className="msg-bubble" data-testid="msg-bubble" data-role={m.role}>
+                {m.content}
+              </div>
+              {m.role === 'assistant' && voiceStatus?.tts && (
+                <button
+                  type="button"
+                  className={`chat-tts-btn${ttsErrorIds.has(m.id) ? ' chat-tts-error' : ''}${playingMsgId === m.id ? ' playing' : ''}`}
+                  title={
+                    playingMsgId === m.id
+                      ? 'Parar reprodução'
+                      : ttsErrorIds.has(m.id)
+                        ? 'Tentar novamente'
+                        : 'Ouvir resposta'
+                  }
+                  disabled={playingMsgId !== null && playingMsgId !== m.id}
+                  onClick={() => {
+                    if (playingMsgId === m.id) {
+                      stopCurrentAudio();
+                    } else {
+                      void playTts(m.content, { msgId: m.id });
+                    }
+                  }}
+                >
+                  {playingMsgId === m.id ? '■' : ttsErrorIds.has(m.id) ? '⚠ ▶' : '▶'}
+                </button>
+              )}
             </div>
           </div>
         ))}
         {streaming && (
           <div className="msg msg-assistant">
-            <div className="msg-bubble streaming" data-testid="msg-bubble" data-role="streaming">
-              {streaming}
-              <span className="streaming-cursor" aria-hidden />
+            <div className="msg-content-wrap">
+              <div className="msg-bubble streaming" data-testid="msg-bubble" data-role="streaming">
+                {streaming}
+                <span className="streaming-cursor" aria-hidden />
+              </div>
             </div>
           </div>
         )}
@@ -442,20 +745,47 @@ export function ChatPanel({
       {toast && <div className="chat-toast">{toast}</div>}
 
       <div className="chat-input-row">
-        <textarea
-          ref={inputRef}
-          className="chat-input"
-          rows={2}
-          placeholder="Pergunte sobre a página atual…"
-          value={input}
-          disabled={isLoading}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-        />
+        <div className="chat-input-area">
+          <textarea
+            ref={inputRef}
+            className="chat-input"
+            rows={2}
+            placeholder="Pergunte sobre a página atual…"
+            value={input}
+            disabled={inputDisabled}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKeyDown}
+          />
+          {voiceStatus?.stt && recordSecondsLeft !== null && (
+            <span className="chat-record-countdown">{recordSecondsLeft}s</span>
+          )}
+        </div>
+        {voiceStatus?.stt && (
+          <div className="chat-mic-area">
+            <button
+              type="button"
+              className={`chat-mic-btn${voiceState === 'listening' ? ' listening' : voiceState === 'speaking' ? ' speaking' : ''}`}
+              disabled={micDisabled}
+              title={
+                voiceState === 'listening'
+                  ? 'Parar gravação'
+                  : voiceState === 'transcribing'
+                    ? 'Transcrevendo…'
+                    : voiceState === 'speaking'
+                      ? 'Reproduzindo'
+                      : 'Gravar voz'
+              }
+              aria-label={voiceState === 'listening' ? 'Parar gravação' : 'Gravar voz'}
+              onClick={handleMicClick}
+            >
+              {voiceState === 'listening' ? '⏹' : voiceState === 'speaking' ? '🔊' : '🎙'}
+            </button>
+          </div>
+        )}
         <button
           type="button"
           className="btn primary"
-          disabled={isLoading || !input.trim()}
+          disabled={isLoading || !input.trim() || voiceState !== 'idle'}
           onClick={() => void sendMessage()}
         >
           {isLoading ? '…' : 'Enviar →'}
