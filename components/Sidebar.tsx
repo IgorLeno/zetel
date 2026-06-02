@@ -38,12 +38,24 @@ const NAV = [
   },
 ];
 
+function syncRailAttribute(collapsed: boolean) {
+  const app = document.querySelector<HTMLElement>('.app');
+  if (!app) return;
+  if (collapsed) {
+    app.dataset.rail = 'true';
+  } else {
+    delete app.dataset.rail;
+  }
+}
+
 export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    setCollapsed(document.documentElement.dataset.sidebarCollapsed === 'true');
+    const initialCollapsed = document.documentElement.dataset.sidebarCollapsed === 'true';
+    setCollapsed(initialCollapsed);
+    syncRailAttribute(initialCollapsed);
   }, []);
 
   function toggleCollapsed() {
@@ -57,6 +69,7 @@ export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
     } else {
       delete document.documentElement.dataset.sidebarCollapsed;
     }
+    syncRailAttribute(next);
   }
 
   return (

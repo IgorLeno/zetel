@@ -733,7 +733,28 @@ export function ChatPanel({
   return (
     <aside className="chat-panel">
       <header className="chat-panel-header">
-        <span className="chat-panel-title">Parceiro de estudos</span>
+        <div className="chat-panel-title-group">
+          <span className="chat-avatar" aria-hidden>
+            <svg viewBox="0 0 16 16" focusable="false">
+              <path
+                d="M4 3.5h7.5A1.5 1.5 0 0 1 13 5v8.5H5.5A2.5 2.5 0 0 1 3 11V5.5A2 2 0 0 1 5 3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M5.5 6.5h5M5.5 9h3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <span className="chat-panel-title">Parceiro de estudos</span>
+        </div>
         <button
           type="button"
           className="btn btn-sm"
@@ -862,16 +883,18 @@ export function ChatPanel({
         )}
 
         <div className="chat-input-area">
-          <textarea
-            ref={inputRef}
-            className="chat-input"
-            rows={2}
-            placeholder="Pergunte sobre a página atual…"
-            value={input}
-            disabled={inputDisabled}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKeyDown}
-          />
+          <div className="composer-box">
+            <textarea
+              ref={inputRef}
+              className="chat-input composer-input"
+              rows={2}
+              placeholder="Pergunte sobre a página atual…"
+              value={input}
+              disabled={inputDisabled}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+            />
+          </div>
           {/* Contador regressivo nos últimos 10s (D34) — visível apenas com entrada por voz */}
           {inputMode === 'voice' && recordSecondsLeft !== null && (
             <span className="chat-record-countdown">{recordSecondsLeft}s</span>
