@@ -136,21 +136,21 @@ O modo voz **não altera** o contrato de contexto existente. O body de chat cont
 
 ## Parte E — Estrutura de etapas do Módulo 13
 
-### 13.1 — Spike técnico + critérios conversacionais *(em andamento)*
+### 13.1 — Spike técnico + critérios conversacionais *(concluído e aprovado)*
 
 Localização: `spikes/spike-13-voz/`
 
 Questões técnicas respondidas pelo spike:
 - TTS(a): ReadableStream passável ao Next.js App Router ✅
-- TTS(b): TTFS com `tts-1` para ~50 palavras PT-BR ⏳ (pendente execução live)
+- TTS(b): TTFS com `tts-1` para ~50 palavras PT-BR ✅ (execução live registrada)
 - TTS(c): Blob URL vs MediaSource → **Blob URL recomendado** ✅
 - STT(a): MediaRecorder usa `audio/webm;codecs=opus` por default ✅
-- STT(b): Whisper aceita webm/opus diretamente ⏳ (pendente execução live)
+- STT(b): Whisper aceita webm/opus diretamente ✅ (execução live registrada)
 - STT(c): `ffmpeg` necessário? **Não** ✅
-- STT(d): Tamanho de 30s webm/opus ⏳ (pendente execução live)
-- STT(e): Qualidade de transcrição PT-BR ⏳ (pendente execução live)
+- STT(d): Tamanho de 30s webm/opus ✅ (execução live registrada)
+- STT(e): Qualidade de transcrição PT-BR ✅ (execução live registrada)
 
-Gate 13.1 → 13.2: spike 13.1 aprovado por Igor (inclui critérios de qualidade conversacional).
+Gate 13.1 → 13.2: concluído (spike aprovado por Igor, com critérios técnicos e conversacionais).
 
 ### 13.2 — Backend de voz
 
@@ -189,7 +189,7 @@ Entregáveis:
 
 ## Parte F — Critérios de qualidade conversacional
 
-O gate não é apenas técnico. Para Igor aprovar 13.2, os seguintes critérios devem ser confirmados:
+O gate não foi apenas técnico. Para aprovação do Módulo 13, os seguintes critérios foram confirmados:
 
 1. **Brevidade oral** — resposta falada é mais curta que resposta textual equivalente; o parceiro fala frases, não lê parágrafos.
 2. **Markdown ausente no modo voz** — com `interactionMode = 'voice'`, o parceiro não gera tabelas, listas aninhadas ou headers.
@@ -216,18 +216,15 @@ Regra: divergência entre `CLAUDE.md` e este PRD → **PRD vence**.
 ## Parte H — Gate e sequência
 
 ```
-Spike 13.1 (estruturalmente completo)
-    Pendente: execução live com OPENAI_API_KEY
-              valores numéricos no README
-              aprovação de Igor (critérios técnicos + conversacionais)
+Módulo 13.1 — Spike técnico + critérios conversacionais ✅
          ↓
-Módulo 13.2 — Backend de voz
+Módulo 13.2 — Backend de voz ✅
          ↓
-Módulo 13.3 — UI de voz
+Módulo 13.3 — UI de voz ✅
          ↓
-Módulo 13.4 — Polimento
+Módulo 13.4 — Polimento ✅
          ↓
-Gate 13 → PRD v5 (prompts editáveis + modo internet)
+Gate 13.4 aprovado (2026-06-02) → PRD v5 (prompts editáveis + modo internet)
 ```
 
 Nenhuma etapa começa antes do gate da anterior ser aprovado por Igor.

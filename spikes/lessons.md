@@ -905,3 +905,9 @@ Rule: para o effect de degradação, ler ambos os estados da closure diretamente
 [2026-06-02] Context: deixei um useEffect com corpo vazio intencional como "placeholder" para persistência pós-degradação.
 Mistake: corpo vazio = lógica que nunca roda. A persistência não ocorria após degradação.
 Rule: nunca deixar useEffect com corpo vazio como placeholder. Se a lógica não cabe no efeito atual, consolidar antes de commitar.
+
+### Fechamento do Gate 13.4 (aprovado em 2026-06-02)
+
+[2026-06-02] Context: validação final da etapa de polimento de voz com base nos commits `00b4e94` → `da4886e`.
+Resultado: Gate 13.4 aprovado com os critérios centrais cumpridos — contrato `interactionMode` ativo no chat, STT/TTS dedicados em rotas próprias, chip de voz com toggles ortogonais (`inputMode × outputMode`), persistência em `localStorage`, fallback textual preservado em falha de áudio, interrupção de reprodução concorrente e limpeza de `createObjectURL`.
+Regra: para futuras evoluções de voz, manter os dois eixos independentes (entrada e saída) e evitar retorno ao modelo implícito por ação isolada (ex.: botão TTS por mensagem), que gera estado difícil de prever.

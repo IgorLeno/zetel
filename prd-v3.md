@@ -45,7 +45,7 @@ Isso precisa permanecer corrigido antes de qualquer implementação. A tabela de
 
 E o campo "Próximos passos" deve apontar para:
 
-> Próximo passo operacional: **Módulo 12 — gestão completa de memória no app** (Módulo 11 concluído; gate 11.4 aprovado)
+> Próximo passo operacional: **PRD v5 — prompts editáveis em runtime e modo internet** (Módulo 13 concluído; Gate 13.4 aprovado em 2026-06-02)
 
 ***
 
@@ -519,6 +519,10 @@ Módulo 11 — Guia de Estudo: experiência de estudo interativa
 Módulo 12 — Gestão completa de memória no app
          ↓
 Gate 12 → PRD v4
+         ↓
+Módulo 13 (voz) — 13.1 a 13.4 ✅
+         ↓
+Gate 13.4 aprovado → PRD v5
 ```
 
 Nenhum módulo começa antes do gate do anterior ser aprovado por Igor.
