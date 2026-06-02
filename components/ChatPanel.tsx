@@ -243,6 +243,25 @@ export function ChatPanel({
       const audio = new Audio(url);
       audioRef.current = audio;
 
+      const handlePlaybackError = (err?: unknown) => {
+        if (currentAudioUrlRef.current === url) {
+          URL.revokeObjectURL(url);
+          currentAudioUrlRef.current = null;
+        }
+        audioRef.current = null;
+        if (msgId) {
+          setPlayingMsgId(null);
+          setTtsErrorIds((prev) => new Set([...prev, msgId]));
+        }
+        if (isAutoVoice) {
+          isAutoVoiceRef.current = false;
+          setVoiceState('idle');
+        }
+        if (err) {
+          console.warn('[voice] Falha ao reproduzir áudio TTS', err);
+        }
+      };
+
       audio.onended = () => {
         if (currentAudioUrlRef.current === url) {
           URL.revokeObjectURL(url);
@@ -257,23 +276,13 @@ export function ChatPanel({
       };
 
       audio.onerror = () => {
-        if (currentAudioUrlRef.current === url) {
-          URL.revokeObjectURL(url);
-          currentAudioUrlRef.current = null;
-        }
-        audioRef.current = null;
-        if (msgId) {
-          setPlayingMsgId(null);
-          setTtsErrorIds((prev) => new Set([...prev, msgId]));
-        }
-        if (isAutoVoice) {
-          isAutoVoiceRef.current = false;
-          setVoiceState('idle');
-        }
+        handlePlaybackError();
       };
 
-      // Start playback — state cleanup handled by event handlers above (D33)
-      void audio.play();
+      // Start playback — rejection is explicit (autoplay/policy) and must cleanup UI state.
+      void audio.play().catch((err) => {
+        handlePlaybackError(err);
+      });
     } catch {
       if (msgId) {
         setPlayingMsgId(null);
