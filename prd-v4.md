@@ -169,7 +169,7 @@ Entregáveis no `ChatPanel`:
 - Microfone PTT no rodapé (ícone mic; clique inicia gravação, clique novamente para; hold-to-talk).
 - Estados visuais: **ouvindo** (gravando) / **transcrevendo** (STT em curso) / **pensando** (SSE em curso) / **falando** (TTS em reprodução).
 - Transcrição do usuário aparece no campo de input (e no chat) antes ou imediatamente ao envio.
-- TTS automático da resposta acionado apenas quando modo conversa está ativo.
+- TTS automático da resposta acionado apenas quando `outputMode='audio'`.
 - Indicador visual de duração (últimos 10s dos 120s máximos de STT).
 
 ### 13.4 — Polimento *(concluído)*

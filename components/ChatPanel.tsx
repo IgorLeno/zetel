@@ -137,6 +137,8 @@ export function ChatPanel({
   const [inputMode, setInputMode] = useState<InputMode>('text');
   const [outputMode, setOutputMode] = useState<OutputMode>('text');
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const inputModeRef = useRef<InputMode>('text');
+  const outputModeRef = useRef<OutputMode>('text');
 
   const visibleMessages = messages.filter(
     (m) => !(m.role === 'assistant' && m.content.trim().length === 0),
@@ -208,24 +210,31 @@ export function ChatPanel({
     const prefs = loadVoicePrefs();
     setInputMode(prefs.inputMode);
     setOutputMode(prefs.outputMode);
+    inputModeRef.current = prefs.inputMode;
+    outputModeRef.current = prefs.outputMode;
   }, []);
 
-  // Degradação silenciosa: se a chave sumiu, volta para modo texto e re-persiste.
-  // voiceStatus chega de forma assíncrona (fetch), após o useEffect de localStorage ter rodado;
-  // portanto inputMode/outputMode da closure já refletem os valores do localStorage.
+  useEffect(() => {
+    inputModeRef.current = inputMode;
+  }, [inputMode]);
+
+  useEffect(() => {
+    outputModeRef.current = outputMode;
+  }, [outputMode]);
+
+  // Degradação silenciosa: se a chave sumiu, volta para modo texto e re-persiste sem stale closure.
   useEffect(() => {
     if (!voiceStatus) return;
-    let im = inputMode;
-    let om = outputMode;
-    let changed = false;
-    if (im === 'voice' && !voiceStatus.stt) { im = 'text'; changed = true; }
-    if (om === 'audio' && !voiceStatus.tts) { om = 'text'; changed = true; }
-    if (changed) {
-      setInputMode(im);
-      setOutputMode(om);
-      saveVoicePrefs(im, om);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const nextInput: InputMode =
+      inputModeRef.current === 'voice' && !voiceStatus.stt ? 'text' : inputModeRef.current;
+    const nextOutput: OutputMode =
+      outputModeRef.current === 'audio' && !voiceStatus.tts ? 'text' : outputModeRef.current;
+    if (nextInput === inputModeRef.current && nextOutput === outputModeRef.current) return;
+    inputModeRef.current = nextInput;
+    outputModeRef.current = nextOutput;
+    setInputMode(nextInput);
+    setOutputMode(nextOutput);
+    saveVoicePrefs(nextInput, nextOutput);
   }, [voiceStatus]);
 
   // Fechar popover ao clicar fora do container chip+popover
@@ -267,15 +276,15 @@ export function ChatPanel({
   // ── Seletores de modo de voz ─────────────────────────────────────────────────
 
   function chooseInput(mode: InputMode): void {
+    inputModeRef.current = mode;
     setInputMode(mode);
-    // outputMode da closure é o valor do render atual — correto porque o setter é
-    // chamado por interação do usuário (sempre um render por interação).
-    saveVoicePrefs(mode, outputMode);
+    saveVoicePrefs(mode, outputModeRef.current);
   }
 
   function chooseOutput(mode: OutputMode): void {
+    outputModeRef.current = mode;
     setOutputMode(mode);
-    saveVoicePrefs(inputMode, mode);
+    saveVoicePrefs(inputModeRef.current, mode);
   }
 
   // ── Voice functions ──────────────────────────────────────────────────────────
@@ -893,8 +902,8 @@ export function ChatPanel({
           </div>
         )}
 
-        {/* Botão ⏹ parar reprodução — visível quando falando sem mic (combinação B: Texto→Áudio) */}
-        {voiceState === 'speaking' && inputMode !== 'voice' && (
+        {/* Botão ⏹ parar reprodução — visível sempre que há TTS em reprodução */}
+        {voiceState === 'speaking' && (
           <button
             type="button"
             className="chat-stop-btn"

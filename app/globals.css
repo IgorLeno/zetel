@@ -604,6 +604,13 @@ body {
   color: var(--accent);
 }
 
+.chat-mode-chip:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* Popover flutuante acima do composer */
 .chat-voice-popover {
   position: absolute;
@@ -618,7 +625,16 @@ body {
   flex-direction: column;
   gap: 8px;
   min-width: 200px;
+  max-width: min(280px, calc(100vw - 24px));
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 640px) {
+  .chat-voice-popover {
+    left: auto;
+    right: 0;
+    max-width: calc(100vw - 16px);
+  }
 }
 
 /* Linha "Entrada / Saída" dentro do popover */
@@ -667,8 +683,15 @@ body {
 
 .chat-voice-opt.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-inv);
   font-weight: 600;
+}
+
+.chat-voice-opt:focus-visible:not(:disabled) {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .chat-voice-opt:disabled {
@@ -697,6 +720,12 @@ body {
 .chat-stop-btn:hover {
   background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
   border-color: var(--accent);
+}
+
+.chat-stop-btn:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .artefatos-panel { width: 100%; }
