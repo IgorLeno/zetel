@@ -92,6 +92,26 @@ describe('Module 14.3 design system contract', () => {
     expect(css, 'close contract: missing .partner-close-tab style in globals.css').toContain('.partner-close-tab');
   });
 
+  it('Zone B — chat: keeps ChatPanel mounted without display none/contents and syncs reading mode from selectedMode', () => {
+    const leituraPanel = readSource('leituraPanel');
+    expect(
+      leituraPanel,
+      'chat mount contract: wrapper must not use display:none or display:contents to hide ChatPanel',
+    ).not.toContain("display: chatOpen ? 'contents' : 'none'");
+    expect(
+      leituraPanel,
+      'chat mount contract: selected reading mode must sync immediately before iframe page-change',
+    ).toContain('setCurrentReadingMode(selectedMode);');
+    expect(
+      leituraPanel,
+      'chat mount contract: context reset effect must depend on selectedMode',
+    ).toContain('}, [selectedMode]);');
+    expect(
+      leituraPanel,
+      'chat mount contract: closed chat wrapper must clip layout without unmounting ChatPanel',
+    ).toContain("overflow: chatOpen ? 'visible' : 'hidden'");
+  });
+
   it('Zone B — chat: removes visual reading context from the header area', () => {
     const chatPanel = readSource('chatPanel');
     const css = readSource('css');

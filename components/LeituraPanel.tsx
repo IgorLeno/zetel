@@ -164,14 +164,14 @@ export function LeituraPanel({
   }, []);
 
   useEffect(() => {
-    if (viewArtifact) setCurrentReadingMode(viewArtifact);
+    setCurrentReadingMode(selectedMode);
     setCurrentPageIndex(null);
     setCurrentGuideBlockId(null);
     setCurrentGuideSectionId(null);
     setCurrentGuideBlockTitle(null);
     setCurrentGuideBlockIndex(null);
     setCurrentGuideBlockTotal(null);
-  }, [viewArtifact]);
+  }, [selectedMode]);
 
   useEffect(() => {
     void loadArtifacts();
@@ -296,8 +296,18 @@ export function LeituraPanel({
             onLoad={postCurrentTheme}
             style={isDragging ? { pointerEvents: 'none' } : undefined}
           />
-          {/* display:none/contents hides but never unmounts (M6-3). */}
-          <div style={{ display: chatOpen ? 'contents' : 'none' }}>
+          <div
+            inert={!chatOpen}
+            aria-hidden={!chatOpen}
+            style={{
+              display: 'flex',
+              width: chatOpen ? chatWidth : 0,
+              minWidth: chatOpen ? CHAT_WIDTH_MIN : 0,
+              maxWidth: chatOpen ? chatWidth : 0,
+              flexShrink: 0,
+              overflow: chatOpen ? 'visible' : 'hidden',
+            }}
+          >
             <div
               className="chat-resize-handle"
               onPointerDown={onHandlePointerDown}

@@ -929,3 +929,7 @@ Rule: **sempre chamar `audio.pause()` + desanexar handlers em `finish()`**, inde
 [2026-06-03] Context: correções visuais pós-M14 no shell de leitura precisavam remover controles da toolbar, fazer o iframe ocupar o espaço disponível e manter o parceiro montado.
 Mistake: acoplar estado visual de leitura (status, regenerar, seção atual) à área que deveria ser só canvas de leitura reduzia espaço útil e criava competição de scroll/layout com o chat.
 Rule: correções de layout no shell devem preservar contratos comportamentais (`ChatPanel` montado, payload de chat, voz/TTS) e mover contexto/progresso para canais dedicados (`ReadingProgress`/`postMessage`), mantendo a área de leitura como flex container simples com iframe e painel lateral.
+
+[2026-06-03] Context: sugestões de nota dependem do `ChatPanel` continuar montado e participando do layout lateral enquanto o painel do parceiro abre/fecha.
+Mistake: usar `display:none` ou `display:contents` no wrapper do parceiro preservava a instância React, mas quebrava o layout/semântica necessários para o painel lateral e suas sugestões.
+Rule: para preservar `ChatPanel` montado no layout lateral, não esconder seu wrapper com `display:none` nem achatar com `display:contents`; recolher via largura zero, overflow controlado, `inert` e `aria-hidden`.
