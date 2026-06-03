@@ -133,6 +133,7 @@ export function ChatPanel({
   const [memoryBusy, setMemoryBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
+  const [pendingUser, setPendingUser] = useState<string | null>(null);
 
   // ── Voice UI state ───────────────────────────────────────────────────────────
   // Default false para evitar mismatch SSR; localStorage é lido no useEffect.
@@ -275,7 +276,7 @@ export function ChatPanel({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streaming, suggestion, memorySuggestion, scrollToBottom]);
+  }, [messages, streaming, suggestion, memorySuggestion, pendingUser, isLoading, scrollToBottom]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -362,8 +363,8 @@ export function ChatPanel({
 
   function handleFinalTranscript(text: string): void {
     stopListening(); // para a captura durante o processamento
-    setInput(text);  // exibe transcrição no textarea
-    void sendMessage(text); // passa texto direto para evitar race com setInput assíncrono
+    setInput('');
+    void sendMessage(text); // textOverride: evita race com setInput e mantém textarea limpo
   }
 
   function maybeRestartMic(): void {
@@ -509,6 +510,7 @@ export function ChatPanel({
     // D36: interactionMode derivado de autoPlay — estilo oral no backend quando autoPlay=ON
     const mode: 'text' | 'voice' = autoPlayRef.current ? 'voice' : 'text';
 
+    setPendingUser(text); // bolha otimista — limpa no finally após histórico atualizado
     if (textOverride === undefined) setInput('');
     setError(null);
     isLoadingRef.current = true;
@@ -616,6 +618,7 @@ export function ChatPanel({
       discussNextMemoryRef.current = false;
       isLoadingRef.current = false;
       setIsLoading(false);
+      setPendingUser(null); // remove bolha otimista; histórico real já foi carregado
       inputRef.current?.focus();
       // Se TTS vai tocar, ele chama maybeRestartMic ao terminar (loop mãos-livres).
       // Caso contrário, reinicia o mic agora.
@@ -865,6 +868,23 @@ export function ChatPanel({
             </div>
           </div>
         ))}
+        {pendingUser && (
+          <div className="msg msg-user">
+            <div className="msg-content-wrap">
+              <div className="msg-bubble" data-role="user-pending">{pendingUser}</div>
+            </div>
+          </div>
+        )}
+        {isLoading && !streaming && (
+          <div className="msg msg-assistant">
+            <div className="msg-content-wrap">
+              <span className="who">Parceiro</span>
+              <div className="msg-bubble streaming" data-role="thinking">
+                <span className="streaming-cursor" aria-hidden />
+              </div>
+            </div>
+          </div>
+        )}
         {streaming && (
           <div className="msg msg-assistant">
             <div className="msg-content-wrap">
