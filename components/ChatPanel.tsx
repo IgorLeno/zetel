@@ -151,6 +151,8 @@ export function ChatPanel({
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   // Mic foi restaurado como ativo mas ainda não iniciou — aguarda gesto do usuário.
   const pendingMicStartRef = useRef(false);
+  // Usuário parou o TTS manualmente — reinicia o mic no finally se o turno ainda estiver carregando.
+  const userCancelledTtsRef = useRef(false);
 
   // Container do painel — usado para o listener de gesto que inicia o mic pendente.
   const chatPanelRef = useRef<HTMLElement>(null);
@@ -383,6 +385,12 @@ export function ChatPanel({
     }
   }
 
+  /** Interrompe TTS do turno e agenda onTurnDrained (reinício do mic via seal). */
+  function abortVoiceTurn(): void {
+    tts.cancel();
+    tts.seal();
+  }
+
   // ── Toggles ──────────────────────────────────────────────────────────────────
 
   function toggleMic(): void {
@@ -484,6 +492,7 @@ export function ChatPanel({
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? 'Falha ao enviar mensagem.');
+        if (mode === 'voice') abortVoiceTurn();
         isLoadingRef.current = false;
         setIsLoading(false);
         return;
@@ -491,6 +500,7 @@ export function ChatPanel({
 
       if (!res.body) {
         setError('Resposta sem stream.');
+        if (mode === 'voice') abortVoiceTurn();
         isLoadingRef.current = false;
         setIsLoading(false);
         return;
@@ -536,10 +546,10 @@ export function ChatPanel({
       setStreaming('');
 
       if (streamError) {
-        if (mode === 'voice') tts.cancel();
+        if (mode === 'voice') abortVoiceTurn();
         setError(streamError);
       } else if (!accumulated.trim() && !received && !receivedMemory) {
-        if (mode === 'voice') tts.cancel();
+        if (mode === 'voice') abortVoiceTurn();
         setError('O parceiro encerrou a resposta sem conteúdo visível. Tente novamente.');
       } else {
         const histRes = await fetch(`/api/zetels/${zetelId}/chat`);
@@ -562,7 +572,7 @@ export function ChatPanel({
         }
       }
     } catch {
-      if (mode === 'voice') tts.cancel();
+      if (mode === 'voice') abortVoiceTurn();
       setError('Erro de rede ao conversar com o parceiro.');
       setStreaming('');
     } finally {
@@ -572,11 +582,12 @@ export function ChatPanel({
       setIsLoading(false);
       setPendingUser(null); // remove bolha otimista; histórico real já foi carregado
       inputRef.current?.focus();
-      // Se TTS vai tocar, ele chama maybeRestartMic ao terminar (loop mãos-livres).
-      // Caso contrário, reinicia o mic agora.
-      if (!willPlayAudio) {
+      // TTS ativo: seal/onTurnDrained reinicia o mic ao terminar. Erro, vazio ou parada manual:
+      // reinicia aqui (parada manual durante isLoading só é segura após setIsLoading(false)).
+      if (!willPlayAudio || userCancelledTtsRef.current) {
         maybeRestartMic();
       }
+      userCancelledTtsRef.current = false;
     }
   }
 
@@ -927,7 +938,12 @@ export function ChatPanel({
               <button
                 type="button"
                 className="mic-btn rec"
-                onClick={() => { tts.cancel(); maybeRestartMic(); }}
+                onClick={() => {
+                  userCancelledTtsRef.current = true;
+                  tts.cancel();
+                  // Durante o stream isLoading bloqueia o mic; o finally reinicia após o turno.
+                  if (!isLoadingRef.current) maybeRestartMic();
+                }}
                 title="Parar reprodução"
                 aria-label="Parar reprodução"
               >
