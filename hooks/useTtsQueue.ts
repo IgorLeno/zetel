@@ -137,14 +137,14 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
     genRef.current++;
     for (const ctrl of controllersRef.current) ctrl.abort();
     controllersRef.current = [];
+    // stop() pauses the current audio and clears its own refs by identity.
+    if (stopCurrentRef.current) stopCurrentRef.current();
+    // Safety net: clear anything a stale callback may have left behind.
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
-    if (stopCurrentRef.current) {
-      stopCurrentRef.current();
-      stopCurrentRef.current = null;
-    } else if (currentUrlRef.current) {
+    if (currentUrlRef.current) {
       URL.revokeObjectURL(currentUrlRef.current);
       currentUrlRef.current = null;
     }
@@ -162,6 +162,8 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
         return;
       }
 
+      const audio = new Audio(url);
+      audioRef.current = audio;
       currentUrlRef.current = url;
 
       if (!speakingRef.current) {
@@ -172,37 +174,29 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
         onPlaybackStateChangeRef.current(true);
       }
 
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      const cleanup = () => {
-        if (currentUrlRef.current === url) {
-          URL.revokeObjectURL(url);
-          currentUrlRef.current = null;
-        }
-        audioRef.current = null;
-        stopCurrentRef.current = null;
-      };
-
-      stopCurrentRef.current = () => {
-        cleanup();
+      // Settle exactly once. Clear shared refs only if they still point to THIS
+      // audio — a late play()/error/ended callback from a superseded turn must
+      // never null the refs of the audio that replaced it (root cause of overlap).
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (audioRef.current === audio) audioRef.current = null;
+        if (stopCurrentRef.current === stop) stopCurrentRef.current = null;
+        if (currentUrlRef.current === url) currentUrlRef.current = null;
+        URL.revokeObjectURL(url);
         resolve();
       };
 
-      audio.onended = () => {
-        cleanup();
-        resolve();
+      const stop = () => {
+        audio.pause();
+        finish();
       };
+      stopCurrentRef.current = stop;
 
-      audio.onerror = () => {
-        cleanup();
-        resolve();
-      };
-
-      void audio.play().catch(() => {
-        cleanup();
-        resolve();
-      });
+      audio.onended = finish;
+      audio.onerror = finish;
+      void audio.play().catch(finish);
     });
   }
 
