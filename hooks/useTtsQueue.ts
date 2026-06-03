@@ -20,6 +20,9 @@ export interface TtsQueue {
 
 const FIRST_CHUNK_MAX = 140;
 
+/** Limite se onended/onerror não dispararem após rejeição espúria de play(). */
+const PLAY_STALL_FALLBACK_MS = 90_000;
+
 // PT-BR abbreviations (lowercase, without trailing dot) that must not end a sentence.
 const ABBREVS = new Set([
   'dr', 'dra', 'sr', 'sra', 'prof', 'profa',
@@ -178,9 +181,19 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
       // audio — a late play()/error/ended callback from a superseded turn must
       // never null the refs of the audio that replaced it (root cause of overlap).
       let settled = false;
+      let stallFallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const clearStallFallback = () => {
+        if (stallFallbackTimer === null) return;
+        console.debug('[zetel:tts] stall-fallback cleared');
+        clearTimeout(stallFallbackTimer);
+        stallFallbackTimer = null;
+      };
+
       const finish = () => {
         if (settled) return;
         settled = true;
+        clearStallFallback();
         // Always silence this element first — prevents a browser from starting
         // (or resuming) playback after the chain has already advanced to the next
         // node (the root cause of the multi-audio overlap bug).
@@ -188,28 +201,36 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
         audio.onerror = null;
         audio.pause();
         if (audioRef.current === audio) audioRef.current = null;
-        if (stopCurrentRef.current === stop) stopCurrentRef.current = null;
+        if (stopCurrentRef.current === finish) stopCurrentRef.current = null;
         if (currentUrlRef.current === url) currentUrlRef.current = null;
         URL.revokeObjectURL(url);
         resolve();
       };
 
-      // cancel() path — delegates to finish(), which now owns the pause().
-      const stop = () => { finish(); };
-      stopCurrentRef.current = stop;
+      stopCurrentRef.current = finish;
 
       audio.onended = finish;
       audio.onerror = finish;
       void audio.play().then(undefined, () => {
         if (settled) return;
-        // Browser quirk: play() can be rejected even when playback actually starts
-        // (e.g. rapid blob succession). If the audio is already running, let onended
-        // drive the chain so we don't advance early and create an overlap.
-        if (!audio.paused && !audio.ended) return;
-        // Genuine block (autoplay policy or decode failure): silence and advance.
-        // The sentence text is already in the chat (D41 fallback), so losing the
-        // audio is acceptable. seal() → onTurnDrained still fires at the end.
-        finish();
+        // Amostra paused/ended após microtask — estado pode mudar de forma assíncrona.
+        setTimeout(() => {
+          if (settled) return;
+          if (!audio.paused && !audio.ended) {
+            if (stallFallbackTimer !== null) return;
+            console.debug('[zetel:tts] stall-fallback started (spurious play() reject)');
+            stallFallbackTimer = setTimeout(() => {
+              stallFallbackTimer = null;
+              if (settled) return;
+              console.debug('[zetel:tts] stall-fallback fired');
+              finish();
+            }, PLAY_STALL_FALLBACK_MS);
+            return;
+          }
+          // Bloqueio real (autoplay) ou elemento já encerrado — avança a cadeia.
+          // O texto da frase já está no chat (fallback D41).
+          finish();
+        }, 0);
       });
     });
   }
