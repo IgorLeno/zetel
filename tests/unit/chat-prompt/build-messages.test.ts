@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOpenRouterMessages } from '@/lib/chat-prompt';
+import { buildOpenRouterMessages, NOTE_MARK_END, NOTE_MARK_START } from '@/lib/chat-prompt';
 import type { ChatMessage } from '@/types/chat-message';
 
 function msg(role: ChatMessage['role'], content: string): ChatMessage {
@@ -161,6 +161,21 @@ describe('buildOpenRouterMessages', () => {
     const sys = messages.find((m) => m.role === 'system');
     expect(sys?.content).toContain('Nota A');
     expect(sys?.content).toContain('Nota B');
+  });
+
+  it('pedido explícito de nota reforça uso obrigatório do marcador quando rubrica existe', () => {
+    const { messages } = buildOpenRouterMessages({
+      displayName: 'Z',
+      pageContent: 'Conteúdo atual.',
+      history: [],
+      userMessage: 'faça uma nota com esse conteúdo',
+      noteRubric: `Rubrica\n${NOTE_MARK_START}\n{"tipo":"rapida","titulo":"...","corpo":"...","pagina_origem":null,"justificativa":"..."}\n${NOTE_MARK_END}`,
+    });
+    const sys = messages.find((m) => m.role === 'system');
+    expect(sys?.content).toContain('pedido explícito de nota');
+    expect(sys?.content).toContain(NOTE_MARK_START);
+    expect(sys?.content).toContain(NOTE_MARK_END);
+    expect(sys?.content).toContain('NUNCA responda apenas em texto livre');
   });
 
   it('interactionMode=voice: system contém instruções de estilo oral', () => {

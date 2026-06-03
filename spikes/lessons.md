@@ -933,3 +933,7 @@ Rule: correções de layout no shell devem preservar contratos comportamentais (
 [2026-06-03] Context: sugestões de nota dependem do `ChatPanel` continuar montado e participando do layout lateral enquanto o painel do parceiro abre/fecha.
 Mistake: usar `display:none` ou `display:contents` no wrapper do parceiro preservava a instância React, mas quebrava o layout/semântica necessários para o painel lateral e suas sugestões.
 Rule: para preservar `ChatPanel` montado no layout lateral, não esconder seu wrapper com `display:none` nem achatar com `display:contents`; recolher via largura zero, overflow controlado, `inert` e `aria-hidden`.
+
+[2026-06-03] Context: o usuário pedia explicitamente "faça uma nota", mas o backend aceitava que o modelo respondesse em texto livre sem emitir `<<<NOTA_SUGERIDA>>>`.
+Mistake: a rubrica de nota ensinava o formato, mas não tornava o marcador obrigatório para pedidos explícitos de criação de nota; sem marcador, o stream não gera `[SUGGESTION]` e o `NoteCard` não renderiza.
+Rule: quando o usuário pedir uma nota explicitamente e houver contexto suficiente, o prompt backend deve exigir o bloco `<<<NOTA_SUGERIDA>>> ... <<<FIM_NOTA>>>`; texto livre do tipo "preparei uma sugestão" nunca é resposta válida para renderização de cartão.

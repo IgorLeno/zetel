@@ -157,6 +157,12 @@ const VOICE_STYLE_PROMPT = `Você está em modo conversa por voz. Adapte seu est
 - Use o documento aberto como base, mas fale naturalmente.
 - Não leia trechos longos do documento em voz alta.`;
 
+const NOTE_DIRECT_REQUEST_PROMPT = `Regra para pedido explícito de nota:
+- Se o usuário fizer um pedido explícito de nota (por exemplo: "faça uma nota", "crie uma nota", "gere uma nota", "salve como nota" ou equivalente), trate isso como intenção de sugestão de nota.
+- Nesses casos, se houver contexto suficiente, você DEVE encerrar a resposta com o bloco ${NOTE_MARK_START} ... ${NOTE_MARK_END} descrito na rubrica.
+- NUNCA responda apenas em texto livre dizendo que preparou, criou ou sugeriu uma nota; sem o bloco delimitado, o app não consegue renderizar o cartão de nota.
+- Se faltar contexto para criar a nota, peça a informação que falta em texto normal e NÃO inclua o bloco.`;
+
 export function buildOpenRouterMessages(opts: {
   displayName: string;
   pageContent: string | null;
@@ -183,6 +189,7 @@ export function buildOpenRouterMessages(opts: {
   // Ordem §8.7: prompt do parceiro → rubricas → memória global → (página/histórico).
   if (opts.noteRubric) {
     systemContent += `\n\n${opts.noteRubric}`;
+    systemContent += `\n\n${NOTE_DIRECT_REQUEST_PROMPT}`;
   }
   if (opts.memoryRubric) {
     systemContent += `\n\n${opts.memoryRubric}`;
