@@ -6,33 +6,37 @@ import { NoteCard, type Suggestion } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
-type VoiceState = 'idle' | 'listening' | 'transcribing' | 'speaking';
-type InputMode = 'text' | 'voice';
-type OutputMode = 'text' | 'audio';
+type VoiceState = 'idle' | 'listening' | 'speaking';
 
 const VOICE_PREFS_KEY = 'zetel_voice_prefs';
 
-function loadVoicePrefs(): { inputMode: InputMode; outputMode: OutputMode } {
+function getSpeechRecognitionCtor(): (new () => SpeechRecognition) | null {
+  if (typeof window === 'undefined') return null;
+  return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
+}
+
+function loadVoicePrefs(): { micAtivo: boolean; autoPlay: boolean } {
   try {
     const raw = localStorage.getItem(VOICE_PREFS_KEY);
-    if (!raw) return { inputMode: 'text', outputMode: 'text' };
+    if (!raw) return { micAtivo: false, autoPlay: false };
     const parsed = JSON.parse(raw) as unknown;
     if (typeof parsed !== 'object' || parsed === null)
-      return { inputMode: 'text', outputMode: 'text' };
+      return { micAtivo: false, autoPlay: false };
     const p = parsed as Record<string, unknown>;
-    const inputMode: InputMode = p.inputMode === 'voice' ? 'voice' : 'text';
-    const outputMode: OutputMode = p.outputMode === 'audio' ? 'audio' : 'text';
-    return { inputMode, outputMode };
+    return {
+      micAtivo: p.micAtivo === true,
+      autoPlay: p.autoPlay === true,
+    };
   } catch {
-    return { inputMode: 'text', outputMode: 'text' };
+    return { micAtivo: false, autoPlay: false };
   }
 }
 
-function saveVoicePrefs(inputMode: InputMode, outputMode: OutputMode): void {
+function saveVoicePrefs(micAtivo: boolean, autoPlay: boolean): void {
   try {
-    localStorage.setItem(VOICE_PREFS_KEY, JSON.stringify({ inputMode, outputMode }));
+    localStorage.setItem(VOICE_PREFS_KEY, JSON.stringify({ micAtivo, autoPlay }));
   } catch {
-    /* localStorage indisponível — modo não persiste */
+    /* localStorage indisponível — prefs não persistem */
   }
 }
 
@@ -77,7 +81,7 @@ function parseSseChunk(text: string): {
       try {
         suggestion = JSON.parse(payload.slice('[SUGGESTION]'.length).trim()) as Suggestion;
       } catch {
-        /* sugestão malformada — ignora, segue como resposta normal */
+        /* sugestão malformada — ignora */
       }
       continue;
     }
@@ -111,6 +115,7 @@ export function ChatPanel({
   currentGuideBlockIndex: number | null;
   currentGuideBlockTotal: number | null;
 }) {
+  // ── Core chat state ──────────────────────────────────────────────────────────
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState('');
   const [input, setInput] = useState('');
@@ -129,43 +134,47 @@ export function ChatPanel({
   const [toast, setToast] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
 
-  // Voice UI (Módulo 13.4 — dois toggles ortogonais: inputMode × outputMode)
+  // ── Voice UI state ───────────────────────────────────────────────────────────
+  // Default false para evitar mismatch SSR; localStorage é lido no useEffect.
   const [voiceStatus, setVoiceStatus] = useState<{ tts: boolean; stt: boolean } | null>(null);
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
-  const [recordSecondsLeft, setRecordSecondsLeft] = useState<number | null>(null);
-  // Default 'text'/'text' evita mismatch de hidratação SSR; localStorage é lido no useEffect.
-  const [inputMode, setInputMode] = useState<InputMode>('text');
-  const [outputMode, setOutputMode] = useState<OutputMode>('text');
-  const [popoverOpen, setPopoverOpen] = useState(false);
-  const inputModeRef = useRef<InputMode>('text');
-  const outputModeRef = useRef<OutputMode>('text');
+  const [micAtivo, setMicAtivo] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(false);
+
+  // ── Refs (leitura síncrona em callbacks assíncronos) ─────────────────────────
+  const micAtivoRef = useRef(false);
+  const autoPlayRef = useRef(false);
+  const isLoadingRef = useRef(false);
+  const voiceStateRef = useRef<VoiceState>('idle');
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  // Mic foi restaurado como ativo mas ainda não iniciou — aguarda gesto do usuário.
+  const pendingMicStartRef = useRef(false);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentAudioUrlRef = useRef<string | null>(null);
+
+  // Container do painel — usado para o listener de gesto que inicia o mic pendente.
+  const chatPanelRef = useRef<HTMLElement>(null);
+
+  const discussNextRef = useRef(false);
+  const discussNextMemoryRef = useRef(false);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const visibleMessages = messages.filter(
     (m) => !(m.role === 'assistant' && m.content.trim().length === 0),
   );
 
-  // Quando true, a PRÓXIMA sugestão recebida vem sem "Discutir" (bounded — regra #10).
-  const discussNextRef = useRef(false);
-  const discussNextMemoryRef = useRef(false);
-  const messagesRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  // Container do chip + popover — usado para fechar ao clicar fora.
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  // Voice refs (D33/D38/D42)
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const currentAudioUrlRef = useRef<string | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordStreamRef = useRef<MediaStream | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // ── Sync refs com estado ─────────────────────────────────────────────────────
+  useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
+  useEffect(() => { isLoadingRef.current = isLoading; }, [isLoading]);
 
   const scrollToBottom = useCallback(() => {
     const el = messagesRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, []);
 
-  // Load chat history
+  // ── Carrega histórico ────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -186,7 +195,7 @@ export function ChatPanel({
     };
   }, [zetelId]);
 
-  // Fetch voice availability once on mount
+  // ── Verifica disponibilidade de voz ─────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -197,7 +206,7 @@ export function ChatPanel({
           setVoiceStatus(data);
         }
       } catch {
-        /* voice indisponível — controles ocultos (D41) */
+        /* voice indisponível — controles desabilitados */
       }
     })();
     return () => {
@@ -205,61 +214,59 @@ export function ChatPanel({
     };
   }, []);
 
-  // Lê prefs de voz do localStorage ao montar (client-only — evita mismatch SSR)
+  // ── Restaura prefs do localStorage (apenas estado visual; mic não inicia agora) ──
   useEffect(() => {
     const prefs = loadVoicePrefs();
-    setInputMode(prefs.inputMode);
-    setOutputMode(prefs.outputMode);
-    inputModeRef.current = prefs.inputMode;
-    outputModeRef.current = prefs.outputMode;
+    setMicAtivo(prefs.micAtivo);
+    setAutoPlay(prefs.autoPlay);
+    micAtivoRef.current = prefs.micAtivo;
+    autoPlayRef.current = prefs.autoPlay;
+    if (prefs.micAtivo) pendingMicStartRef.current = true;
   }, []);
 
-  useEffect(() => {
-    inputModeRef.current = inputMode;
-  }, [inputMode]);
-
-  useEffect(() => {
-    outputModeRef.current = outputMode;
-  }, [outputMode]);
-
-  // Degradação silenciosa: se a chave sumiu, volta para modo texto e re-persiste sem stale closure.
+  // ── Degradação silenciosa: se chave sumiu, desliga os modos que dependem dela ──
   useEffect(() => {
     if (!voiceStatus) return;
-    const nextInput: InputMode =
-      inputModeRef.current === 'voice' && !voiceStatus.stt ? 'text' : inputModeRef.current;
-    const nextOutput: OutputMode =
-      outputModeRef.current === 'audio' && !voiceStatus.tts ? 'text' : outputModeRef.current;
-    if (nextInput === inputModeRef.current && nextOutput === outputModeRef.current) return;
-    inputModeRef.current = nextInput;
-    outputModeRef.current = nextOutput;
-    setInputMode(nextInput);
-    setOutputMode(nextOutput);
-    saveVoicePrefs(nextInput, nextOutput);
+    let changed = false;
+    if (micAtivoRef.current && !voiceStatus.stt) {
+      micAtivoRef.current = false;
+      setMicAtivo(false);
+      changed = true;
+    }
+    if (autoPlayRef.current && !voiceStatus.tts) {
+      autoPlayRef.current = false;
+      setAutoPlay(false);
+      changed = true;
+    }
+    if (changed) saveVoicePrefs(micAtivoRef.current, autoPlayRef.current);
   }, [voiceStatus]);
 
-  // Fechar popover ao clicar fora do container chip+popover
+  // ── Listener one-time: inicia mic pendente no primeiro gesto do usuário ──────
   useEffect(() => {
-    if (!popoverOpen) return;
-    function handleOutsideClick(e: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setPopoverOpen(false);
+    const panel = chatPanelRef.current;
+    if (!panel) return;
+    function handleFirstGesture() {
+      if (pendingMicStartRef.current && micAtivoRef.current) {
+        pendingMicStartRef.current = false;
+        startListening();
       }
+      panel!.removeEventListener('pointerdown', handleFirstGesture);
     }
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [popoverOpen]);
+    panel.addEventListener('pointerdown', handleFirstGesture);
+    return () => panel.removeEventListener('pointerdown', handleFirstGesture);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Cleanup audio/recording resources on unmount (D33/D38)
+  // ── Cleanup ao desmontar ─────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (audioRef.current) audioRef.current.pause();
       if (currentAudioUrlRef.current) URL.revokeObjectURL(currentAudioUrlRef.current);
-      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      if (recordStreamRef.current) {
-        recordStreamRef.current.getTracks().forEach((t) => t.stop());
+      const rec = recognitionRef.current;
+      if (rec) {
+        rec.onend = null;
+        rec.abort();
+        recognitionRef.current = null;
       }
     };
   }, []);
@@ -273,21 +280,129 @@ export function ChatPanel({
     window.setTimeout(() => setToast(null), 2500);
   }
 
-  // ── Seletores de modo de voz ─────────────────────────────────────────────────
+  // ── Web Speech API — reconhecimento contínuo ─────────────────────────────────
 
-  function chooseInput(mode: InputMode): void {
-    inputModeRef.current = mode;
-    setInputMode(mode);
-    saveVoicePrefs(mode, outputModeRef.current);
+  function stopListeningClean(): void {
+    const rec = recognitionRef.current;
+    if (rec) {
+      rec.onend = null; // impede auto-restart via onend
+      rec.abort();
+      recognitionRef.current = null;
+    }
   }
 
-  function chooseOutput(mode: OutputMode): void {
-    outputModeRef.current = mode;
-    setOutputMode(mode);
-    saveVoicePrefs(inputModeRef.current, mode);
+  function stopListening(): void {
+    stopListeningClean();
+    voiceStateRef.current = 'idle';
+    setVoiceState('idle');
   }
 
-  // ── Voice functions ──────────────────────────────────────────────────────────
+  function startListening(): void {
+    if (!micAtivoRef.current) return;
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) return;
+
+    stopListeningClean(); // limpa instância anterior sem flash de estado
+
+    try {
+      const rec = new Ctor();
+      rec.lang = 'pt-BR';
+      rec.continuous = true;
+      rec.interimResults = true;
+      recognitionRef.current = rec;
+
+      rec.onresult = (event: SpeechRecognitionEvent) => {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            const transcript = result[0].transcript.trim();
+            if (transcript) {
+              handleFinalTranscript(transcript);
+              return;
+            }
+          }
+        }
+      };
+
+      rec.onerror = (event: SpeechRecognitionErrorEvent) => {
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          micAtivoRef.current = false;
+          setMicAtivo(false);
+          pendingMicStartRef.current = false;
+          saveVoicePrefs(false, autoPlayRef.current);
+          setError('Microfone não disponível. Verifique as permissões do navegador.');
+          voiceStateRef.current = 'idle';
+          setVoiceState('idle');
+        }
+        // no-speech e aborted são benignos; onend trata o reinício
+      };
+
+      rec.onend = () => {
+        voiceStateRef.current = 'idle';
+        setVoiceState('idle');
+        // Reinicia automaticamente se o mic ainda está ativo e não estamos carregando.
+        // (Não há risco de conflito com TTS: handleFinalTranscript zera onend antes do abort.)
+        if (micAtivoRef.current && !isLoadingRef.current) {
+          startListening();
+        }
+      };
+
+      rec.start();
+      voiceStateRef.current = 'listening';
+      setVoiceState('listening');
+      setError(null);
+    } catch {
+      // start() pode lançar se browser rejeitar (e.g., já está rodando)
+      voiceStateRef.current = 'idle';
+      setVoiceState('idle');
+    }
+  }
+
+  function handleFinalTranscript(text: string): void {
+    stopListening(); // para a captura durante o processamento
+    setInput(text);  // exibe transcrição no textarea
+    void sendMessage(text); // passa texto direto para evitar race com setInput assíncrono
+  }
+
+  function maybeRestartMic(): void {
+    if (micAtivoRef.current && !isLoadingRef.current) {
+      startListening();
+    }
+  }
+
+  // ── Toggles ──────────────────────────────────────────────────────────────────
+
+  function toggleMic(): void {
+    const Ctor = getSpeechRecognitionCtor();
+    const next = !micAtivoRef.current;
+    if (next && !Ctor) {
+      setError('Microfone não disponível neste navegador.');
+      return;
+    }
+    micAtivoRef.current = next;
+    setMicAtivo(next);
+    pendingMicStartRef.current = false;
+    saveVoicePrefs(next, autoPlayRef.current);
+    if (next) {
+      startListening();
+    } else {
+      stopListening();
+    }
+  }
+
+  function toggleAutoPlay(): void {
+    const next = !autoPlayRef.current;
+    if (next && !voiceStatus?.tts) {
+      setError('Auto-play de voz não disponível. Configure a chave TTS nas Configurações.');
+      return;
+    }
+    autoPlayRef.current = next;
+    setAutoPlay(next);
+    saveVoicePrefs(micAtivoRef.current, next);
+    if (!next) stopCurrentAudio();
+  }
+
+  // ── TTS (mecanismo M13 mantido; adiciona maybeRestartMic ao terminar) ────────
 
   function stopCurrentAudio(): void {
     if (audioRef.current) {
@@ -298,12 +413,15 @@ export function ChatPanel({
       URL.revokeObjectURL(currentAudioUrlRef.current); // D33
       currentAudioUrlRef.current = null;
     }
-    // Usa setter funcional para garantir leitura do estado mais recente (D42)
-    setVoiceState((prev) => (prev === 'speaking' ? 'idle' : prev));
+    if (voiceStateRef.current === 'speaking') {
+      voiceStateRef.current = 'idle';
+      setVoiceState('idle');
+    }
   }
 
   async function playTts(text: string): Promise<void> {
-    stopCurrentAudio(); // D42: interrompe reprodução anterior antes de iniciar nova
+    stopCurrentAudio(); // D42: interrompe reprodução anterior
+    voiceStateRef.current = 'speaking';
     setVoiceState('speaking');
 
     try {
@@ -328,8 +446,10 @@ export function ChatPanel({
           currentAudioUrlRef.current = null;
         }
         audioRef.current = null;
+        voiceStateRef.current = 'idle';
         setVoiceState('idle');
-        // D41: fallback textual garantido — texto já está no chat, retorna ao idle silenciosamente
+        // D41: fallback textual garantido — texto já está no chat
+        maybeRestartMic(); // reinicia mic para o próximo turno
       };
 
       audio.onended = () => {
@@ -337,142 +457,24 @@ export function ChatPanel({
         URL.revokeObjectURL(url); // D33
         currentAudioUrlRef.current = null;
         audioRef.current = null;
+        voiceStateRef.current = 'idle';
         setVoiceState('idle');
+        maybeRestartMic(); // loop mãos-livres: mic reativa após reprodução
       };
 
       audio.onerror = () => {
         handlePlaybackError();
       };
 
-      // Start playback — rejeição explícita (autoplay policy) exige limpeza do estado de UI.
       void audio.play().catch(() => {
         handlePlaybackError();
       });
     } catch {
-      // D41: TTS falhou — texto já visível no chat, retorna ao idle
+      // D41: TTS falhou — texto já visível no chat
+      voiceStateRef.current = 'idle';
       setVoiceState('idle');
+      maybeRestartMic();
     }
-  }
-
-  async function startRecording(): Promise<void> {
-    stopCurrentAudio(); // D42: sem gravação simultânea com reprodução
-
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      setError('Não foi possível acessar o microfone.');
-      return;
-    }
-
-    recordStreamRef.current = stream;
-
-    const mimeType =
-      typeof MediaRecorder !== 'undefined' &&
-      MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/mp4';
-
-    const recorder = new MediaRecorder(stream, { mimeType });
-    audioChunksRef.current = [];
-
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunksRef.current.push(e.data);
-    };
-
-    recorder.onstop = () => {
-      recordStreamRef.current?.getTracks().forEach((t) => t.stop());
-      recordStreamRef.current = null;
-      void handleRecordingStop(mimeType);
-    };
-
-    mediaRecorderRef.current = recorder;
-    recorder.start();
-    setVoiceState('listening');
-    setError(null);
-
-    // Auto-stop after 120s; countdown in last 10s (D34)
-    let elapsed = 0;
-    recordTimerRef.current = setInterval(() => {
-      elapsed++;
-      const remaining = 120 - elapsed;
-      if (remaining <= 10) setRecordSecondsLeft(remaining);
-      if (remaining <= 0) {
-        if (recordTimerRef.current) clearInterval(recordTimerRef.current);
-        recordTimerRef.current = null;
-        stopRecording();
-      }
-    }, 1000);
-  }
-
-  function stopRecording(): void {
-    if (recordTimerRef.current) {
-      clearInterval(recordTimerRef.current);
-      recordTimerRef.current = null;
-    }
-    setRecordSecondsLeft(null);
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state !== 'inactive') {
-      recorder.stop();
-      mediaRecorderRef.current = null;
-    }
-  }
-
-  async function handleRecordingStop(mimeType: string): Promise<void> {
-    setVoiceState('transcribing');
-
-    const chunks = audioChunksRef.current;
-    audioChunksRef.current = [];
-
-    if (chunks.length === 0) {
-      setVoiceState('idle');
-      return;
-    }
-
-    const blob = new Blob(chunks, { type: mimeType });
-    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-    const file = new File([blob], `recording.${ext}`, { type: mimeType });
-    const form = new FormData();
-    form.append('audio', file);
-
-    try {
-      const res = await fetch('/api/voice/stt', { method: 'POST', body: form });
-
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setVoiceState('idle');
-        setError(data.error ?? 'Erro ao transcrever o áudio.');
-        return;
-      }
-
-      const data = (await res.json()) as { text?: string };
-      const text = data.text?.trim() ?? '';
-
-      if (!text) {
-        setVoiceState('idle');
-        setError('Não foi possível transcrever. Tente novamente.');
-        return;
-      }
-
-      // D40: transcrição visível no textarea antes do envio
-      setInput(text);
-      setVoiceState('idle');
-
-      // Auto-send; interactionMode é derivado de outputMode dentro de sendMessage
-      void sendMessage(text);
-    } catch {
-      setVoiceState('idle');
-      setError('Erro ao transcrever o áudio.');
-    }
-  }
-
-  function handleMicClick(): void {
-    if (voiceState === 'idle') {
-      void startRecording();
-    } else if (voiceState === 'listening') {
-      stopRecording();
-    }
-    // transcribing/speaking: botão desabilitado — sem ação
   }
 
   // ── Chat functions ───────────────────────────────────────────────────────────
@@ -496,15 +498,18 @@ export function ChatPanel({
     }
   }
 
-  async function sendMessage(rawText?: string) {
-    const text = (rawText ?? input).trim();
+  // textOverride: passado diretamente do fluxo de voz e de "Discutir" para evitar
+  // race condition com setInput assíncrono (não lê o estado input nesses caminhos).
+  async function sendMessage(textOverride?: string) {
+    const text = (textOverride ?? input).trim();
     if (!text || isLoading) return;
 
-    // D36: interactionMode derivado de outputMode — auto-TTS apenas quando outputMode='audio'
-    const mode: 'text' | 'voice' = outputMode === 'audio' ? 'voice' : 'text';
+    // D36: interactionMode derivado de autoPlay — estilo oral no backend quando autoPlay=ON
+    const mode: 'text' | 'voice' = autoPlayRef.current ? 'voice' : 'text';
 
-    if (rawText === undefined) setInput('');
+    if (textOverride === undefined) setInput('');
     setError(null);
+    isLoadingRef.current = true;
     setIsLoading(true);
     setStreaming('');
     setSuggestion(null);
@@ -512,6 +517,7 @@ export function ChatPanel({
 
     let received: Suggestion | null = null;
     let receivedMemory: MemorySuggestionData | null = null;
+    let willPlayAudio = false;
 
     try {
       const res = await fetch(`/api/zetels/${zetelId}/chat`, {
@@ -533,12 +539,14 @@ export function ChatPanel({
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? 'Falha ao enviar mensagem.');
+        isLoadingRef.current = false;
         setIsLoading(false);
         return;
       }
 
       if (!res.body) {
         setError('Resposta sem stream.');
+        isLoadingRef.current = false;
         setIsLoading(false);
         return;
       }
@@ -547,9 +555,7 @@ export function ChatPanel({
       const decoder = new TextDecoder();
       let accumulated = '';
       let streamError: string | null = null;
-      // Buffer acumulador: uma linha `data:` pode chegar partida entre dois
-      // chunks do ReadableStream. Só processamos linhas completas (até o último
-      // `\n`); o resto fica retido para o próximo chunk.
+      // Buffer acumulador: uma linha `data:` pode chegar partida entre dois chunks.
       let sseBuffer = '';
 
       const flush = (t: string) => {
@@ -557,7 +563,7 @@ export function ChatPanel({
         if (parsed.error) streamError = parsed.error;
         if (parsed.suggestion) received = parsed.suggestion;
         if (parsed.memorySuggestion) receivedMemory = parsed.memorySuggestion;
-        if (parsed.done) return; // stream encerrado via [DONE] — não processar mais chunks
+        if (parsed.done) return;
         for (const c of parsed.chunks) {
           accumulated += c;
           setStreaming(accumulated);
@@ -573,7 +579,6 @@ export function ChatPanel({
         flush(sseBuffer.slice(0, boundary + 1));
         sseBuffer = sseBuffer.slice(boundary + 1);
       }
-      // Processa qualquer resto sem `\n` final ao terminar o stream.
       if (sseBuffer.trim()) flush(sseBuffer);
 
       setStreaming('');
@@ -595,8 +600,9 @@ export function ChatPanel({
             canDiscuss: !discussNextMemoryRef.current,
           });
         }
-        // D36: TTS automático apenas quando outputMode='audio' (mode='voice')
+        // D36: TTS automático apenas quando autoPlay=ON
         if (mode === 'voice' && accumulated.trim()) {
+          willPlayAudio = true;
           void playTts(accumulated);
         }
       }
@@ -606,8 +612,14 @@ export function ChatPanel({
     } finally {
       discussNextRef.current = false;
       discussNextMemoryRef.current = false;
+      isLoadingRef.current = false;
       setIsLoading(false);
       inputRef.current?.focus();
+      // Se TTS vai tocar, ele chama maybeRestartMic ao terminar (loop mãos-livres).
+      // Caso contrário, reinicia o mic agora.
+      if (!willPlayAudio) {
+        maybeRestartMic();
+      }
     }
   }
 
@@ -651,7 +663,7 @@ export function ChatPanel({
         body: JSON.stringify({ messageId, rejected: true }),
       });
     } catch {
-      /* a flag é só para auditoria; falha não bloqueia o usuário */
+      /* flag só para auditoria; falha não bloqueia */
     }
     showToast('Sugestão descartada.');
   }
@@ -659,7 +671,7 @@ export function ChatPanel({
   function discussNote() {
     if (!suggestion) return;
     const { titulo, corpo } = suggestion.data;
-    discussNextRef.current = true; // a próxima sugestão volta sem "Discutir"
+    discussNextRef.current = true;
     void sendMessage(
       `Sobre esta sugestão de nota ("${titulo}"): o que você acha de refiná-la? Rascunho atual:\n\n${corpo}`,
     );
@@ -705,7 +717,7 @@ export function ChatPanel({
         body: JSON.stringify({ messageId, rejected: true, kind: 'memory' }),
       });
     } catch {
-      /* a flag é só para auditoria; falha não bloqueia o usuário */
+      /* flag só para auditoria */
     }
     showToast('Memória rejeitada.');
   }
@@ -713,7 +725,7 @@ export function ChatPanel({
   function discussMemory() {
     if (!memorySuggestion) return;
     const { titulo, corpo } = memorySuggestion.data;
-    discussNextMemoryRef.current = true; // a próxima sugestão volta sem "Discutir"
+    discussNextMemoryRef.current = true;
     void sendMessage(
       `Sobre esta sugestão de memória ("${titulo}"): o que você acha de refiná-la? Rascunho atual:\n\n${corpo}`,
     );
@@ -725,10 +737,6 @@ export function ChatPanel({
       void sendMessage();
     }
   }
-
-  const voiceAvailable = voiceStatus !== null && (voiceStatus.tts || voiceStatus.stt);
-  const micDisabled = voiceState === 'transcribing' || voiceState === 'speaking' || isLoading;
-  const inputDisabled = isLoading || voiceState !== 'idle';
 
   /* SVG icons — inline to keep the component self-contained */
   const icMic = (
@@ -755,34 +763,11 @@ export function ChatPanel({
       <path d="M14 8L2 2l3 6-3 6 12-6z" strokeLinejoin="round"/>
     </svg>
   );
-  const icText = (
-    <svg viewBox="0 0 16 16" aria-hidden>
-      <path d="M2 4h12M2 8h8M2 12h10" strokeLinecap="round"/>
-    </svg>
-  );
-  const icType = (
-    <svg viewBox="0 0 16 16" aria-hidden>
-      <rect x="1" y="3" width="14" height="10" rx="2"/>
-      <path d="M5 9h6M8 7v4" strokeLinecap="round"/>
-    </svg>
-  );
   const icTrash = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <path d="M3 5h10M6 5V3h4v2M5 5l1 8h4l1-8" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
-  const icCheck = (
-    <svg viewBox="0 0 16 16" aria-hidden>
-      <path d="M3 8l4 4 6-7" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-
-  const MODES: { inMode: InputMode; outMode: OutputMode; label: string; desc: string }[] = [
-    { inMode: 'text',  outMode: 'text',  label: 'Texto → Texto',  desc: 'Escreve e lê a resposta.' },
-    { inMode: 'text',  outMode: 'audio', label: 'Texto → Áudio',  desc: 'Escreve e ouve a resposta.' },
-    { inMode: 'voice', outMode: 'text',  label: 'Voz → Texto',    desc: 'Fala e lê a resposta.' },
-    { inMode: 'voice', outMode: 'audio', label: 'Voz → Áudio',    desc: 'Conversa por voz, mãos livres.' },
-  ];
 
   const sectionLabel = currentGuideBlockTitle
     ? currentGuideBlockTitle
@@ -796,8 +781,10 @@ export function ChatPanel({
     'Quais são os conceitos-chave?',
   ];
 
+  const ttsUnavailable = voiceStatus !== null && !voiceStatus.tts;
+
   return (
-    <aside className="chat-panel">
+    <aside className="chat-panel" ref={chatPanelRef}>
       <header className="chat-panel-header">
         <div className="chat-panel-title-group">
           <span className="chat-avatar" aria-hidden>
@@ -912,116 +899,56 @@ export function ChatPanel({
 
       {toast && <div className="chat-toast">{toast}</div>}
 
-      {/* Countdown bar — visible only when recording near limit (D34) */}
-      {inputMode === 'voice' && recordSecondsLeft !== null && (
-        <div className="rec-meta">
-          <span className="wave"><i/><i/><i/><i/></span>
-          Ouvindo… {recordSecondsLeft}s
-        </div>
-      )}
-
-      {/* Composer — mic/mode/send live inside the box */}
+      {/* Composer */}
       <div className="composer">
         <div className="composer-box">
           <textarea
             ref={inputRef}
             className="chat-input composer-input"
             rows={2}
-            placeholder={inputMode === 'voice' ? 'Toque no microfone para falar…' : 'Pergunte sobre esta página…'}
+            placeholder={micAtivo ? 'Ouvindo…' : 'Pergunte sobre esta página…'}
             value={input}
-            disabled={inputDisabled}
+            disabled={isLoading}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
           />
           <div className="composer-bar">
-            {/* Mode chip + popover (Módulo 13.4) */}
-            {voiceAvailable && (
-              <div className="mode-control" ref={popoverRef}>
-                {popoverOpen && (
-                  <div className="mode-pop" role="dialog" aria-label="Modo de conversa">
-                    <h4>Modo de conversa</h4>
-                    <div className="mode-grid">
-                      {MODES.map((m) => {
-                        const active = m.inMode === inputMode && m.outMode === outputMode;
-                        const disabledVoiceIn = m.inMode === 'voice' && !voiceStatus?.stt;
-                        const disabledAudioOut = m.outMode === 'audio' && !voiceStatus?.tts;
-                        const isDisabled = disabledVoiceIn || disabledAudioOut;
-                        return (
-                          <button
-                            key={m.label}
-                            type="button"
-                            className={`mode-cell${active ? ' active' : ''}`}
-                            disabled={isDisabled}
-                            title={
-                              disabledVoiceIn
-                                ? 'Chave STT não configurada'
-                                : disabledAudioOut
-                                ? 'Chave TTS não configurada'
-                                : undefined
-                            }
-                            onClick={() => {
-                              chooseInput(m.inMode);
-                              chooseOutput(m.outMode);
-                              setPopoverOpen(false);
-                            }}
-                          >
-                            {active && <span className="mc-check">{icCheck}</span>}
-                            <span className="mc-io">
-                              {m.inMode === 'voice' ? icMic : icText}
-                              <span className="ar">→</span>
-                              {m.outMode === 'audio' ? icSpeaker : icType}
-                            </span>
-                            <span className="mc-desc">{m.desc}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="mode-note">Entrada e saída são independentes.</p>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  className={`mode-chip${popoverOpen ? ' open' : ''}`}
-                  onClick={() => setPopoverOpen((v) => !v)}
-                  title="Configurar modo de conversa"
-                  aria-expanded={popoverOpen}
-                  aria-haspopup="dialog"
-                >
-                  <span className="io">{inputMode === 'voice' ? icMic : icText}</span>
-                  <span className="arrow">→</span>
-                  <span className="io">{outputMode === 'audio' ? icSpeaker : icType}</span>
-                  <svg className="caret" viewBox="0 0 12 12" aria-hidden>
-                    <path d="M2 4l4 4 4-4" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </div>
-            )}
+            {/* Toggle MIC — sempre visível */}
+            <button
+              type="button"
+              data-testid="mic-toggle"
+              className={`mic-btn${micAtivo ? ' active' : ''}${voiceState === 'listening' ? ' rec' : ''}`}
+              onClick={toggleMic}
+              title={micAtivo ? 'Desligar microfone' : 'Ligar microfone (Web Speech API)'}
+              aria-label={micAtivo ? 'Desligar microfone' : 'Ligar microfone'}
+              aria-pressed={micAtivo}
+            >
+              {voiceState === 'listening' ? icStop : icMic}
+            </button>
+
+            {/* Toggle AUTO-PLAY — sempre visível; disabled quando TTS indisponível */}
+            <button
+              type="button"
+              data-testid="autoplay-toggle"
+              className={`mic-btn${autoPlay ? ' active' : ''}`}
+              onClick={toggleAutoPlay}
+              disabled={ttsUnavailable}
+              title={
+                ttsUnavailable
+                  ? 'Auto-play indisponível — configure a chave TTS nas Configurações'
+                  : autoPlay
+                  ? 'Desligar auto-play de voz'
+                  : 'Ligar auto-play de voz'
+              }
+              aria-label={autoPlay ? 'Desligar auto-play de voz' : 'Ligar auto-play de voz'}
+              aria-pressed={autoPlay}
+            >
+              {icSpeaker}
+            </button>
 
             <div className="grow" />
 
-            {/* Mic button — visible when inputMode='voice' */}
-            {inputMode === 'voice' && (
-              <button
-                type="button"
-                className={`mic-btn${voiceState === 'listening' ? ' rec' : ''}`}
-                disabled={micDisabled}
-                title={
-                  voiceState === 'listening'
-                    ? 'Parar gravação'
-                    : voiceState === 'transcribing'
-                    ? 'Transcrevendo…'
-                    : voiceState === 'speaking'
-                    ? 'Reproduzindo'
-                    : 'Gravar voz'
-                }
-                aria-label={voiceState === 'listening' ? 'Parar gravação' : 'Gravar voz'}
-                onClick={handleMicClick}
-              >
-                {voiceState === 'listening' ? icStop : voiceState === 'speaking' ? icSpeaker : icMic}
-              </button>
-            )}
-
-            {/* Stop TTS button — visible when speaking */}
+            {/* Botão de parar TTS — visível apenas durante reprodução */}
             {voiceState === 'speaking' && (
               <button
                 type="button"
@@ -1037,7 +964,7 @@ export function ChatPanel({
             <button
               type="button"
               className="send-btn"
-              disabled={isLoading || !input.trim() || voiceState !== 'idle'}
+              disabled={isLoading || !input.trim()}
               onClick={() => void sendMessage()}
             >
               {isLoading ? <span className="streaming-cursor" aria-hidden /> : icSend}

@@ -83,15 +83,18 @@ describe('Module 14.3 design system contract', () => {
     expect(css, 'chat contract: missing .context-chip in globals.css').toContain('.context-chip');
   });
 
-  it('Zone B — chat: has mode-pop / mode-cell composer bar', () => {
+  it('Zone B — chat: has mic-toggle / autoplay-toggle composer bar (no mode-pop/mode-cell)', () => {
     const chatPanel = readSource('chatPanel');
     const css = readSource('css');
-    expect(chatPanel, 'chat contract: missing mode-pop popover in ChatPanel').toContain('mode-pop');
-    expect(chatPanel, 'chat contract: missing mode-cell in ChatPanel').toContain('mode-cell');
+    expect(chatPanel, 'chat contract: missing mic-toggle in ChatPanel').toContain('mic-toggle');
+    expect(chatPanel, 'chat contract: missing autoplay-toggle in ChatPanel').toContain('autoplay-toggle');
     expect(chatPanel, 'chat contract: missing composer-bar in ChatPanel').toContain('composer-bar');
-    expect(css, 'chat contract: missing .mode-pop in globals.css').toContain('.mode-pop');
-    expect(css, 'chat contract: missing .mode-cell in globals.css').toContain('.mode-cell');
     expect(css, 'chat contract: missing .composer-bar in globals.css').toContain('.composer-bar');
+    expect(css, 'chat contract: missing .mic-btn.active in globals.css').toContain('.mic-btn.active');
+    expect(chatPanel, 'chat contract: mode-pop must be removed from ChatPanel').not.toContain('mode-pop');
+    expect(chatPanel, 'chat contract: mode-cell must be removed from ChatPanel').not.toContain('mode-cell');
+    expect(css, 'chat contract: .mode-pop must be removed from globals.css').not.toContain('.mode-pop');
+    expect(css, 'chat contract: .mode-cell must be removed from globals.css').not.toContain('.mode-cell');
   });
 
   it('Zone B — chat: no raw emoji in composer logic (uses SVG icons)', () => {

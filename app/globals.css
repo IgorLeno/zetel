@@ -1701,56 +1701,6 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 }
 .composer-bar .grow { flex: 1; }
 
-/* ── Mode chip + popover (replaces chat-voice-control) ── */
-.mode-control { position: relative; }
-
-.mode-chip {
-  display: inline-flex; align-items: center; gap: 7px;
-  height: 30px; padding: 0 11px; border-radius: 99px;
-  border: 1px solid var(--border); background: var(--surface);
-  color: var(--text-2); font-size: 12px; font-weight: 550; white-space: nowrap;
-  transition: border-color var(--t-fast), color var(--t-fast), background var(--t-fast);
-}
-.mode-chip:hover,
-.mode-chip.open { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--text); }
-.mode-chip.open { background: var(--accent-tint2); }
-.mode-chip .io { display: inline-flex; align-items: center; gap: 4px; }
-.mode-chip svg.ic { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.7; }
-.mode-chip .arrow { color: var(--text-4); font-size: 11px; }
-.mode-chip .caret { width: 11px; height: 11px; stroke: var(--text-3); fill: none; stroke-width: 2; transition: transform var(--t-fast); }
-.mode-chip.open .caret { transform: rotate(180deg); }
-
-.mode-pop {
-  position: absolute; bottom: calc(100% + 10px); left: 0; z-index: 30;
-  width: 264px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-md); box-shadow: var(--shadow-lg);
-  padding: 6px; animation: popin var(--t-fast);
-  transform-origin: bottom left;
-}
-@keyframes popin { from { transform: translateY(6px) scale(.98); opacity: 0; } }
-.mode-pop h4 {
-  font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--text-4); padding: 8px 8px 6px;
-}
-.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 0 2px 2px; }
-
-.mode-cell {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
-  padding: 11px 12px; border-radius: var(--r-sm); border: 1px solid var(--border-soft);
-  background: var(--surface-2); text-align: left;
-  transition: all var(--t-fast); position: relative;
-}
-.mode-cell:hover:not(:disabled) { border-color: var(--border); background: var(--hover); }
-.mode-cell.active { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: var(--accent-tint2); }
-.mode-cell:disabled { opacity: .42; cursor: not-allowed; }
-.mc-io { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text); }
-.mc-io svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; }
-.mc-io .ar { color: var(--text-4); }
-.mc-desc { font-size: 10.5px; color: var(--text-3); line-height: 1.35; }
-.mc-check { position: absolute; top: 8px; right: 8px; color: var(--accent); }
-.mc-check svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.2; }
-.mode-note { font-size: 10.5px; color: var(--text-4); padding: 8px 8px 4px; line-height: 1.4; }
-
 /* ── Mic / Send / Stop buttons (inside composer-bar) ── */
 .mic-btn {
   width: 34px; height: 34px; flex-shrink: 0; border-radius: 99px;
@@ -1763,6 +1713,13 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 .mic-btn.rec {
   border-color: var(--danger); color: var(--danger); background: var(--danger-tint);
   animation: mic-pulse-unified 1.4s ease-in-out infinite;
+}
+.mic-btn.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent); background: var(--accent-tint);
+}
+.mic-btn.active:hover:not(:disabled) {
+  border-color: var(--accent); background: var(--accent-tint2);
 }
 
 .send-btn {
@@ -1777,24 +1734,6 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 .send-btn:hover:not(:disabled) { background: var(--accent-strong); }
 .send-btn:active:not(:disabled) { transform: scale(.96); }
 .send-btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
-
-/* ── Recording waveform ── */
-.rec-meta {
-  display: flex; align-items: center; gap: 7px;
-  padding: 6px 16px 0; font-size: 11.5px; color: var(--danger); flex-shrink: 0;
-}
-.rec-meta .wave { display: inline-flex; gap: 2px; align-items: center; }
-.rec-meta .wave i { width: 2px; height: 8px; border-radius: 2px; background: currentColor; animation: wave 1s ease-in-out infinite; }
-.rec-meta .wave i:nth-child(2) { animation-delay: .15s; }
-.rec-meta .wave i:nth-child(3) { animation-delay: .3s; }
-.rec-meta .wave i:nth-child(4) { animation-delay: .45s; }
-@keyframes wave { 0%,100% { height: 5px; } 50% { height: 13px; } }
-@media (prefers-reduced-motion: reduce) {
-  .rec-meta .wave i {
-    animation: none;
-    height: 8px;
-  }
-}
 
 /* ── Suggestion cards (.sugg-card) ── */
 .sugg-card {
