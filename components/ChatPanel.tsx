@@ -242,6 +242,8 @@ export function ChatPanel({
   }, [voiceStatus]);
 
   // ── Listener one-time: inicia mic pendente no primeiro gesto do usuário ──────
+  // Deps omitidas de propósito: handleFirstGesture/startListening só leem refs
+  // (pendingMicStartRef, micAtivoRef) e chatPanelRef — sem props/state reativos.
   useEffect(() => {
     const panel = chatPanelRef.current;
     if (!panel) return;

@@ -5,7 +5,6 @@ declare class SpeechRecognition extends EventTarget {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
-  resultIndex: number;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
   onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
   onend: (() => void) | null;
@@ -14,10 +13,15 @@ declare class SpeechRecognition extends EventTarget {
   abort(): void;
 }
 
+interface SpeechRecognitionAlternative {
+  readonly transcript: string;
+  readonly confidence?: number;
+}
+
 interface SpeechRecognitionResult {
   readonly isFinal: boolean;
   readonly length: number;
-  [index: number]: { readonly transcript: string };
+  [index: number]: SpeechRecognitionAlternative;
 }
 
 interface SpeechRecognitionResultList {
