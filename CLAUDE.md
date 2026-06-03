@@ -2,7 +2,7 @@
 
 Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsidian e SQLite como estado operacional.
 
-**Estado atual: Módulo 13 concluído (13.1–13.4; Gate 13.4 aprovado em 2026-06-02). Voz em produção com contrato `interactionMode`, STT/TTS dedicados, chip `inputMode × outputMode`, persistência local e fallback textual garantido. Módulo 12 concluído (gate passado em 2026-06-01; commits 9156d75 + 922cf52). Gate 12 → PRD v4 aprovado. Módulo 12.1 completo (Fase 1 + Fase 2; E2E live opt-in com budget guard, coleta automática de artefatos, GitHub Actions manual). Módulo 12.0B concluído (gate passado em 2026-06-01). Módulo 12.0A concluído (gate passado em 2026-06-01). Módulo 11 concluído (gate 11.4 aprovado em 2026-05-31). Módulo 10 concluído (10A–10D; 10E parcial/absorvido). Próximo passo: PRD v5 — prompts editáveis em runtime e modo internet.**
+**Estado atual: Módulo 14 concluído (14.1–14.4; Gate 14.4 aprovado em 2026-06-03). Zetel Redesign no app shell: tokens CSS de leitura (`--read-width`, `--read-font`, `--read-size`, `--read-lh`, `--density`), design system violeta-indigo (14.2), zonas de UI topbar/leitura/chat/cards/iframes (14.3), modo mãos-livres com Web Speech API contínua e toggles `micAtivo`/`autoPlay` (14.4; substitui o chip `inputMode × outputMode` do 13.4 na UI, preservando `interactionMode` no backend via `autoPlay`). Módulo 13 concluído (13.1–13.4; Gate 13.4 em 2026-06-02). Módulo 12 concluído (gate 2026-06-01). Próximo passo: PRD v5 — prompts editáveis em runtime e modo internet.**
 
 **Módulo 12.1 (E2E Live — Fase 1 + Fase 2) completo.** E2E live é opt-in (`ZETEL_E2E_LIVE=1`); CI padrão nunca usa OpenRouter. Budget guard (`ZETEL_E2E_MAX_CALLS`, default 3) em `setup-live.ts` via `checkBudget` exportada para uso nos specs. Artefatos de falha coletados automaticamente em `test-results/e2e-live/` via `collect-artifacts.ts`. Summarizer opcional em `scripts/e2e-live-summarize.mjs` (funciona sem e com chave). GitHub Actions manual (`workflow_dispatch`) em `.github/workflows/e2e-live.yml` com secret `OPENROUTER_API_KEY` obrigatório. Qualquer mudança em `lib/openrouter.ts`, `lib/study-guide-service.ts`, `lib/chat-prompt.ts` ou `app/api/zetels/[id]/chat/route.ts` deve ser validada com `pnpm test:e2e:live` manualmente quando chave disponível. Gate mínimo permanece: `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`. Ver `docs/TESTING.md` (seção "E2E Live com OpenRouter").
 
@@ -35,7 +35,9 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 #### Próximos passos
 - Gate visual/manual do Documento Técnico refinado, se necessário.
-- Próximo passo operacional: **PRD v5 — Prompts editáveis e modo internet**. O Módulo 13 foi encerrado com Gate 13.4 aprovado (voz com STT separado → rota de chat textual existente (`interactionMode='voice'`) → TTS, sem `gpt-audio-mini`).
+- Próximo passo operacional: **PRD v5 — Prompts editáveis e modo internet**. O Módulo 14 foi encerrado com Gate 14.4 aprovado (Zetel Redesign + modo mãos-livres).
+
+**Módulo 14 (Zetel Redesign + modo mãos-livres) concluído em 2026-06-03; gate 14.4 aprovado; `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck` limpos.** **14.1** — shell do redesign: sidebar colapsável com persistência `zetel_sidebar_collapsed`, `LeituraPanel` com chips de status, ajustes de nav no guia (`lib/study-guide-service.ts`). **14.2** — design system em `app/globals.css` + `app/layout.tsx`: tokens violeta-indigo (`--accent` #7d7bff), fontes Hanken Grotesk / Literata / JetBrains Mono via `next/font/google`, wrapper `.app`, ponte `data-rail` no collapse; contrato estático em `tests/unit/design-system/module-14-2-contract.test.ts`; plano em `docs/superpowers/plans/2026-06-02-modulo-14-2-design-system.md`. **14.3** — zonas de UI: topbar (`crumb`/`doc-title`/`pill`), toolbar de leitura (`segmented`/`ghost-btn`), chat (`context-chip`, `composer-bar`, `mic-toggle`/`autoplay-toggle`, cards `sugg-card`), accent violet nos templates de iframe (`render-service` / `study-guide-service`); contrato em `tests/unit/design-system/module-14-3-contract.test.ts`. **14.4** — modo mãos-livres: STT contínuo via Web Speech API no cliente (`types/speech-recognition.d.ts`, loop `event.resultIndex` em `ChatPanel.tsx`), toggles ortogonais `micAtivo` + `autoPlay` com prefs `zetel_voice_prefs`, reinício automático do mic após TTS (`maybeRestartMic`); remove chip/popover `inputMode × outputMode` da UI (comportamento de voz do M13 preservado no backend). **Dívida DT-M14-1 fechada:** `resultIndex` pertence a `SpeechRecognitionEvent` (não à classe `SpeechRecognition`), alinhado ao uso em `onresult`.
 
 **Módulo 11 (Guia de Estudo: experiência interativa) concluído em 2026-05-31; gate 11.4 aprovado; `pnpm build` limpo.** **11.1** — template interativo em `renderStudyGuideHtml`: sidebar sticky (desktop) / nav compacta (mobile), quiz pedagógico (`data-answer-index`, feedback pós-clique, pontuação, reiniciar), glossário pesquisável, highlight de seção via `IntersectionObserver`. **11.2** — schema editorial v2 opcional (`comparison_tabs`, `accordions`, `timelines`, `tables`) + `renderV2Blocks`; compatibilidade retroativa. **11.3** — `buildSystemPrompt` como designer instrucional com blocos v2. **11.4** — validação com Zetel `dft` (reprocessado 28→27 páginas): `deepseek/deepseek-v4-flash`, 100% rastreabilidade (35/35 itens, 0 órfãos, 0 flagged), 4 tipos v2 preenchidos, HTML offline (~51 KB). Ressalva não-bloqueante: compat retroativa v1 não testada por ausência de fixture. Ver `spikes/lessons.md` (Módulos 11.1–11.4).
 
@@ -189,6 +191,7 @@ Para detalhe completo, ver Partes C e D do PRD. Esta tabela usa as versões **co
 | ID | Descrição | Absorver em |
 |----|-----------|-------------|
 | **DT-M12-1** | `note_model` e `memory_model` salvos em settings e expostos na UI, mas **não wired em runtime**: sugestão de nota/memória é gerada inline na mesma `streamChat` call do chat, usando `chat_model` ‖ `default_model`; não há chamada LLM separada para essas tarefas. Wiring real exige separar a geração de sugestão em chamadas próprias — decisão de produto. Operações seguem com modelo global/chat — não é regressão. | Patch pré-Módulo 13 ou durante 13.x (fechar D28) |
+| **DT-M14-1** ✅ fechada | `resultIndex` havia sido declarado na classe `SpeechRecognition` (incorreto); o loop `onresult` em `ChatPanel.tsx` usa `event.resultIndex` conforme MDN. Tipo restaurado em `SpeechRecognitionEvent` em `types/speech-recognition.d.ts`. | Módulo 14.4 (2026-06-03) |
 
 ---
 
@@ -244,7 +247,11 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **13.2** | **Backend de voz** ✅ | `/api/voice/stt`, `/api/voice/tts`, `/api/voice/status`; `interactionMode` em `chat/route.ts`; estilo oral no prompt | 13.1 |
 | **13.3** | **UI de voz** ✅ | Mic PTT, estados de voz, transcrição no fluxo do chat e integração com STT/TTS | 13.2 |
 | **13.4** | **Polimento de voz** ✅ (Gate aprovado 2026-06-02) | Chip `inputMode × outputMode`, persistência, gating por status, stop de áudio e cleanup robusto | 13.3 |
-| PRD v5 | Prompts editáveis e modo internet | PRD v5 | 12 |
+| **14.1** | **Shell Zetel Redesign (fundação)** ✅ | Sidebar colapsável, chips de status na leitura, nav do guia | 13.4 |
+| **14.2** | **Design system** ✅ | Tokens violeta-indigo, fontes Google, `.app` + `data-rail`, contrato `module-14-2-contract` | 14.1 |
+| **14.3** | **Redesign UI (zonas A/B/C)** ✅ | Topbar, toolbar leitura, composer/chat, cards, accent nos iframes; tokens `--read-*`/`--density` | 14.2 |
+| **14.4** | **Modo mãos-livres** ✅ (Gate aprovado 2026-06-03) | Web Speech API contínua, `micAtivo`/`autoPlay`, `maybeRestartMic`; fecha DT-M14-1 | 14.3 |
+| PRD v5 | Prompts editáveis e modo internet | PRD v5 | 14 |
 | Futuro | Memória emergente automática | Fase futura | 12 |
 
 ---
