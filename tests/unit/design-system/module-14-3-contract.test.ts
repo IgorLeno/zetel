@@ -50,11 +50,13 @@ describe('Module 14.3 design system contract', () => {
     expect(missing, `Missing contract sources: ${missing.join(', ')}`).toEqual([]);
   });
 
-  it('Zone A — topbar: page.tsx uses crumb/doc-title/pill classes', () => {
+  it('Zone A — topbar: page.tsx uses crumb/doc-title classes; pill badge moved to LeituraPanel', () => {
     const zetelDetailPage = readSource('zetelDetailPage');
+    const leituraPanel = readSource('leituraPanel');
     expect(zetelDetailPage, 'topbar contract: missing class "crumb" in page.tsx').toContain('crumb');
     expect(zetelDetailPage, 'topbar contract: missing class "doc-title" in page.tsx').toContain('doc-title');
-    expect(zetelDetailPage, 'topbar contract: missing class "pill" in page.tsx').toContain('pill');
+    // pill badge moved from topbar to LeituraPanel toolbar (status chip)
+    expect(leituraPanel, 'topbar contract: pill class must exist in LeituraPanel').toContain('pill');
   });
 
   it('Zone A — topbar: globals.css has .topbar / .crumb / .doc-title / .pill rules', () => {
@@ -65,15 +67,15 @@ describe('Module 14.3 design system contract', () => {
     expect(css, 'topbar contract: missing .pill rule in globals.css').toMatch(/\.pill\s*\{/);
   });
 
-  it('Zone B — leitura toolbar: uses .segmented/.seg-opt and .ghost-btn', () => {
+  it('Zone B — leitura toolbar: uses .ghost-btn and .partner-toggle-btn; mode selection moved to sidebar URL nav', () => {
     const leituraPanel = readSource('leituraPanel');
     const css = readSource('css');
-    expect(leituraPanel, 'toolbar contract: missing class "segmented" in LeituraPanel').toContain('segmented');
-    expect(leituraPanel, 'toolbar contract: missing class "seg-opt" in LeituraPanel').toContain('seg-opt');
+    // segmented control removed — mode is now selected via sidebar ?view= param
+    expect(leituraPanel, 'toolbar contract: segmented must be absent (mode moved to sidebar)').not.toContain('class="segmented"');
     expect(leituraPanel, 'toolbar contract: missing class "ghost-btn" in LeituraPanel').toContain('ghost-btn');
-    expect(css, 'toolbar contract: missing .segmented in globals.css').toContain('.segmented');
-    expect(css, 'toolbar contract: missing .seg-opt in globals.css').toContain('.seg-opt');
+    expect(leituraPanel, 'toolbar contract: missing partner-toggle-btn in LeituraPanel').toContain('partner-toggle-btn');
     expect(css, 'toolbar contract: missing .ghost-btn in globals.css').toContain('.ghost-btn');
+    expect(css, 'toolbar contract: missing .partner-toggle-btn in globals.css').toContain('.partner-toggle-btn');
   });
 
   it('Zone B — chat: has context-chip', () => {

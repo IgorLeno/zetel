@@ -1765,3 +1765,96 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 .xbtn.primary:hover:not(:disabled) { background: var(--accent-strong); }
 .xbtn.ghost { border-color: transparent; background: transparent; color: var(--text-3); }
 .xbtn.ghost:hover:not(:disabled) { color: var(--text); background: var(--hover); }
+
+/* ── ZetelWorkspace ── */
+.zetel-workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Partner toggle button (toolbar, accent) ── */
+.partner-toggle-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 13px; border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+  border: 1px solid var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent);
+  flex-shrink: 0;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.partner-toggle-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.7; flex-shrink: 0; }
+.partner-toggle-btn:hover { background: var(--accent-dim); }
+.partner-toggle-btn.on { background: var(--accent); color: var(--accent-ink); }
+.partner-toggle-btn.on:hover { background: var(--accent-strong); }
+
+/* ── Chat resize handle ── */
+.chat-resize-handle {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: var(--border-soft);
+  transition: background var(--t-fast);
+  user-select: none;
+}
+.chat-resize-handle:hover { background: var(--accent); }
+
+/* ── Topbar reading progress island ── */
+.topbar-spacer { flex: 1; }
+.topbar-reading-progress {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.topbar-section-title {
+  font-size: 12px; color: var(--text-3); max-width: 180px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topbar-percent-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  white-space: nowrap;
+}
+.topbar-percent-badge svg { width: 22px; height: 22px; flex-shrink: 0; }
+.topbar-icon-link {
+  display: grid; place-items: center;
+  width: 32px; height: 32px; border-radius: var(--r-sm);
+  color: var(--text-3);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.topbar-icon-link:hover { background: var(--hover); color: var(--text); }
+.topbar-icon-link svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.75; }
+
+/* ── Sidebar: logo-mark as link (zetel page) ── */
+.logo-mark--link {
+  text-decoration: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-z {
+  font-family: var(--font-read), Georgia, serif;
+  font-size: 18px; font-weight: 700;
+  color: #fff; line-height: 1;
+  user-select: none;
+}
+
+/* ── Sidebar toggle: integrated edge button ── */
+.sidebar-toggle {
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 0 6px 6px 0;
+  border-left: none;
+}
+
+/* ── Vault selector in sidebar footer ── */
+.vault-selector {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--text-3); text-decoration: none;
+  font-size: 12px; overflow: hidden; min-width: 0; flex: 1;
+  padding: 4px 6px; border-radius: var(--r-sm);
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.vault-selector:hover { color: var(--text); background: var(--hover); }
+.vault-icon { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.7; flex-shrink: 0; }
+.vault-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity var(--t-fast), max-width var(--t-med); max-width: 120px; }
+.app[data-rail="true"] .vault-name,
+html[data-sidebar-collapsed="true"] .app .vault-name { max-width: 0; opacity: 0; pointer-events: none; }

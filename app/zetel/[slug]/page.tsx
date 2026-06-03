@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { getDb } from '@/lib/db';
 import { getZetelBySlug } from '@/lib/zetel-service';
 import { ChevronLeftIcon } from '@/components/icons/ChevronLeftIcon';
-import { ZetelTabs } from '@/components/ZetelTabs';
+import { ZetelWorkspace } from '@/components/ZetelWorkspace';
+import { ReadingProgress } from '@/components/ReadingProgress';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +29,8 @@ export default async function ZetelDetailPage({
 }) {
   const { slug } = await params;
   const zetel = getZetelBySlug(getDb(), slug);
+  const store = await cookies();
+  const theme = store.get('zetel-theme')?.value === 'dark' ? 'dark' : 'light';
 
   if (!zetel || zetel.trashedAt) {
     return (
@@ -55,14 +59,11 @@ export default async function ZetelDetailPage({
         </Link>
         <span className="crumb-sep">/</span>
         <span className="doc-title">{zetel.displayName}</span>
-        {zetel.readingStale ? (
-          <span className="pill warn"><span className="dot" />Desatualizado</span>
-        ) : zetel.lastBuiltAt ? (
-          <span className="pill ok"><span className="dot" />Atualizado</span>
-        ) : null}
+        <div className="topbar-spacer" />
+        <ReadingProgress theme={theme} />
       </header>
       <div className="page-body page-body--zetel">
-        <ZetelTabs
+        <ZetelWorkspace
           zetelId={zetel.id}
           readingStale={zetel.readingStale}
           lastBuiltAt={zetel.lastBuiltAt}

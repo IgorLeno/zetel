@@ -845,21 +845,25 @@ function renderGuideNav(guia: StudyGuide): string {
     ...(guia.timelines ?? []).map((item, i) => navLink(`timeline-${i + 1}`, item.titulo)),
     ...(guia.tables ?? []).map((item, i) => navLink(`editorial-table-${i + 1}`, item.titulo)),
   ].join('\n');
-  return `<div class="guide-topbar">
-    <button class="guide-toc-btn" aria-expanded="false" aria-controls="guide-toc" type="button">Índice ▾</button>
-    <div id="guide-toc" class="guide-toc-panel" hidden>
-      <nav class="guide-nav" aria-label="Navegação do guia">
-        ${navLink('capa', 'Capa')}
-        ${navLink('conceitos-chave', 'Conceitos-chave')}
-        ${navLink('secoes', 'Seções')}
-        ${sectionLinks}
-        ${v2Links}
-        ${navLink('glossario', 'Glossário')}
-        ${navLink('quiz', 'Quiz')}
-        ${navLink('zettelkasten', 'Perguntas Zettelkasten')}
-      </nav>
+  return `<footer id="guide-nav-bar">
+    <button type="button" id="guide-btn-prev">← Anterior</button>
+    <div id="guide-counter-wrap">
+      <button type="button" id="guide-section-counter">Índice</button>
+      <div id="guide-toc-popover" hidden>
+        <nav aria-label="Navegação do guia">
+          ${navLink('capa', 'Capa')}
+          ${navLink('conceitos-chave', 'Conceitos-chave')}
+          ${navLink('secoes', 'Seções')}
+          ${sectionLinks}
+          ${v2Links}
+          ${navLink('glossario', 'Glossário')}
+          ${navLink('quiz', 'Quiz')}
+          ${navLink('zettelkasten', 'Perguntas Zettelkasten')}
+        </nav>
+      </div>
     </div>
-  </div>`;
+    <button type="button" id="guide-btn-next">Próxima →</button>
+  </footer>`;
 }
 
 function renderTableHead(colunas: string[]): string {
@@ -1132,17 +1136,26 @@ function guideCss(): string {
   html{scroll-behavior:smooth}
   body{font-family:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);
     color:var(--text);line-height:1.65;margin:0;padding:0}
-  .guide-topbar{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);
-    padding:8px 20px;display:flex;align-items:center}
-  .guide-toc-btn{background:var(--card);border:1px solid var(--border);border-radius:7px;
-    padding:5px 12px;color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;
-    white-space:nowrap;transition:border-color .12s,color .12s}
-  .guide-toc-btn:hover,.guide-toc-btn:focus{border-color:var(--accent);color:var(--accent);outline:none}
-  .guide-toc-panel{position:absolute;top:calc(100% + 4px);left:20px;min-width:220px;max-height:60vh;
-    overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;
-    box-shadow:0 14px 34px var(--shadow);z-index:20}
-  .guide-toc-panel[hidden]{display:none}
-  .guide-shell{max-width:860px;margin:0 auto;padding:32px 24px 80px}
+  #guide-nav-bar{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;
+    justify-content:center;gap:12px;padding:10px 16px;background:var(--bg);
+    border-top:1px solid var(--border);font-family:'Hanken Grotesk',system-ui,sans-serif;z-index:10}
+  #guide-nav-bar button{min-width:44px;min-height:44px;padding:8px 16px;border-radius:7px;
+    border:1px solid var(--border);background:var(--card);color:var(--text);font-size:14px;
+    font-weight:550;cursor:pointer;transition:background .12s,border-color .12s,color .12s;font:inherit}
+  #guide-nav-bar button:hover:not(:disabled){background:color-mix(in srgb,var(--accent) 10%,transparent);
+    border-color:var(--accent);color:var(--accent)}
+  #guide-nav-bar button:disabled{opacity:.42;cursor:not-allowed}
+  #guide-counter-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+  #guide-toc-popover{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+    min-width:220px;max-height:60vh;overflow-y:auto;background:var(--card);border:1px solid var(--border);
+    border-radius:10px;box-shadow:0 14px 34px var(--shadow);z-index:20}
+  #guide-toc-popover[hidden]{display:none}
+  #guide-toc-popover nav{display:flex;flex-direction:column;padding:8px}
+  #guide-toc-popover a{display:block;color:var(--muted);text-decoration:none;border-radius:7px;
+    padding:8px 10px;font-size:13px;line-height:1.35;transition:background .1s,color .1s}
+  #guide-toc-popover a:hover,#guide-toc-popover a:focus{color:var(--text);background:var(--sub);outline:none}
+  #guide-toc-popover a.is-active{color:var(--accent);background:var(--sub);font-weight:700}
+  .guide-shell{max-width:860px;margin:0 auto;padding:32px 24px 100px}
   .guide-nav{display:flex;flex-direction:column;padding:8px}
   .guide-nav a{display:block;color:var(--muted);text-decoration:none;border-radius:7px;padding:8px 10px;
     font-size:13px;line-height:1.35;transition:background .1s,color .1s}
@@ -1235,9 +1248,8 @@ function guideCss(): string {
   footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px;
     padding-top:20px;border-top:1px solid var(--border)}
   @media (max-width:767px){
-    .guide-shell{padding:0 16px 64px}
-    .guide-topbar{padding:8px 16px}
-    .guide-toc-panel{left:16px;right:16px;min-width:0}
+    .guide-shell{padding:0 16px 100px}
+    #guide-toc-popover{left:16px;right:16px;transform:none;min-width:0}
     header.capa{padding-top:28px}
     header.capa h1{font-size:28px}
     .quiz-head{grid-template-columns:1fr;gap:8px}
@@ -1257,42 +1269,16 @@ function guideNavScript(): string {
   function bySel(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
   function quizOptionsFor(item){ return Array.prototype.slice.call(item.querySelectorAll('.quiz-option')); }
 
+  var activeNavIdx = 0;
+  var guideTocPopover = document.getElementById('guide-toc-popover');
+  function closeGuideToc(){ if (guideTocPopover) guideTocPopover.setAttribute('hidden', ''); }
+
   window.addEventListener('message', function(e){
     var d = e && e.data;
     if (d && d.type === 'zetel:theme' && (d.theme === 'dark' || d.theme === 'light')) {
       document.documentElement.setAttribute('data-theme', d.theme);
     }
   });
-
-  // ── Guide TOC dropdown ──────────────────────────────────────────────────────
-  var tocBtn = document.querySelector('.guide-toc-btn');
-  var tocPanel = document.getElementById('guide-toc');
-  function closeToc(){
-    if (!tocPanel || !tocBtn) return;
-    tocPanel.setAttribute('hidden', '');
-    tocBtn.setAttribute('aria-expanded', 'false');
-    tocBtn.textContent = 'Índice ▾';
-  }
-  if (tocBtn && tocPanel) {
-    tocBtn.addEventListener('click', function(e){
-      e.stopPropagation();
-      var isOpen = !tocPanel.hasAttribute('hidden');
-      if (isOpen) {
-        closeToc();
-      } else {
-        tocPanel.removeAttribute('hidden');
-        tocBtn.setAttribute('aria-expanded', 'true');
-        tocBtn.textContent = 'Índice ▴';
-      }
-    });
-    document.addEventListener('click', function(e){
-      if (!tocPanel.hasAttribute('hidden') &&
-          !tocBtn.contains(e.target) && !tocPanel.contains(e.target)) {
-        closeToc();
-      }
-    });
-  }
-  // ───────────────────────────────────────────────────────────────────────────
 
   bySel('.comparison-tabs').forEach(function(group){
     var buttons = Array.prototype.slice.call(group.querySelectorAll('[data-tab-target]'));
@@ -1418,6 +1404,7 @@ function guideNavScript(): string {
     var blockTotal = blockTotalRaw != null ? Number(blockTotalRaw) : NaN;
     if (!isNaN(blockIndex)) payload.guideBlockIndex = blockIndex;
     if (!isNaN(blockTotal)) payload.guideBlockTotal = blockTotal;
+    payload.percent = navSections.length > 0 ? Math.round((activeNavIdx + 1) / navSections.length * 100) : 0;
     return payload;
   }
   var lastLocation = '';
@@ -1434,24 +1421,30 @@ function guideNavScript(): string {
   }
   var last = '';
   var activeNav = '';
+  var navSections = bySel('[data-nav-section]');
   function setActiveNav(id){
     if (!id || id === activeNav) return;
     activeNav = id;
+    for (var ni = 0; ni < navSections.length; ni++) {
+      if (navSections[ni].getAttribute('data-nav-section') === id) { activeNavIdx = ni; break; }
+    }
+    var counter = document.getElementById('guide-section-counter');
+    var prevBtn = document.getElementById('guide-btn-prev');
+    var nextBtn = document.getElementById('guide-btn-next');
+    if (counter) counter.textContent = 'Índice ' + (activeNavIdx + 1) + '/' + navSections.length;
+    if (prevBtn) prevBtn.disabled = activeNavIdx === 0;
+    if (nextBtn) nextBtn.disabled = activeNavIdx === navSections.length - 1;
     bySel('[data-nav-target]').forEach(function(a){
       var isActive = a.getAttribute('data-nav-target') === id;
       a.classList.toggle('is-active', isActive);
-      if (isActive) {
-        a.setAttribute('aria-current', 'true');
-      } else {
-        a.removeAttribute('aria-current');
-      }
+      if (isActive) { a.setAttribute('aria-current', 'true'); }
+      else { a.removeAttribute('aria-current'); }
     });
   }
-  var navSections = bySel('[data-nav-section]');
   bySel('[data-nav-target]').forEach(function(a){
     a.addEventListener('click', function(e){
       e.preventDefault();
-      closeToc();
+      closeGuideToc();
       var id = a.getAttribute('data-nav-target');
       var target = id ? document.getElementById(id) : null;
       if (target) {
@@ -1521,6 +1514,48 @@ function guideNavScript(): string {
     window.addEventListener('resize', throttledFallback);
     fallbackUpdate();
   }
+  // ── Bottom nav bar ───────────────────────────────────────────────────────────
+  var guideBtnPrev = document.getElementById('guide-btn-prev');
+  var guideBtnNext = document.getElementById('guide-btn-next');
+  var guideSectionCounter = document.getElementById('guide-section-counter');
+  if (guideSectionCounter && guideTocPopover) {
+    guideSectionCounter.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (guideTocPopover.hasAttribute('hidden')) { guideTocPopover.removeAttribute('hidden'); }
+      else { guideTocPopover.setAttribute('hidden', ''); }
+    });
+    document.addEventListener('click', function(e){
+      if (!guideTocPopover.hasAttribute('hidden') &&
+          !guideSectionCounter.contains(e.target) && !guideTocPopover.contains(e.target)) {
+        closeGuideToc();
+      }
+    });
+  }
+  if (guideBtnPrev) {
+    guideBtnPrev.addEventListener('click', function(){
+      var idx = activeNavIdx - 1;
+      if (idx >= 0 && navSections[idx]) {
+        navSections[idx].scrollIntoView({ block:'start' });
+        setActiveNav(navSections[idx].getAttribute('data-nav-section'));
+        var loc = navSections[idx].querySelector('[data-guide-block-id]') || navSections[idx];
+        post(loc);
+        closeGuideToc();
+      }
+    });
+  }
+  if (guideBtnNext) {
+    guideBtnNext.addEventListener('click', function(){
+      var idx = activeNavIdx + 1;
+      if (idx < navSections.length && navSections[idx]) {
+        navSections[idx].scrollIntoView({ block:'start' });
+        setActiveNav(navSections[idx].getAttribute('data-nav-section'));
+        var loc = navSections[idx].querySelector('[data-guide-block-id]') || navSections[idx];
+        post(loc);
+        closeGuideToc();
+      }
+    });
+  }
+  // ───────────────────────────────────────────────────────────────────────────
   updateActiveFromViewport();
   if (activeLocationTargets.length) post(activeLocationTargets[0]);
 })();
@@ -1557,7 +1592,6 @@ export function renderStudyGuideHtml(
 <script>${guideHeadScript()}</script>
 </head>
 <body>
-  ${renderGuideNav(guia)}
   <div class="guide-shell">
     <main class="guide-main">
       <header id="capa" class="capa" data-nav-section="capa">
@@ -1576,6 +1610,7 @@ export function renderStudyGuideHtml(
       <footer>Renderizado por template determinístico (sem LLM). O conteúdo editorial foi gerado por IA a partir do material; verifique a origem nos selos de rastreabilidade.</footer>
     </main>
   </div>
+  ${renderGuideNav(guia)}
   <script>${guideNavScript()}</script>
 </body>
 </html>`;

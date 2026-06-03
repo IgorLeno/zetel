@@ -2,10 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 
-const NAV = [
+// ── Global nav (all routes except /zetel/[slug]) ─────────────────────────────
+const GLOBAL_NAV = [
   {
     href: '/zetel',
     label: 'Zetel',
@@ -38,6 +41,67 @@ const NAV = [
   },
 ];
 
+// ── Zetel reading nav ─────────────────────────────────────────────────────────
+const ZETEL_NAV = [
+  {
+    view: 'tecnico',
+    label: 'Documento Técnico',
+    icon: (
+      <>
+        <rect x="2" y="2" width="12" height="12" rx="2" />
+        <path d="M5 6h6M5 9h4" />
+      </>
+    ),
+  },
+  {
+    view: 'guia-estudo',
+    label: 'Guia de Estudo',
+    icon: (
+      <>
+        <path d="M3 3l10 0-8 10h8" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+  },
+  {
+    view: 'arquivos',
+    label: 'Arquivos',
+    icon: (
+      <>
+        <path d="M3 3h4l1.5 2H13a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" />
+      </>
+    ),
+  },
+  {
+    view: 'notas-rapidas',
+    label: 'Notas Rápidas',
+    icon: (
+      <>
+        <path d="M3 4h10M3 8h7M3 12h5" strokeLinecap="round" />
+      </>
+    ),
+  },
+  {
+    view: 'notas-literatura',
+    label: 'Notas de Literatura',
+    icon: (
+      <>
+        <path d="M4 2h8a1 1 0 011 1v11l-4-2-4 2V3a1 1 0 011-1z" />
+      </>
+    ),
+  },
+  {
+    view: 'artefatos',
+    label: 'Artefatos',
+    icon: (
+      <>
+        <circle cx="8" cy="8" r="5" />
+        <path d="M8 5v3l2 1" strokeLinecap="round" />
+      </>
+    ),
+  },
+] as const;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function syncRailAttribute(collapsed: boolean) {
   if (collapsed) {
     document.querySelector<HTMLElement>('.app')?.setAttribute('data-rail', 'true');
@@ -46,6 +110,38 @@ function syncRailAttribute(collapsed: boolean) {
   }
 }
 
+function extractZetelSlug(pathname: string): string | null {
+  const m = pathname.match(/^\/zetel\/([^/?#]+)/);
+  return m ? m[1] : null;
+}
+
+// ── Zetel context nav (needs useSearchParams → must be inside Suspense) ───────
+function ZetelNav({ slug, collapsed }: { slug: string; collapsed: boolean }) {
+  const searchParams = useSearchParams();
+  const activeView = searchParams.get('view') ?? 'tecnico';
+
+  return (
+    <nav className="sidebar-nav">
+      <div className="nav-section-label">Leitura</div>
+      {ZETEL_NAV.map((item) => {
+        const active = activeView === item.view;
+        return (
+          <Link
+            key={item.view}
+            href={`/zetel/${slug}?view=${item.view}`}
+            className={`nav-item${active ? ' active' : ''}`}
+            title={collapsed ? item.label : undefined}
+          >
+            <svg viewBox="0 0 16 16">{item.icon}</svg>
+            <span className="nav-label">{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -70,39 +166,56 @@ export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
     syncRailAttribute(next);
   }
 
+  const zetelSlug = extractZetelSlug(pathname);
+  const isZetelPage = zetelSlug !== null;
+
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <div className="logo-mark">
-          <svg viewBox="0 0 16 16">
-            <path
-              d="M3 3h10L5 13h8"
-              stroke="white"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-          </svg>
-        </div>
-        <span className="logo-text">Zetel</span>
+        <Link href="/zetel" className="logo-mark logo-mark--link" aria-label="Zetel — início">
+          <span className="logo-z">Z</span>
+        </Link>
+        {!isZetelPage && <span className="logo-text">Zetel</span>}
       </div>
 
-      <nav className="sidebar-nav">
-        <div className="nav-section-label">Menu</div>
-        {NAV.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + '/');
-          return (
-            <Link key={item.href} href={item.href} className={`nav-item${active ? ' active' : ''}`}>
-              <svg viewBox="0 0 16 16">{item.icon}</svg>
-              <span className="nav-label">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      {isZetelPage ? (
+        <Suspense fallback={
+          <nav className="sidebar-nav">
+            <div className="nav-section-label">Leitura</div>
+          </nav>
+        }>
+          <ZetelNav slug={zetelSlug} collapsed={collapsed} />
+        </Suspense>
+      ) : (
+        <nav className="sidebar-nav">
+          <div className="nav-section-label">Menu</div>
+          {GLOBAL_NAV.map((item) => {
+            const active = pathname === item.href || pathname.startsWith(item.href + '/');
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`nav-item${active ? ' active' : ''}`}
+              >
+                <svg viewBox="0 0 16 16">{item.icon}</svg>
+                <span className="nav-label">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
 
       <div className="sidebar-footer">
-        <span className="footer-label">v0.1.0</span>
+        {isZetelPage ? (
+          <Link href="/zetel" className="vault-selector" title="Voltar à lista de Zetels">
+            <svg viewBox="0 0 16 16" className="vault-icon">
+              <path d="M8 2L2 5v3c0 3 2.5 5.5 6 6.5C14 13.5 14 8 14 8V5L8 2z" />
+            </svg>
+            <span className="vault-name">{zetelSlug}</span>
+          </Link>
+        ) : (
+          <span className="footer-label">v0.1.0</span>
+        )}
         <ThemeToggle initialTheme={theme} />
       </div>
 
@@ -115,10 +228,8 @@ export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
       >
         <svg viewBox="0 0 12 12">
           {collapsed ? (
-            /* → chevron: points right, click to expand */
             <path d="M4 10L8 6 4 2" strokeLinecap="round" strokeLinejoin="round" />
           ) : (
-            /* ← chevron: points left, click to collapse */
             <path d="M8 10L4 6 8 2" strokeLinecap="round" strokeLinejoin="round" />
           )}
         </svg>

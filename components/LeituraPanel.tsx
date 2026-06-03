@@ -4,6 +4,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChatPanel } from './ChatPanel';
 
+const CHAT_WIDTH_KEY = 'zetel_chat_width';
+const CHAT_WIDTH_DEFAULT = 360;
+const CHAT_WIDTH_MIN = 280;
+const CHAT_WIDTH_MAX = 520;
+
 type ReadingMode = 'tecnico' | 'guia-estudo';
 
 interface ArtifactsInfo {
@@ -52,10 +57,12 @@ export function LeituraPanel({
   zetelId,
   readingStale,
   lastBuiltAt,
+  selectedMode,
 }: {
   zetelId: string;
   readingStale: boolean;
   lastBuiltAt: string | null;
+  selectedMode: ReadingMode;
 }) {
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -63,8 +70,19 @@ export function LeituraPanel({
   const [buildingMode, setBuildingMode] = useState<ReadingMode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<ArtifactsInfo | null>(null);
-  const [selectedMode, setSelectedMode] = useState<ReadingMode>('tecnico');
   const [chatOpen, setChatOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [chatWidth, setChatWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return CHAT_WIDTH_DEFAULT;
+    const saved = localStorage.getItem(CHAT_WIDTH_KEY);
+    const n = saved ? parseInt(saved, 10) : NaN;
+    return isNaN(n) ? CHAT_WIDTH_DEFAULT : Math.min(CHAT_WIDTH_MAX, Math.max(CHAT_WIDTH_MIN, n));
+  });
+  const draggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartWidthRef = useRef(0);
+  const chatWidthRef = useRef(chatWidth);
+  useEffect(() => { chatWidthRef.current = chatWidth; }, [chatWidth]);
   const [currentReadingMode, setCurrentReadingMode] = useState<ReadingMode>('tecnico');
   const [currentPageIndex, setCurrentPageIndex] = useState<number | null>(null);
   const [currentGuideBlockId, setCurrentGuideBlockId] = useState<string | null>(null);
@@ -188,6 +206,30 @@ export function LeituraPanel({
     return () => obs.disconnect();
   }, [postCurrentTheme]);
 
+  function onHandlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    draggingRef.current = true;
+    dragStartXRef.current = e.clientX;
+    dragStartWidthRef.current = chatWidthRef.current;
+    setIsDragging(true);
+
+    function onMove(ev: PointerEvent) {
+      if (!draggingRef.current) return;
+      const dx = dragStartXRef.current - ev.clientX;
+      const newWidth = Math.min(CHAT_WIDTH_MAX, Math.max(CHAT_WIDTH_MIN, dragStartWidthRef.current + dx));
+      setChatWidth(newWidth);
+    }
+    function onUp() {
+      draggingRef.current = false;
+      setIsDragging(false);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      try { localStorage.setItem(CHAT_WIDTH_KEY, String(chatWidthRef.current)); } catch (_) {}
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
   async function onBuild() {
     const mode = selectedMode;
     setBuilding(true);
@@ -239,29 +281,6 @@ export function LeituraPanel({
     <div className="leitura-panel">
       <div className="leitura-toolbar">
         <div className="toolbar-start">
-          <div className="segmented" role="radiogroup" aria-label="Modo de leitura">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={selectedMode === 'tecnico'}
-              className={`seg-opt${selectedMode === 'tecnico' ? ' active' : ''}`}
-              disabled={building}
-              onClick={() => setSelectedMode('tecnico')}
-            >
-              Documento Técnico
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={selectedMode === 'guia-estudo'}
-              className={`seg-opt${selectedMode === 'guia-estudo' ? ' active' : ''}`}
-              disabled={building}
-              title="Gerado por IA a partir do material"
-              onClick={() => setSelectedMode('guia-estudo')}
-            >
-              Guia de Estudo
-            </button>
-          </div>
           {statusChip}
           {guideProgress}
           <button
@@ -281,7 +300,7 @@ export function LeituraPanel({
         {showIframe && (
           <button
             type="button"
-            className={`toolbar-icon-btn${chatOpen ? ' on' : ''}`}
+            className={`partner-toggle-btn${chatOpen ? ' on' : ''}`}
             title={chatOpen ? 'Fechar parceiro' : 'Abrir parceiro de estudos'}
             aria-label={chatOpen ? 'Fechar parceiro' : 'Abrir parceiro de estudos'}
             onClick={() => setChatOpen((o) => !o)}
@@ -290,6 +309,7 @@ export function LeituraPanel({
               <rect x="2" y="2" width="12" height="10" rx="2"/>
               <path d="M5 13l1.5-2M11 13l-1.5-2" strokeLinecap="round"/>
             </svg>
+            <span>Parceiro</span>
           </button>
         )}
       </div>
@@ -326,18 +346,29 @@ export function LeituraPanel({
             sandbox="allow-scripts"
             src={iframeSrc}
             onLoad={postCurrentTheme}
+            style={isDragging ? { pointerEvents: 'none' } : undefined}
           />
+          {/* display:none/contents hides but never unmounts (M6-3). */}
           <div style={{ display: chatOpen ? 'contents' : 'none' }}>
-            <ChatPanel
-              zetelId={zetelId}
-              currentReadingMode={currentReadingMode}
-              currentPageIndex={currentPageIndex}
-              currentGuideBlockId={currentGuideBlockId}
-              currentGuideSectionId={currentGuideSectionId}
-              currentGuideBlockTitle={currentGuideBlockTitle}
-              currentGuideBlockIndex={currentGuideBlockIndex}
-              currentGuideBlockTotal={currentGuideBlockTotal}
+            <div
+              className="chat-resize-handle"
+              onPointerDown={onHandlePointerDown}
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Redimensionar painel do parceiro"
             />
+            <div style={{ width: chatWidth, minWidth: chatWidth, maxWidth: chatWidth, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <ChatPanel
+                zetelId={zetelId}
+                currentReadingMode={currentReadingMode}
+                currentPageIndex={currentPageIndex}
+                currentGuideBlockId={currentGuideBlockId}
+                currentGuideSectionId={currentGuideSectionId}
+                currentGuideBlockTitle={currentGuideBlockTitle}
+                currentGuideBlockIndex={currentGuideBlockIndex}
+                currentGuideBlockTotal={currentGuideBlockTotal}
+              />
+            </div>
           </div>
         </div>
       )}

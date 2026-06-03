@@ -527,10 +527,18 @@ function buildViewerCss(): string {
     article.page .katex-display{overflow-x:auto;overflow-y:hidden;padding:20px 24px;background:var(--math-bg);border:1px solid var(--math-border);border-radius:var(--radius-card);text-align:center}
     article.page .katex-display>.katex{padding:2px 0}
     #nav-bar{position:fixed;bottom:0;left:220px;right:0;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 16px;background:var(--bg-page);border-top:1px solid var(--border);font-family:var(--font-ui);z-index:10}
-    #nav-bar button{min-width:44px;min-height:44px;padding:8px 16px;border-radius:var(--radius-subcard);border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;font-weight:550;cursor:pointer}
+    #nav-bar button{min-width:44px;min-height:44px;padding:8px 16px;border-radius:var(--radius-subcard);border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px;font-weight:550;cursor:pointer;transition:background .12s,border-color .12s,color .12s}
     #nav-bar button:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent);color:var(--accent)}
     #nav-bar button:disabled{opacity:.42;cursor:not-allowed}
-    #page-counter{font-size:13px;color:var(--text-secondary);min-width:8rem;text-align:center}
+    #page-counter-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+    #page-counter{min-width:8rem;text-align:center;font-size:14px;font-weight:550;min-height:44px;padding:8px 16px;border-radius:var(--radius-subcard);border:1px solid var(--border);background:var(--bg-card);color:var(--text);cursor:pointer;transition:background .12s,border-color .12s,color .12s}
+    #page-counter:hover{background:var(--accent-hover);border-color:var(--accent);color:var(--accent)}
+    #toc-popover{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);min-width:220px;max-height:60vh;overflow-y:auto;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.18);z-index:20}
+    #toc-popover[hidden]{display:none}
+    #toc-popover ul{list-style:none;padding:8px;margin:0}
+    #toc-popover li a{display:block;color:var(--text-secondary);text-decoration:none;border-radius:7px;padding:8px 10px;font-size:13px;line-height:1.35;transition:background .1s,color .1s;cursor:pointer}
+    #toc-popover li a:hover,#toc-popover li a:focus{color:var(--text);background:var(--bg-page);outline:none}
+    #toc-popover li a.active{color:var(--accent);background:var(--bg-page);font-weight:700}
     @media (max-width:768px){
       #toc{display:none}
       .toc-select{display:block;position:sticky;top:0;z-index:5;width:100%;font-family:var(--font-ui);font-size:13px;padding:12px 14px;border:0;border-bottom:1px solid var(--border);background:var(--bg-card);color:var(--text)}
@@ -561,6 +569,8 @@ function buildNavScript(): string {
   var reader = document.getElementById('reader');
   var total = pages.length;
   var current = 0;
+  var tocPopover = document.getElementById('toc-popover');
+  var popoverLinks = tocPopover ? Array.prototype.slice.call(tocPopover.querySelectorAll('a[data-idx]')) : [];
 
   function setActive(idx){
     links.forEach(function(a,i){ a.classList.toggle('active', i===idx); });
@@ -572,16 +582,18 @@ function buildNavScript(): string {
     current = Math.max(0, Math.min(n, total-1));
     if (pages[current]) pages[current].classList.add('active');
     var counter = document.getElementById('page-counter');
-    if (counter) counter.textContent = 'Página ' + (current+1) + ' de ' + total;
+    if (counter) counter.textContent = 'Índice ' + (current+1) + '/' + total;
     var prev = document.getElementById('btn-prev');
     var next = document.getElementById('btn-next');
     if (prev) prev.disabled = current===0;
     if (next) next.disabled = current===total-1;
     if (reader) reader.scrollTop = 0;
+    popoverLinks.forEach(function(a){ a.classList.toggle('active', Number(a.getAttribute('data-idx'))===current); });
     try {
       var el = pages[current];
       var idx = el && el.dataset.page != null ? Number(el.dataset.page) : current;
-      window.parent.postMessage({ type:'zetel:page-change', readingMode:'tecnico', pageIndex: idx }, '*');
+      var percent = Math.round((current + 1) / total * 100);
+      window.parent.postMessage({ type:'zetel:page-change', readingMode:'tecnico', pageIndex: idx, percent: percent }, '*');
     } catch(_){}
   }
 
@@ -612,6 +624,30 @@ function buildNavScript(): string {
       document.documentElement.setAttribute('data-theme', d.theme);
     }
   });
+
+  // ── Popover "Índice" do botão central ───────────────────────────────────────
+  var pageCounterBtn = document.getElementById('page-counter');
+  function closePopover(){ if (tocPopover) tocPopover.setAttribute('hidden', ''); }
+  if (pageCounterBtn && tocPopover) {
+    pageCounterBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (tocPopover.hasAttribute('hidden')) { tocPopover.removeAttribute('hidden'); }
+      else { tocPopover.setAttribute('hidden', ''); }
+    });
+    document.addEventListener('click', function(e){
+      if (!tocPopover.hasAttribute('hidden') &&
+          !pageCounterBtn.contains(e.target) && !tocPopover.contains(e.target)) { closePopover(); }
+    });
+  }
+  popoverLinks.forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      var idx = Number(a.getAttribute('data-idx'));
+      if (!isNaN(idx)) show(idx);
+      closePopover();
+    });
+  });
+  // ───────────────────────────────────────────────────────────────────────────
 
   setActive(0);
   show(0);
@@ -688,7 +724,12 @@ async function assembleHtml(
   </div>
   <footer id="nav-bar">
     <button type="button" id="btn-prev">← Anterior</button>
-    <span id="page-counter">Página 1 de ${total}</span>
+    <div id="page-counter-wrap">
+      <button type="button" id="page-counter">Índice 1/${total}</button>
+      <div id="toc-popover" hidden>
+        <ul>${tocItems}</ul>
+      </div>
+    </div>
     <button type="button" id="btn-next">Próxima →</button>
   </footer>
   <script>${buildNavScript()}</script>
