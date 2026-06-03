@@ -266,7 +266,7 @@ body {
 /* Sidebar toggle button */
 .sidebar-toggle {
   position: absolute;
-  top: 64px;
+  top: 50%;
   right: -11px;
   width: 22px;
   height: 22px;
@@ -275,10 +275,12 @@ body {
   justify-content: center;
   background: var(--surface-2);
   border: 1px solid var(--border);
+  border-left: none;
   color: var(--text-3);
   cursor: pointer;
   z-index: 2;
-  border-radius: 6px;
+  border-radius: 0 6px 6px 0;
+  transform: translateY(-50%);
   transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
 }
 .sidebar-toggle:hover { color: var(--text-2); border-color: var(--accent); }
@@ -596,6 +598,12 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 .leitura-with-chat .leitura-iframe {
   flex: 1;
   min-width: 0;
+}
+
+.leitura-with-chat .chat-panel {
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .leitura-iframe {
@@ -1835,14 +1843,6 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   font-size: 18px; font-weight: 700;
   color: #fff; line-height: 1;
   user-select: none;
-}
-
-/* ── Sidebar toggle: integrated edge button ── */
-.sidebar-toggle {
-  top: 50%;
-  transform: translateY(-50%);
-  border-radius: 0 6px 6px 0;
-  border-left: none;
 }
 
 /* ── Vault selector in sidebar footer ── */

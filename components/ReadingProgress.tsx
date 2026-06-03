@@ -46,7 +46,9 @@ export function ReadingProgress({ theme }: { theme: 'light' | 'dark' }) {
     function handler(e: MessageEvent) {
       const d = e.data;
       if (!d || d.type !== 'zetel:page-change') return;
-      if (typeof d.percent === 'number') setPercent(d.percent);
+      if (typeof d.percent === 'number') {
+        setPercent(Math.max(0, Math.min(100, d.percent)));
+      }
       if (typeof d.guideBlockTitle === 'string') {
         setSectionTitle(d.guideBlockTitle);
       } else if (d.readingMode === 'tecnico') {
