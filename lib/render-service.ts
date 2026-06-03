@@ -593,7 +593,7 @@ function buildNavScript(): string {
       var el = pages[current];
       var idx = el && el.dataset.page != null ? Number(el.dataset.page) : current;
       var percent = Math.round((current + 1) / total * 100);
-      window.parent.postMessage({ type:'zetel:page-change', readingMode:'tecnico', pageIndex: idx, percent: percent }, '*');
+      window.parent.postMessage({ type:'zetel:page-change', readingMode:'tecnico', pageIndex: idx, pagesCount: total, percent: percent }, '*');
     } catch(_){}
   }
 

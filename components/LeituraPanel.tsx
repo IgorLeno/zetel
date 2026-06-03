@@ -110,17 +110,6 @@ export function LeituraPanel({
 
   const showIframe = anyBuilt && !building && viewArtifact !== null;
 
-  const buttonLabel =
-    selectedMode === 'guia-estudo'
-      ? guiaBuilt
-        ? '↺ Regenerar'
-        : 'Gerar Guia'
-      : tecnicoBuilt
-        ? 'Atualizar leitura'
-        : 'Preparar leitura';
-  const buttonPrimary =
-    selectedMode === 'guia-estudo' ? !guiaBuilt : !tecnicoBuilt || readingStale;
-
   const iframeSrc = (() => {
     const params = new URLSearchParams();
     if (viewArtifact === 'guia-estudo') params.set('artifact', 'guia-estudo');
@@ -254,65 +243,24 @@ export function LeituraPanel({
     }
   }
 
-  const statusChip = building ? (
-    <span className="status-chip busy">
-      {buildingMode === 'guia-estudo' ? 'Gerando…' : 'Construindo…'}
-    </span>
-  ) : selectedMode === 'tecnico' && tecnicoBuilt && readingStale ? (
-    <span className="status-chip warn">Desatualizado</span>
-  ) : selectedMode === 'tecnico' && tecnicoBuilt && !readingStale ? (
-    <span className="status-chip ok">Pronto</span>
-  ) : selectedMode === 'guia-estudo' && guiaBuilt ? (
-    <span className="status-chip ok">Pronto</span>
-  ) : null;
-
-  const guideProgress =
-    selectedMode === 'guia-estudo' &&
-    currentGuideBlockIndex !== null &&
-    currentGuideBlockTotal !== null &&
-    currentGuideBlockTotal > 0 ? (
-      <span className="pill busy">
-        <span className="dot" />
-        {currentGuideBlockIndex + 1}/{currentGuideBlockTotal}
-      </span>
-    ) : null;
-
   return (
     <div className="leitura-panel">
-      <div className="leitura-toolbar">
-        <div className="toolbar-start">
-          {statusChip}
-          {guideProgress}
-          <button
-            type="button"
-            className={`ghost-btn${building ? ' spin' : ''}`}
-            disabled={building}
-            onClick={onBuild}
-          >
-            {building ? (
-              <svg viewBox="0 0 16 16"><path d="M8 2a6 6 0 1 0 6 6" strokeLinecap="round"/></svg>
-            ) : (
-              <svg viewBox="0 0 16 16"><path d="M2 8a6 6 0 1 0 6-6" strokeLinecap="round"/><path d="M2 2v4h4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            )}
-            {buttonLabel}
-          </button>
-        </div>
-        {showIframe && (
-          <button
-            type="button"
-            className={`partner-toggle-btn${chatOpen ? ' on' : ''}`}
-            title={chatOpen ? 'Fechar parceiro' : 'Abrir parceiro de estudos'}
-            aria-label={chatOpen ? 'Fechar parceiro' : 'Abrir parceiro de estudos'}
-            onClick={() => setChatOpen((o) => !o)}
-          >
-            <svg viewBox="0 0 16 16">
-              <rect x="2" y="2" width="12" height="10" rx="2"/>
-              <path d="M5 13l1.5-2M11 13l-1.5-2" strokeLinecap="round"/>
-            </svg>
-            <span>Parceiro</span>
-          </button>
-        )}
-      </div>
+      <div className="leitura-toolbar" aria-hidden="true" />
+      {showIframe && !chatOpen && (
+        <button
+          type="button"
+          className="partner-toggle-btn"
+          title="Abrir parceiro de estudos"
+          aria-label="Abrir parceiro de estudos"
+          onClick={() => setChatOpen(true)}
+        >
+          <svg viewBox="0 0 16 16">
+            <rect x="2" y="2" width="12" height="10" rx="2"/>
+            <path d="M5 13l1.5-2M11 13l-1.5-2" strokeLinecap="round"/>
+          </svg>
+          <span>Parceiro</span>
+        </button>
+      )}
       {error && <p className="feedback err">{error}</p>}
 
       {!anyBuilt && !building ? (
@@ -331,8 +279,8 @@ export function LeituraPanel({
         <div className="empty-state leitura-empty">
           <div>
             {selectedMode === 'guia-estudo'
-              ? 'Guia de Estudo ainda não gerado. Use o botão acima para gerá-lo.'
-              : 'Documento Técnico ainda não construído. Use o botão acima.'}
+              ? 'Guia de Estudo ainda não gerado.'
+              : 'Documento Técnico ainda não construído.'}
           </div>
         </div>
       ) : (
@@ -357,7 +305,18 @@ export function LeituraPanel({
               aria-orientation="vertical"
               aria-label="Redimensionar painel do parceiro"
             />
-            <div style={{ width: chatWidth, minWidth: chatWidth, maxWidth: chatWidth, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ width: chatWidth, minWidth: CHAT_WIDTH_MIN, maxWidth: chatWidth, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
+              <button
+                type="button"
+                className="partner-close-tab"
+                title="Fechar parceiro"
+                aria-label="Fechar parceiro"
+                onClick={() => setChatOpen(false)}
+              >
+                <svg viewBox="0 0 16 16" aria-hidden>
+                  <path d="M10 4L6 8l4 4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
               <ChatPanel
                 zetelId={zetelId}
                 currentReadingMode={currentReadingMode}

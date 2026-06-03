@@ -267,24 +267,24 @@ body {
 .sidebar-toggle {
   position: absolute;
   top: 50%;
-  right: -11px;
-  width: 22px;
-  height: 22px;
+  right: -12px;
+  width: 12px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-2);
+  background: var(--bg-sidebar, var(--surface));
   border: 1px solid var(--border);
   border-left: none;
   color: var(--text-3);
   cursor: pointer;
   z-index: 2;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 8px 8px 0;
   transform: translateY(-50%);
   transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
 }
 .sidebar-toggle:hover { color: var(--text-2); border-color: var(--accent); }
-.sidebar-toggle svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+.sidebar-toggle svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
 
 /* Collapsed state — .app drives runtime; html bridge prevents first-paint flash. */
 .app[data-rail="true"] .sidebar,
@@ -474,6 +474,7 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 }
 
 .leitura-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -487,6 +488,7 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   gap: 10px;
   flex-shrink: 0;
 }
+.leitura-toolbar:empty { display: none; }
 
 .toolbar-start {
   display: flex;
@@ -589,6 +591,7 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 
 .leitura-body {
   flex: 1;
+  height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: row;
@@ -596,19 +599,22 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 }
 
 .leitura-with-chat .leitura-iframe {
-  flex: 1;
+  flex: 1 1 0%;
   min-width: 0;
 }
 
 .leitura-with-chat .chat-panel {
   width: 100%;
-  min-width: 0;
-  flex-shrink: 1;
+  min-width: 280px;
+  flex: 1 1 auto;
+  height: 100%;
 }
 
 .leitura-iframe {
-  flex: 1;
+  flex: 1 1 0%;
   min-height: 0;
+  min-width: 0;
+  height: 100%;
   width: 100%;
   border: none;
   border-radius: var(--radius);
@@ -679,7 +685,7 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 }
 
 .chat-messages {
-  flex: 1;
+  flex: 1 1 0%;
   overflow-y: auto;
   padding: 12px;
   display: flex;
@@ -1638,11 +1644,9 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 .toolbar-icon-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.7; }
 .toolbar-icon-btn.on { color: var(--accent); background: var(--accent-tint); }
 
-/* ── Chat head sub-title ── */
+/* ── Chat header title ── */
 .ht { min-width: 0; flex: 1; }
-.ht .chat-panel-title,
-.ht .chat-head-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chat-head-sub { font-size: 11.5px; color: var(--text-3); }
+.ht .chat-panel-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── mini-btn (inside chat header) ── */
 .mini-btn {
@@ -1654,21 +1658,6 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 }
 .mini-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; }
 .mini-btn:hover { background: var(--hover); color: var(--text); }
-
-/* ── Context chip ── */
-.context-chip {
-  display: flex; align-items: center; gap: 8px;
-  margin: 10px 14px 0;
-  padding: 8px 11px; border-radius: var(--r-sm);
-  background: var(--accent-tint2);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-  font-size: 12px; color: var(--text-2); flex-shrink: 0;
-}
-.context-chip svg {
-  width: 13px; height: 13px;
-  stroke: var(--accent); fill: none; stroke-width: 1.8; flex-shrink: 0;
-}
-.context-chip b { color: var(--text); font-weight: 600; }
 
 /* ── Chat empty state + suggested prompts ── */
 .chat-empty {
@@ -1782,21 +1771,49 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   min-height: 0;
 }
 
-/* ── Partner toggle button (toolbar, accent) ── */
+/* ── Partner toggle button (floating over reading iframe) ── */
 .partner-toggle-btn {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  z-index: 4;
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 6px 13px; border-radius: var(--r-sm);
+  padding: 8px 14px; border-radius: 999px;
   font-size: 13px; font-weight: 600; white-space: nowrap;
   border: 1px solid var(--accent);
-  background: var(--accent-tint);
+  background: var(--surface);
   color: var(--accent);
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
   transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
 }
 .partner-toggle-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.7; flex-shrink: 0; }
 .partner-toggle-btn:hover { background: var(--accent-dim); }
-.partner-toggle-btn.on { background: var(--accent); color: var(--accent-ink); }
-.partner-toggle-btn.on:hover { background: var(--accent-strong); }
+
+/* ── Partner close tab (chat open state) ── */
+.partner-close-tab {
+  position: absolute;
+  top: 14px;
+  left: -34px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px 0 0 8px;
+  border: 1px solid var(--border-soft);
+  border-right: 0;
+  background: var(--surface);
+  color: var(--text-3);
+  box-shadow: var(--shadow-sm);
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  z-index: 3;
+}
+.partner-close-tab:hover {
+  background: var(--hover);
+  color: var(--text);
+  border-color: var(--accent);
+}
+.partner-close-tab svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.9; }
 
 /* ── Chat resize handle ── */
 .chat-resize-handle {
@@ -1824,6 +1841,10 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   white-space: nowrap;
 }
 .topbar-percent-badge svg { width: 22px; height: 22px; flex-shrink: 0; }
+.topbar-progress-count {
+  color: var(--text-3);
+  font-weight: 550;
+}
 .topbar-icon-link {
   display: grid; place-items: center;
   width: 32px; height: 32px; border-radius: var(--r-sm);

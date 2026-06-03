@@ -923,3 +923,9 @@ Rule: callbacks assíncronos que mutam refs compartilhadas devem ser **idempoten
 [2026-06-03] Context: mesmo dentro de um único turno (sem `cancel()`), uma resposta com 5 frases podia gerar 5 blobs simultâneos ("media ativa" no DevTools), todos tocando ao mesmo tempo.
 Mistake: `finish()` resolvia a promise da cadeia serial mas nunca chamava `audio.pause()`. Quando `audio.play()` era rejeitado pelo navegador (sucessão rápida de blobs, quirks de autoplay), a cadeia avançava para a próxima frase mantendo o elemento `audio` anterior vivo — navegadores podem iniciar playback após uma promise `play()` rejeitada, então o áudio antigo soava em paralelo com o novo.
 Rule: **sempre chamar `audio.pause()` + desanexar handlers em `finish()`**, independentemente do caminho que o liquidou. Isso garante que o nó anterior está comprovadamente mudo antes de a cadeia avançar. Adicionalmente, diferenciar rejeição *espúria* de `play()` (o áudio toca apesar do reject: `!audio.paused && !audio.ended → aguardar onended`) de bloqueio *real* (autoplay negado: `audio.paused === true → finish()`). A verificação elimina o avanço prematuro sem introduzir retry ou timers.
+
+## Pós-M14 — Layout de leitura e parceiro (2026-06-03)
+
+[2026-06-03] Context: correções visuais pós-M14 no shell de leitura precisavam remover controles da toolbar, fazer o iframe ocupar o espaço disponível e manter o parceiro montado.
+Mistake: acoplar estado visual de leitura (status, regenerar, seção atual) à área que deveria ser só canvas de leitura reduzia espaço útil e criava competição de scroll/layout com o chat.
+Rule: correções de layout no shell devem preservar contratos comportamentais (`ChatPanel` montado, payload de chat, voz/TTS) e mover contexto/progresso para canais dedicados (`ReadingProgress`/`postMessage`), mantendo a área de leitura como flex container simples com iframe e painel lateral.

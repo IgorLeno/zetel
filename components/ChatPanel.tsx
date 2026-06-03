@@ -737,12 +737,6 @@ export function ChatPanel({
     </svg>
   );
 
-  const sectionLabel = currentGuideBlockTitle
-    ? currentGuideBlockTitle
-    : currentPageIndex !== null
-    ? `Página ${currentPageIndex + 1}`
-    : 'página atual';
-
   const SUGGESTED = [
     'Resuma esta seção como uma nota',
     'Explique com uma analogia',
@@ -776,7 +770,6 @@ export function ChatPanel({
           </span>
           <div className="ht">
             <div className="chat-panel-title">Parceiro de estudos</div>
-            <div className="chat-head-sub">{sectionLabel}</div>
           </div>
         </div>
         <button
@@ -790,15 +783,6 @@ export function ChatPanel({
           {clearing ? 'Limpando…' : 'Limpar'}
         </button>
       </header>
-
-      {/* Context chip — shows what the partner is reading */}
-      <div className="context-chip">
-        <svg viewBox="0 0 16 16" aria-hidden>
-          <path d="M4 2h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" strokeLinejoin="round"/>
-          <path d="M5 6h6M5 9h4" strokeLinecap="round"/>
-        </svg>
-        Lendo · <b>{sectionLabel}</b>
-      </div>
 
       <div className="chat-messages" ref={messagesRef} data-testid="chat-messages">
         {!loaded && <p className="chat-placeholder">Carregando histórico…</p>}

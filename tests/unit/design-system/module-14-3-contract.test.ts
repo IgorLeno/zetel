@@ -10,6 +10,7 @@ const sources = {
   chatPanel: join(root, 'components/ChatPanel.tsx'),
   noteCard: join(root, 'components/NoteCard.tsx'),
   memoryCard: join(root, 'components/MemoryCard.tsx'),
+  readingProgress: join(root, 'components/ReadingProgress.tsx'),
   renderService: join(root, 'lib/render-service.ts'),
   studyGuide: join(root, 'lib/study-guide-service.ts'),
   zetelDetailPage: join(root, 'app/zetel/[slug]/page.tsx'),
@@ -50,13 +51,13 @@ describe('Module 14.3 design system contract', () => {
     expect(missing, `Missing contract sources: ${missing.join(', ')}`).toEqual([]);
   });
 
-  it('Zone A — topbar: page.tsx uses crumb/doc-title classes; pill badge moved to LeituraPanel', () => {
+  it('Zone A — topbar: page.tsx uses crumb/doc-title classes; reading progress owns the progress badge', () => {
     const zetelDetailPage = readSource('zetelDetailPage');
-    const leituraPanel = readSource('leituraPanel');
+    const readingProgress = readSource('readingProgress');
     expect(zetelDetailPage, 'topbar contract: missing class "crumb" in page.tsx').toContain('crumb');
     expect(zetelDetailPage, 'topbar contract: missing class "doc-title" in page.tsx').toContain('doc-title');
-    // pill badge moved from topbar to LeituraPanel toolbar (status chip)
-    expect(leituraPanel, 'topbar contract: pill class must exist in LeituraPanel').toContain('pill');
+    expect(readingProgress, 'topbar contract: missing topbar-percent-badge in ReadingProgress').toContain('topbar-percent-badge');
+    expect(readingProgress, 'topbar contract: reading progress must render current / total label').toContain('progressLabel');
   });
 
   it('Zone A — topbar: globals.css has .topbar / .crumb / .doc-title / .pill rules', () => {
@@ -67,22 +68,45 @@ describe('Module 14.3 design system contract', () => {
     expect(css, 'topbar contract: missing .pill rule in globals.css').toMatch(/\.pill\s*\{/);
   });
 
-  it('Zone B — leitura toolbar: uses .ghost-btn and .partner-toggle-btn; mode selection moved to sidebar URL nav', () => {
+  it('Zone B — leitura toolbar: removes visible build/status controls; mode selection moved to sidebar URL nav', () => {
     const leituraPanel = readSource('leituraPanel');
-    const css = readSource('css');
     // segmented control removed — mode is now selected via sidebar ?view= param
     expect(leituraPanel, 'toolbar contract: segmented must be absent (mode moved to sidebar)').not.toContain('class="segmented"');
-    expect(leituraPanel, 'toolbar contract: missing class "ghost-btn" in LeituraPanel').toContain('ghost-btn');
-    expect(leituraPanel, 'toolbar contract: missing partner-toggle-btn in LeituraPanel').toContain('partner-toggle-btn');
-    expect(css, 'toolbar contract: missing .ghost-btn in globals.css').toContain('.ghost-btn');
-    expect(css, 'toolbar contract: missing .partner-toggle-btn in globals.css').toContain('.partner-toggle-btn');
+    expect(leituraPanel, 'toolbar contract: build button must not render as ghost-btn in LeituraPanel').not.toContain('ghost-btn');
+    expect(leituraPanel, 'toolbar contract: statusChip must not render in LeituraPanel toolbar').not.toContain('statusChip');
+    expect(leituraPanel, 'toolbar contract: buttonLabel must not render in LeituraPanel toolbar').not.toContain('buttonLabel');
+    expect(leituraPanel, 'toolbar contract: guideProgress must not render in LeituraPanel toolbar').not.toContain('guideProgress');
   });
 
-  it('Zone B — chat: has context-chip', () => {
+  it('Zone B — leitura FAB: partner toggle floats over iframe and is hidden while chat is open', () => {
+    const leituraPanel = readSource('leituraPanel');
+    const css = readSource('css');
+    expect(leituraPanel, 'FAB contract: partner toggle must render only when iframe is visible and chat is closed').toContain('showIframe && !chatOpen');
+    expect(leituraPanel, 'FAB contract: missing partner-toggle-btn in LeituraPanel').toContain('partner-toggle-btn');
+    expect(css, 'FAB contract: .partner-toggle-btn must be positioned absolute').toMatch(/\.partner-toggle-btn\s*\{[\s\S]*position:\s*absolute/);
+    expect(css, 'FAB contract: .partner-toggle-btn must sit 24px from bottom').toMatch(/\.partner-toggle-btn\s*\{[\s\S]*bottom:\s*24px/);
+    expect(css, 'FAB contract: .partner-toggle-btn must sit 24px from right').toMatch(/\.partner-toggle-btn\s*\{[\s\S]*right:\s*24px/);
+    expect(css, 'FAB contract: .partner-toggle-btn.on must not exist because FAB is hidden when chat is open').not.toContain('.partner-toggle-btn.on');
+    expect(leituraPanel, 'close contract: chat-open state must still expose a close control').toContain('partner-close-tab');
+    expect(leituraPanel, 'close contract: close control must set chatOpen=false').toContain('setChatOpen(false)');
+    expect(css, 'close contract: missing .partner-close-tab style in globals.css').toContain('.partner-close-tab');
+  });
+
+  it('Zone B — chat: removes visual reading context from the header area', () => {
     const chatPanel = readSource('chatPanel');
     const css = readSource('css');
-    expect(chatPanel, 'chat contract: missing context-chip in ChatPanel').toContain('context-chip');
-    expect(css, 'chat contract: missing .context-chip in globals.css').toContain('.context-chip');
+    expect(chatPanel, 'chat contract: chat-head-sub must be removed from ChatPanel').not.toContain('chat-head-sub');
+    expect(chatPanel, 'chat contract: context-chip must be removed from ChatPanel').not.toContain('context-chip');
+    expect(css, 'chat contract: .chat-head-sub must be removed from globals.css').not.toContain('.chat-head-sub');
+    expect(css, 'chat contract: .context-chip must be removed from globals.css').not.toContain('.context-chip');
+  });
+
+  it('Zone B — reading progress: technical iframe posts pagesCount and topbar renders current / total', () => {
+    const readingProgress = readSource('readingProgress');
+    const renderService = readSource('renderService');
+    expect(renderService, 'progress contract: technical page-change payload must include pagesCount').toContain('pagesCount: total');
+    expect(readingProgress, 'progress contract: ReadingProgress must store current/total progress').toContain('setProgress');
+    expect(readingProgress, 'progress contract: ReadingProgress must render current / total label').toContain('progressLabel');
   });
 
   it('Zone B — chat: has mic-toggle / autoplay-toggle composer bar (no mode-pop/mode-cell)', () => {

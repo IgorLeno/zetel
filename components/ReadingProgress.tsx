@@ -9,6 +9,11 @@ const STROKE = 2.5;
 const R = (SIZE - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
 
+type ProgressPosition = {
+  current: number;
+  total: number;
+} | null;
+
 function ProgressRing({ percent }: { percent: number }) {
   const dash = CIRC * (percent / 100);
   return (
@@ -41,6 +46,7 @@ function ProgressRing({ percent }: { percent: number }) {
 export function ReadingProgress({ theme }: { theme: 'light' | 'dark' }) {
   const [percent, setPercent] = useState(0);
   const [sectionTitle, setSectionTitle] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ProgressPosition>(null);
 
   useEffect(() => {
     function handler(e: MessageEvent) {
@@ -54,10 +60,36 @@ export function ReadingProgress({ theme }: { theme: 'light' | 'dark' }) {
       } else if (d.readingMode === 'tecnico') {
         setSectionTitle(null);
       }
+
+      if (
+        d.readingMode === 'guia-estudo' &&
+        typeof d.guideBlockIndex === 'number' &&
+        typeof d.guideBlockTotal === 'number' &&
+        d.guideBlockTotal > 0
+      ) {
+        setProgress({
+          current: Math.max(1, Math.min(d.guideBlockIndex + 1, d.guideBlockTotal)),
+          total: d.guideBlockTotal,
+        });
+      } else if (
+        d.readingMode === 'tecnico' &&
+        typeof d.pageIndex === 'number' &&
+        typeof d.pagesCount === 'number' &&
+        d.pagesCount > 0
+      ) {
+        setProgress({
+          current: Math.max(1, Math.min(d.pageIndex + 1, d.pagesCount)),
+          total: d.pagesCount,
+        });
+      } else {
+        setProgress(null);
+      }
     }
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, []);
+
+  const progressLabel = progress ? `${progress.current} / ${progress.total}` : null;
 
   return (
     <div className="topbar-reading-progress">
@@ -66,9 +98,13 @@ export function ReadingProgress({ theme }: { theme: 'light' | 'dark' }) {
           {sectionTitle}
         </span>
       )}
-      <span className="topbar-percent-badge" title={`${percent}% lido`}>
+      <span
+        className="topbar-percent-badge"
+        title={progressLabel ? `${percent}% lido · ${progressLabel}` : `${percent}% lido`}
+      >
         <ProgressRing percent={percent} />
         <span>{percent}%</span>
+        {progressLabel && <span className="topbar-progress-count">{progressLabel}</span>}
       </span>
       <Link href="/memoria" className="topbar-icon-link" title="Memória" aria-label="Memória">
         <svg viewBox="0 0 16 16">
