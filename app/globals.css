@@ -24,6 +24,13 @@
   --t-med:  .26s cubic-bezier(.4,0,.2,1);
   --t-slow: .42s cubic-bezier(.22,1,.36,1);
 
+  /* leitura — contrato para futuros controles de Tweaks */
+  --read-width:    752px;
+  --read-font:     var(--font-read);
+  --read-size:     17px;
+  --read-lh:       1.75;
+  --density:       1;
+
   --bg:          #f4f4f1;
   --bg-rail:     #efefeb;
   --surface:     #ffffff;
