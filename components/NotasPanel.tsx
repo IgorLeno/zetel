@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { type NoteTipo } from '@/lib/notes-service';
 import { formatRelative } from '@/lib/relative-time';
-
-type NoteTipo = 'rapida' | 'literatura' | 'elaborada' | 'minha-nota';
 
 const TIPO_EMPTY_LABEL: Record<NoteTipo, string> = {
   rapida: 'rápida',

@@ -74,7 +74,10 @@ export function NoteCard({
   // ─────────────────────────────────────────────────────────────────
   const canSaveRapida = !busy && draft.trim() !== suggestion.corpo.trim();
   const canSaveLiteratura = !busy && interpretacao.trim().length > 20;
-  const canSaveElaborada = !busy && respostas.every((r) => r.trim().length > 0);
+  const canSaveElaborada =
+    !busy &&
+    respostas.length > 0 &&
+    respostas.every((r) => r.trim().length >= 10);
   const canSaveMinhaNote = !busy && minhaCorpo.trim().length > 30;
 
   function handleSaveRapidaEdited() {
@@ -87,8 +90,8 @@ export function NoteCard({
   }
 
   function handleSaveElaborada() {
-    // Monta corpo a partir do Q&A
     const perguntas = suggestion.perguntas ?? [];
+    if (perguntas.length === 0) return;
     const corpo = perguntas
       .map((p, i) => `### ${p}\n\n${respostas[i] ?? ''}`)
       .join('\n\n');

@@ -108,7 +108,7 @@ export function saveNote(vaultPath: string, slug: string, input: SaveNoteInput):
     temInterpretacao: interpretacao.length > 0,
   });
 
-  // Para notas de literatura: acrescenta seção "Minha interpretação" ao corpo (Módulo 15).
+  // Quando interpretacaoUsuario está preenchida: acrescenta seção "Minha interpretação" ao corpo (qualquer tipo).
   const interpretacaoSection = interpretacao ? `\n\n## Minha interpretação\n\n${interpretacao}` : '';
   const fileContent = `${frontmatter}\n\n# ${titulo}\n\n${corpo}${interpretacaoSection}\n`;
 
