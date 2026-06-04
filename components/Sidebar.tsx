@@ -90,6 +90,26 @@ const ZETEL_NAV = [
     ),
   },
   {
+    view: 'notas-elaboradas',
+    label: 'Notas Elaboradas',
+    icon: (
+      <>
+        <path d="M3 4h10M3 8h10M3 12h6" strokeLinecap="round" />
+        <circle cx="13" cy="12" r="2" />
+      </>
+    ),
+  },
+  {
+    view: 'notas-do-usuario',
+    label: 'Minhas Notas',
+    icon: (
+      <>
+        <path d="M4 2h8a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" />
+        <path d="M6 6h4M6 9h2" strokeLinecap="round" />
+      </>
+    ),
+  },
+  {
     view: 'artefatos',
     label: 'Artefatos',
     icon: (

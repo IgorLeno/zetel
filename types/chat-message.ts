@@ -15,7 +15,7 @@ export interface ChatMessageMeta {
   /** Turno do assistente trouxe uma sugestão de nota válida (Módulo 6). */
   suggestedNote?: boolean;
   /** Tipo da nota sugerida — só a flag/tipo, nunca o conteúdo (regra #6). */
-  noteTipo?: 'rapida' | 'literatura';
+  noteTipo?: 'rapida' | 'literatura' | 'elaborada' | 'minha-nota';
   /** Usuário rejeitou a sugestão deste turno (Módulo 6). */
   noteRejected?: boolean;
   /** Uma memória foi guardada a partir desta mensagem (Módulo 7). */

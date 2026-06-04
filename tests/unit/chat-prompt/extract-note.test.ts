@@ -73,4 +73,93 @@ describe('extractNoteSuggestion', () => {
     const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
     expect(suggestion?.paginaOrigem).toBe('p3');
   });
+
+  // ── Módulo 15: tipos novos ──────────────────────────────────────────────────
+
+  it('extrai nota do tipo elaborada com perguntas válidas', () => {
+    const json = JSON.stringify({
+      tipo: 'elaborada',
+      titulo: 'Conceito X',
+      corpo: '',
+      perguntas: ['O que é X?', 'Quando se usa X?', 'Qual a limitação de X?'],
+      justificativa: 'nunca deve sair',
+    });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion).not.toBeNull();
+    expect(suggestion!.tipo).toBe('elaborada');
+    expect(suggestion!.titulo).toBe('Conceito X');
+    expect(suggestion!.corpo).toBe('');
+    expect(suggestion!.perguntas).toEqual(['O que é X?', 'Quando se usa X?', 'Qual a limitação de X?']);
+    expect(JSON.stringify(suggestion)).not.toContain('justificativa');
+  });
+
+  it('elaborada aceita corpo vazio sem degradar', () => {
+    const json = JSON.stringify({ tipo: 'elaborada', titulo: 'T', corpo: '', perguntas: ['P1?', 'P2?'] });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion?.tipo).toBe('elaborada');
+    expect(suggestion?.corpo).toBe('');
+  });
+
+  it('elaborada degrada para null quando perguntas ausentes', () => {
+    const json = JSON.stringify({ tipo: 'elaborada', titulo: 'T', corpo: '' });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion).toBeNull();
+  });
+
+  it('elaborada degrada para null quando perguntas tem menos de 2 itens', () => {
+    const json = JSON.stringify({ tipo: 'elaborada', titulo: 'T', corpo: '', perguntas: ['Só uma?'] });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion).toBeNull();
+  });
+
+  it('elaborada trunca perguntas para no máximo 3', () => {
+    const json = JSON.stringify({ tipo: 'elaborada', titulo: 'T', corpo: '', perguntas: ['P1?', 'P2?', 'P3?', 'P4?', 'P5?'] });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion?.perguntas?.length).toBe(3);
+  });
+
+  it('extrai nota do tipo minha-nota com dicas válidas', () => {
+    const json = JSON.stringify({
+      tipo: 'minha-nota',
+      titulo: 'Minha visão',
+      corpo: '',
+      dicas: ['O que é?', 'Por que importa?', 'Como conecta com o que já sabe?'],
+    });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion).not.toBeNull();
+    expect(suggestion!.tipo).toBe('minha-nota');
+    expect(suggestion!.titulo).toBe('Minha visão');
+    expect(suggestion!.corpo).toBe('');
+    expect(suggestion!.dicas).toEqual(['O que é?', 'Por que importa?', 'Como conecta com o que já sabe?']);
+  });
+
+  it('minha-nota força corpo vazio independente do que o LLM enviou', () => {
+    const json = JSON.stringify({ tipo: 'minha-nota', titulo: 'T', corpo: 'texto da IA', dicas: ['D1?', 'D2?'] });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion?.corpo).toBe('');
+  });
+
+  it('minha-nota degrada para null quando dicas ausentes', () => {
+    const json = JSON.stringify({ tipo: 'minha-nota', titulo: 'T', corpo: '' });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion).toBeNull();
+  });
+
+  it('minha-nota degrada para null quando dicas tem menos de 2 itens', () => {
+    const json = JSON.stringify({ tipo: 'minha-nota', titulo: 'T', corpo: '', dicas: ['Só uma'] });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion).toBeNull();
+  });
+
+  it('rapida ainda degrada para null quando corpo vazio', () => {
+    const json = JSON.stringify({ tipo: 'rapida', titulo: 'T', corpo: '' });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion).toBeNull();
+  });
+
+  it('literatura ainda degrada para null quando corpo vazio', () => {
+    const json = JSON.stringify({ tipo: 'literatura', titulo: 'T', corpo: '' });
+    const { suggestion } = extractNoteSuggestion(`${NOTE_MARK_START}${json}${NOTE_MARK_END}`);
+    expect(suggestion).toBeNull();
+  });
 });

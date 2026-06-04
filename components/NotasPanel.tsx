@@ -3,8 +3,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { formatRelative } from '@/lib/relative-time';
 
+type NoteTipo = 'rapida' | 'literatura' | 'elaborada' | 'minha-nota';
+
+const TIPO_EMPTY_LABEL: Record<NoteTipo, string> = {
+  rapida: 'rápida',
+  literatura: 'de literatura',
+  elaborada: 'elaborada',
+  'minha-nota': 'sua',
+};
+
 interface NoteItem {
-  tipo: 'rapida' | 'literatura';
+  tipo: NoteTipo;
   titulo: string;
   paginaOrigem: string | null;
   criadaEm: string | null;
@@ -13,10 +22,10 @@ interface NoteItem {
 }
 
 /**
- * Aba de listagem de notas (Módulo 6). Sem editor embutido (regra #14).
+ * Aba de listagem de notas (Módulo 6/15). Sem editor embutido (regra #14).
  * Abertura externa em cascata (D14): Obsidian URI → copiar caminho → abrir pasta.
  */
-export function NotasPanel({ zetelId, tipo }: { zetelId: string; tipo: 'rapida' | 'literatura' }) {
+export function NotasPanel({ zetelId, tipo }: { zetelId: string; tipo: NoteTipo }) {
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [vaultName, setVaultName] = useState('');
   const [loaded, setLoaded] = useState(false);
@@ -88,7 +97,7 @@ export function NotasPanel({ zetelId, tipo }: { zetelId: string; tipo: 'rapida' 
   if (notes.length === 0) {
     return (
       <div className="empty-state">
-        <div>Nenhuma nota {tipo === 'rapida' ? 'rápida' : 'de literatura'} ainda. O parceiro pode sugerir uma durante a conversa.</div>
+        <div>Nenhuma nota {TIPO_EMPTY_LABEL[tipo]} ainda. O parceiro pode sugerir uma durante a conversa.</div>
       </div>
     );
   }

@@ -7,7 +7,7 @@ import { LeituraPanel } from './LeituraPanel';
 import { ArtefatosPanel } from './ArtefatosPanel';
 import { NotasPanel } from './NotasPanel';
 
-type ViewParam = 'tecnico' | 'guia-estudo' | 'arquivos' | 'notas-rapidas' | 'notas-literatura' | 'artefatos';
+type ViewParam = 'tecnico' | 'guia-estudo' | 'arquivos' | 'notas-rapidas' | 'notas-literatura' | 'notas-elaboradas' | 'notas-do-usuario' | 'artefatos';
 
 function isReadingView(view: ViewParam): view is 'tecnico' | 'guia-estudo' {
   return view === 'tecnico' || view === 'guia-estudo';
@@ -24,7 +24,7 @@ function WorkspaceView({
 }) {
   const searchParams = useSearchParams();
   const rawView = searchParams.get('view') ?? 'tecnico';
-  const view = (['tecnico', 'guia-estudo', 'arquivos', 'notas-rapidas', 'notas-literatura', 'artefatos'] as const).includes(
+  const view = (['tecnico', 'guia-estudo', 'arquivos', 'notas-rapidas', 'notas-literatura', 'notas-elaboradas', 'notas-do-usuario', 'artefatos'] as const).includes(
     rawView as ViewParam,
   )
     ? (rawView as ViewParam)
@@ -52,6 +52,16 @@ function WorkspaceView({
       {view === 'notas-literatura' && (
         <div data-testid="notas-literatura-panel">
           <NotasPanel zetelId={zetelId} tipo="literatura" />
+        </div>
+      )}
+      {view === 'notas-elaboradas' && (
+        <div data-testid="notas-elaboradas-panel">
+          <NotasPanel zetelId={zetelId} tipo="elaborada" />
+        </div>
+      )}
+      {view === 'notas-do-usuario' && (
+        <div data-testid="notas-do-usuario-panel">
+          <NotasPanel zetelId={zetelId} tipo="minha-nota" />
         </div>
       )}
       {view === 'artefatos' && <ArtefatosPanel zetelId={zetelId} />}

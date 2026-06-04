@@ -140,6 +140,10 @@ export interface NoteSuggestion {
   titulo: string;
   corpo: string;
   paginaOrigem: string | null;
+  /** Perguntas para o usuário (tipo "elaborada" — o usuário responde e as respostas formam a nota). */
+  perguntas?: string[];
+  /** Perguntas norteadoras (tipo "minha-nota" — o usuário escreve o corpo guiado por estas dicas). */
+  dicas?: string[];
 }
 
 export function truncatePageContext(text: string): string {
@@ -320,7 +324,7 @@ export function resolveHistoryWindow(raw: string | null): number {
 }
 
 function isTipo(v: unknown): v is NoteTipo {
-  return v === 'rapida' || v === 'literatura';
+  return v === 'rapida' || v === 'literatura' || v === 'elaborada' || v === 'minha-nota';
 }
 
 /**
@@ -343,31 +347,49 @@ export function extractNoteSuggestion(fullContent: string): {
 
   try {
     const parsed = JSON.parse(jsonRaw) as Record<string, unknown>;
-    if (
-      !isTipo(parsed.tipo) ||
-      typeof parsed.titulo !== 'string' ||
-      typeof parsed.corpo !== 'string' ||
-      !parsed.titulo.trim() ||
-      !parsed.corpo.trim()
-    ) {
+
+    if (!isTipo(parsed.tipo) || typeof parsed.titulo !== 'string' || !parsed.titulo.trim()) {
       return { narrative, suggestion: null };
     }
+
+    const tipo = parsed.tipo;
+    const titulo = (parsed.titulo as string).trim();
+    const corpo = typeof parsed.corpo === 'string' ? parsed.corpo.trim() : '';
     const paginaOrigem =
       typeof parsed.pagina_origem === 'string' && parsed.pagina_origem.trim() && parsed.pagina_origem !== 'null'
         ? parsed.pagina_origem.trim()
         : null;
-    return {
-      narrative,
-      suggestion: {
-        tipo: parsed.tipo,
-        titulo: parsed.titulo.trim(),
-        corpo: parsed.corpo.trim(),
-        paginaOrigem,
-      },
-    };
+
+    // Validação ramificada por tipo (Módulo 15: notas ativas).
+    if (tipo === 'rapida' || tipo === 'literatura') {
+      // Tipos clássicos: exigem corpo não vazio.
+      if (!corpo) return { narrative, suggestion: null };
+      return { narrative, suggestion: { tipo, titulo, corpo, paginaOrigem } };
+    }
+
+    if (tipo === 'elaborada') {
+      // Exige perguntas: array de 2-3 strings não vazias. Corpo pode ser vazio.
+      const perguntas = parseStringArray(parsed.perguntas);
+      if (perguntas.length < 2) return { narrative, suggestion: null };
+      return { narrative, suggestion: { tipo, titulo, corpo, paginaOrigem, perguntas } };
+    }
+
+    // minha-nota: exige dicas: array de 2-3 strings não vazias. Corpo é sempre vazio.
+    const dicas = parseStringArray(parsed.dicas);
+    if (dicas.length < 2) return { narrative, suggestion: null };
+    return { narrative, suggestion: { tipo, titulo, corpo: '', paginaOrigem, dicas } };
   } catch {
     return { narrative, suggestion: null };
   }
+}
+
+/** Extrai array de strings não-vazias de um valor desconhecido (máximo 3). */
+function parseStringArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    .map((s) => s.trim())
+    .slice(0, 3);
 }
 
 /** Sugestão de memória validada, sem `justificativa` (essa nunca sai do backend). */

@@ -11,11 +11,13 @@ import { logger } from './logger';
  * frontmatter de §13.3. Nada de título/corpo nos logs (regra #6).
  */
 
-export type NoteTipo = 'rapida' | 'literatura';
+export type NoteTipo = 'rapida' | 'literatura' | 'elaborada' | 'minha-nota';
 
 const NOTE_DIRS: Record<NoteTipo, string> = {
   rapida: 'notas-rapidas',
   literatura: 'notas-literatura',
+  elaborada: 'notas-elaboradas',
+  'minha-nota': 'notas-do-usuario',
 };
 
 export interface SaveNoteInput {
@@ -24,6 +26,8 @@ export interface SaveNoteInput {
   corpo: string;
   paginaOrigem: string | null;
   modelo: string;
+  /** Interpretação do usuário (Módulo 15 — notas ativas). Persiste como seção no corpo e flag no frontmatter. */
+  interpretacaoUsuario?: string | null;
 }
 
 export interface SavedNote {
@@ -54,6 +58,8 @@ function buildFrontmatter(opts: {
   modelo: string;
   paginaOrigem: string | null;
   criadaEm: string;
+  /** Indica presença de seção "Minha interpretação" no corpo (Módulo 15). */
+  temInterpretacao?: boolean;
 }): string {
   return [
     '---',
@@ -63,6 +69,7 @@ function buildFrontmatter(opts: {
     `modelo: ${opts.modelo}`,
     `pagina_origem: ${opts.paginaOrigem ?? 'null'}`,
     `criada_em: ${opts.criadaEm}`,
+    `tem_interpretacao: ${opts.temInterpretacao ? 'true' : 'false'}`,
     '---',
   ].join('\n');
 }
@@ -91,14 +98,19 @@ export function saveNote(vaultPath: string, slug: string, input: SaveNoteInput):
   const filename = resolveFreeName(dir, base);
   const criadaEm = new Date().toISOString();
 
+  const interpretacao = input.interpretacaoUsuario?.trim() ?? '';
   const frontmatter = buildFrontmatter({
     slug,
     tipo: input.tipo,
     modelo: input.modelo,
     paginaOrigem: input.paginaOrigem,
     criadaEm,
+    temInterpretacao: interpretacao.length > 0,
   });
-  const fileContent = `${frontmatter}\n\n# ${titulo}\n\n${corpo}\n`;
+
+  // Para notas de literatura: acrescenta seção "Minha interpretação" ao corpo (Módulo 15).
+  const interpretacaoSection = interpretacao ? `\n\n## Minha interpretação\n\n${interpretacao}` : '';
+  const fileContent = `${frontmatter}\n\n# ${titulo}\n\n${corpo}${interpretacaoSection}\n`;
 
   writeFileSync(join(dir, filename), fileContent);
 
@@ -175,9 +187,9 @@ function readDir(vaultPath: string, slug: string, tipo: NoteTipo): NoteListItem[
   return items;
 }
 
-/** Lista as notas de um Zetel (ambos os tipos), mais recentes primeiro. */
+/** Lista as notas de um Zetel (todos os tipos), mais recentes primeiro. */
 export function listNotes(vaultPath: string, slug: string): NoteListItem[] {
-  const all = [...readDir(vaultPath, slug, 'rapida'), ...readDir(vaultPath, slug, 'literatura')];
+  const all = (Object.keys(NOTE_DIRS) as NoteTipo[]).flatMap((tipo) => readDir(vaultPath, slug, tipo));
   return all.sort((a, b) => (b.criadaEm ?? '').localeCompare(a.criadaEm ?? ''));
 }
 
@@ -206,25 +218,47 @@ export function ensureSugestaoNotaPrompt(vaultPath: string): string {
   return SUGESTAO_NOTA_PROMPT;
 }
 
-/** Rubrica mínima de sugestão de nota (§10.1 do PRD). */
+/** Rubrica de sugestão de nota — 4 tipos (Módulo 15: notas ativas). */
 export const SUGESTAO_NOTA_PROMPT = `# Rubrica de sugestão de nota
 
 Você é o parceiro de estudos do Zetel. Além de conversar, você PODE — com
 parcimônia — propor uma nota quando o diálogo produz algo digno de retomada.
 
-## Quando propor
+## Filosofia das notas ativas
 
-**Nota rápida** — insight pontual, definição precisa, conexão direta entre
-conceitos ou citação relevante (até 3 parágrafos). Proponha quando:
-- o usuário acabou de articular um entendimento próprio sobre o trecho;
+Toda nota guardada deve ter contribuição cognitiva real do usuário. Você é
+parceiro de estruturação, não autor. Prefira tipos que exijam elaboração do
+usuário; use "rapida" e "literatura" só quando o próprio usuário já articulou
+o conteúdo essencial.
+
+## Quatro tipos de nota
+
+**rapida** — síntese curta e factual (até 3 parágrafos).
+Proponha quando:
+- o usuário acabou de articular um entendimento próprio e claro;
 - o conceito tem valor de retomada futura;
 - ainda não existe nota equivalente neste Zetel.
+ATENÇÃO: o usuário será forçado a EDITAR o corpo antes de guardar.
 
-**Nota de literatura** — síntese mais elaborada de um trecho/conceito discutido
-(título, resumo curto, contexto de origem). Proponha quando:
-- a conversa cobriu um trecho substantivo (mais que uma frase pontual);
-- o usuário sinalizou interesse profundo (perguntou várias vezes, pediu fixação);
-- a síntese agrega entendimento em relação ao texto-fonte (não é cópia próxima).
+**literatura** — conceito-chave com referência à fonte.
+Proponha quando:
+- a conversa cobriu um trecho substantivo e o usuário sinalizou interesse profundo;
+- a síntese agrega entendimento além do texto-fonte (não é cópia próxima).
+O usuário DEVE adicionar uma interpretação pessoal antes de guardar.
+
+**elaborada** — você faz 2-3 perguntas; o usuário responde; as respostas viram a nota.
+Proponha quando:
+- o conceito é complexo e você quer verificar compreensão antes de gerar a nota;
+- o usuário pediu reflexão mais profunda.
+Neste tipo: \`corpo\` deve ser \`""\` (vazio); inclua \`"perguntas"\` com 2-3 perguntas
+curtas e diretas sobre o conceito (o usuário responderá e as respostas formarão a nota).
+
+**minha-nota** — título sugerido pela IA; corpo totalmente do usuário.
+Proponha quando:
+- o usuário pediu explicitamente para escrever/criar/anotar algo por conta própria;
+- o conteúdo exige elaboração pessoal (opinião, reflexão, conexão com experiências).
+Neste tipo: \`corpo\` deve ser \`""\` (vazio); inclua \`"dicas"\` com 2-3 perguntas
+norteadoras (ex.: "O que é?", "Por que importa?", "Como conecta com o que você já sabe?").
 
 ## Quando NÃO propor (anti-padrões)
 
@@ -241,13 +275,25 @@ nova substância na conversa.
 Responda normalmente em PT-BR. Se — e somente se — decidir propor uma nota,
 acrescente ao FINAL da resposta um bloco delimitado EXATAMENTE assim:
 
+Para tipos "rapida" e "literatura":
 <<<NOTA_SUGERIDA>>>
-{"tipo":"rapida|literatura","titulo":"...","corpo":"...","pagina_origem":"<anchor ou null>","justificativa":"..."}
+{"tipo":"rapida","titulo":"...","corpo":"...","pagina_origem":"<anchor ou null>","justificativa":"..."}
+<<<FIM_NOTA>>>
+
+Para tipo "elaborada":
+<<<NOTA_SUGERIDA>>>
+{"tipo":"elaborada","titulo":"...","corpo":"","perguntas":["Pergunta 1?","Pergunta 2?","Pergunta 3?"],"pagina_origem":"<anchor ou null>","justificativa":"..."}
+<<<FIM_NOTA>>>
+
+Para tipo "minha-nota":
+<<<NOTA_SUGERIDA>>>
+{"tipo":"minha-nota","titulo":"...","corpo":"","dicas":["O que é?","Por que importa?","Como conecta com o que você já sabe?"],"pagina_origem":"<anchor ou null>","justificativa":"..."}
 <<<FIM_NOTA>>>
 
 Regras do bloco:
 - JSON válido em uma linha; \`corpo\` em Markdown; \`justificativa\` é interna (o
   usuário nunca a vê — explique nela por que a nota vale a pena);
 - use \`pagina_origem\` igual ao anchor da página em discussão, ou null;
+- \`perguntas\` e \`dicas\` são arrays de strings curtas (máximo 3 itens);
 - se não for propor nota, NÃO inclua o bloco.
 `;

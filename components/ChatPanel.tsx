@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '@/types/chat-message';
-import { NoteCard, type Suggestion } from './NoteCard';
+import { NoteCard, type Suggestion, type SaveNotePayload } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
 import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
 
@@ -591,7 +591,7 @@ export function ChatPanel({
     }
   }
 
-  async function saveNote(corpoFinal: string) {
+  async function saveNote(payload: SaveNotePayload) {
     if (!suggestion) return;
     setNoteBusy(true);
     try {
@@ -600,10 +600,11 @@ export function ChatPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipo: suggestion.data.tipo,
-          titulo: suggestion.data.titulo,
-          corpo: corpoFinal,
+          titulo: payload.titulo ?? suggestion.data.titulo,
+          corpo: payload.corpo,
           paginaOrigem: suggestion.data.paginaOrigem,
           modelo: suggestion.data.model,
+          interpretacaoUsuario: payload.interpretacaoUsuario ?? null,
         }),
       });
       if (res.ok) {
@@ -848,7 +849,7 @@ export function ChatPanel({
             suggestion={suggestion.data}
             canDiscuss={suggestion.canDiscuss}
             busy={noteBusy || isLoading}
-            onSave={(corpo) => void saveNote(corpo)}
+            onSave={(payload) => void saveNote(payload)}
             onDiscuss={discussNote}
             onReject={() => void rejectNote()}
           />

@@ -1740,6 +1740,57 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   border: 1px solid var(--border); border-radius: var(--r-md);
   background: var(--surface-2); overflow: hidden; align-self: stretch;
 }
+
+/* ── NoteCard: campos de input dos tipos ativos (Módulo 15) ── */
+.note-card-field {
+  margin: 0 14px 8px;
+  width: calc(100% - 28px);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color var(--t-fast);
+}
+.note-card-field:focus { outline: none; border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.note-card-field--tall { min-height: 90px; }
+
+.note-card-title-input {
+  display: block;
+  margin: 6px 14px 8px;
+  width: calc(100% - 28px);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+  box-sizing: border-box;
+  transition: border-color var(--t-fast);
+}
+.note-card-title-input:focus { outline: none; border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+
+.note-card-section { padding: 0 14px 4px; display: flex; flex-direction: column; gap: 4px; }
+.note-card-label { font-size: 11.5px; font-weight: 600; color: var(--text-2); }
+.note-card-required { color: var(--accent); margin-left: 2px; }
+.note-card-hint { margin: 2px 14px 6px; font-size: 11.5px; color: var(--text-3); line-height: 1.45; }
+.note-card-hint + .note-card-hint { margin-top: 0; }
+
+.note-card-qa { padding: 0 14px 4px; display: flex; flex-direction: column; gap: 10px; }
+.note-card-qa-item { display: flex; flex-direction: column; gap: 4px; }
+.note-card-qa-item .note-card-label { font-size: 12px; color: var(--text); }
+.note-card-qa-item .note-card-field { margin: 0; width: 100%; }
+
+.note-card-dicas { padding: 0 14px 8px; }
+.note-card-dicas ul { margin: 4px 0 0 16px; padding: 0; font-size: 12px; color: var(--text-3); line-height: 1.55; list-style: disc; }
+.note-card-dicas li { margin-bottom: 2px; }
 .sugg-card.mem { border-color: color-mix(in srgb, var(--memory) 34%, transparent); }
 .sugg-top { display: flex; align-items: center; gap: 8px; padding: 11px 14px 9px; }
 .sugg-badge {

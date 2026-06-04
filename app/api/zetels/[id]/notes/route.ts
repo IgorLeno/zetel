@@ -13,7 +13,7 @@ const NO_VAULT = 'Caminho do vault não configurado. Configure-o em Configuraç�
 type Ctx = { params: Promise<{ id: string }> };
 
 function isTipo(v: unknown): v is NoteTipo {
-  return v === 'rapida' || v === 'literatura';
+  return v === 'rapida' || v === 'literatura' || v === 'elaborada' || v === 'minha-nota';
 }
 
 /** GET /api/zetels/[id]/notes — lista notas do Zetel (ambos os tipos). */
@@ -58,6 +58,7 @@ export async function POST(request: Request, { params }: Ctx) {
     corpo?: unknown;
     paginaOrigem?: unknown;
     modelo?: unknown;
+    interpretacaoUsuario?: unknown;
   };
   try {
     body = await request.json();
@@ -75,9 +76,13 @@ export async function POST(request: Request, { params }: Ctx) {
       ? body.paginaOrigem.trim()
       : null;
   const modelo = typeof body.modelo === 'string' && body.modelo.trim() ? body.modelo.trim() : 'desconhecido';
+  const interpretacaoUsuario =
+    typeof body.interpretacaoUsuario === 'string' && body.interpretacaoUsuario.trim()
+      ? body.interpretacaoUsuario.trim()
+      : null;
 
   try {
-    const saved = saveNote(vaultPath, slug, { tipo: body.tipo, titulo, corpo, paginaOrigem, modelo });
+    const saved = saveNote(vaultPath, slug, { tipo: body.tipo, titulo, corpo, paginaOrigem, modelo, interpretacaoUsuario });
     return NextResponse.json(saved);
   } catch (err) {
     logger.error('note save failed', { id, error: (err as Error).message });
