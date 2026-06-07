@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { chmodSync, mkdirSync } from 'node:fs';
 import { DB_PATH, ZETEL_HOME } from './paths';
 import { runMigrations } from './migrate';
+import { healVaultPathIfStale } from './vault-path-heal';
 import { logger } from './logger';
 
 /**
@@ -21,6 +22,7 @@ export function getDb(): Database.Database {
     db.pragma('foreign_keys = ON'); // dívida #3 do Módulo 0
 
     runMigrations(db);
+    healVaultPathIfStale(db);
 
     globalThis.__zetelDb = db;
     logger.info('DB connected', { path: DB_PATH });
