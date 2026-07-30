@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "revision": 3,
+  "spec": {
+    "id": "SPEC-000-agent-workflow-pilot",
+    "status": "APPROVED",
+    "approved_at": "2026-07-30T00:00:00-03:00",
+    "approved_by": "human-request-2026-07-30"
+  },
+  "active_task": null,
+  "tasks": [
+    {"id": "001", "status": "READY", "blocked_by": []},
+    {"id": "002", "status": "DRAFT", "blocked_by": ["001"]},
+    {"id": "003", "status": "DRAFT", "blocked_by": ["002"]},
+    {"id": "004", "status": "DRAFT", "blocked_by": ["003"]},
+    {"id": "005", "status": "DRAFT", "blocked_by": ["004"]},
+    {"id": "006", "status": "DRAFT", "blocked_by": ["005"]},
+    {"id": "007", "status": "DRAFT", "blocked_by": ["006"]},
+    {"id": "008", "status": "DRAFT", "blocked_by": ["007"]},
+    {"id": "009", "status": "DRAFT", "blocked_by": ["008"]}
+  ],
+  "session": {
+    "id": "recovery-bootstrap-2026-07-30",
+    "agent": "codex",
+    "task_id": null,
+    "status": "DONE",
+    "started_at": "2026-07-30T00:00:00-03:00",
+    "closed_at": null
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true
+  }
+}
