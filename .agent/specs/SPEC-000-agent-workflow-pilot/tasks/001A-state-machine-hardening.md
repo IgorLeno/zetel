@@ -1,14 +1,14 @@
 ---
 id: "001A"
 title: Endurecimento das invariantes e escrita concorrente
-status: IN_PROGRESS
+status: SESSION_CLOSED
 blocked_by: ["001"]
 writer: grok
 reviewer: agente ou subagente separado
-commit: null
-push: null
-review_result: pending
-handoff: null
+commit: "6f91b87476942d0bd6aa53295c283fdbfcdf6af5"
+push: "origin/chore/spec-session-workflow-pilot"
+review_result: PASS
+handoff: ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001A-hardening-6f91b87.md"
 ---
 
 ## Objetivo

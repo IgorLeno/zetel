@@ -20,14 +20,6 @@ Status da decomposicao: `APPROVED` (com extensao aprovada `001A` em 2026-08-01)
 Historico (bootstrap, 2026-07-30): a tarefa 001 estava `READY`; as demais
 `DRAFT` bloqueadas pela predecessora.
 
-Checkpoint durante a 001A (correcao pre-merge):
-
-```text
-001   SESSION_CLOSED
-001A  em execucao (IN_PROGRESS … SESSION_CLOSED ao final)
-002   DRAFT, blocked_by: ["001A"]
-```
-
 Checkpoint apos fechamento da 001A:
 
 ```text
@@ -37,6 +29,9 @@ Checkpoint apos fechamento da 001A:
 active_task: null
 session.status: SESSION_CLOSED
 ```
+
+(Historico da execucao 001A: a 002 ficou `DRAFT` com `blocked_by: ["001A"]`
+enquanto a correcao estava em curso.)
 
 Regras:
 

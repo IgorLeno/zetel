@@ -6,7 +6,7 @@
 repository: IgorLeno/zetel
 remote: origin
 branch: chore/spec-session-workflow-pilot
-baseline: 5528881ea022c032fc17ba08a09d083787fdc839
+baseline: 6f91b87476942d0bd6aa53295c283fdbfcdf6af5
 ```
 
 Papel: unico repositorio autorizado para o piloto.

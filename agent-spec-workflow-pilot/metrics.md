@@ -46,8 +46,15 @@ Medicoes historicas — nao reinterpretar como pos-001.
 - Demais comandos: pendentes
 - Testes focados agentctl na entrega 001: `15` (suite expandida na 001A)
 
-## Checkpoint 001A
+## Checkpoint 001A (evidencia nova)
 
-Contagens de gates e testes focados da 001A serao registradas nos reviews
-`001A-*` e no handoff de fechamento com SHA testado — nao antecipar numeros
-antes da execucao dos gates.
+- Entrega: `6f91b87476942d0bd6aa53295c283fdbfcdf6af5`
+- Testes focados agentctl: `31` aprovados
+- `pnpm build`: `PASS`
+- `pnpm test:ci`: `PASS` (`213` unitarios + `17` integracao)
+- `pnpm test:coverage`: `PASS` (`230` testes; thresholds aprovados)
+- `pnpm typecheck`: `PASS`
+- `git diff --check`: `PASS`
+- `./agentctl spec status`: `PASS`
+- Reviews: `2` eixos `PASS`; independencia entre fornecedores nao comprovada
+- Handoff: `001A-hardening-6f91b87.md`

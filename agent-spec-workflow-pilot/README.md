@@ -1,6 +1,6 @@
 # Agent Spec Workflow Pilot
 
-Status do piloto: `TASK_001_CLOSED` · correcao `001A` em curso / checkpoint pre-merge.
+Status do piloto: `TASK_001A_CLOSED` · proxima unidade `002 READY`.
 
 Identificadores estaveis:
 
@@ -8,14 +8,14 @@ Identificadores estaveis:
 repository: IgorLeno/zetel
 remote: origin
 branch: chore/spec-session-workflow-pilot
-baseline: 5528881ea022c032fc17ba08a09d083787fdc839
+baseline: 6f91b87476942d0bd6aa53295c283fdbfcdf6af5
 ```
 
-Checkpoint atual (durante/apos 001A):
+Checkpoint atual:
 
 - `001` `SESSION_CLOSED`
-- `001A` endurecimento pre-merge (fecha antes da 002)
-- `002` bloqueada por `001A` durante a correcao; `READY` apos fechamento
+- `001A` `SESSION_CLOSED` (entrega `6f91b87`)
+- `002` `READY`
 
 `agentctl spec status` esta implementado. Demais comandos
 (`spec create/approve`, lifecycle de tarefa, session, converge) continuam

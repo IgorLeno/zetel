@@ -2,8 +2,8 @@
 
 O bootstrap do piloto foi recuperado e aprovado (`pre-task-001`). A tarefa 001
 entregou a fundacao (`state machine`, escrita atomica, `agentctl spec status`).
-A tarefa corretiva `001A` endurece invariantes e resolve findings do CodeRabbit
-antes de qualquer merge e antes de iniciar a 002.
+A tarefa corretiva `001A` endureceu invariantes e resolveu findings do
+CodeRabbit; esta `SESSION_CLOSED`. A tarefa `002` esta `READY`.
 
 Estado operacional:
 
@@ -15,5 +15,5 @@ Estado operacional:
 repository: IgorLeno/zetel
 remote: origin
 branch: chore/spec-session-workflow-pilot
-baseline: 5528881ea022c032fc17ba08a09d083787fdc839
+baseline: 6f91b87476942d0bd6aa53295c283fdbfcdf6af5
 ```

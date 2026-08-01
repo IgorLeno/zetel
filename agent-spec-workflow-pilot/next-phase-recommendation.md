@@ -2,10 +2,8 @@
 
 Recomendacao atual: `CONTINUE O PILOTO; NAO PROMOVA PARA AGENT-POLICY`.
 
-Proxima unidade apos fechamento da `001A`: tarefa `002` — “Lifecycle de spec”,
-em sessao nova (processo novo, sem `resume`).
-
-Durante a `001A`, a tarefa `002` permanece `DRAFT` com `blocked_by: ["001A"]`.
+Proxima unidade: tarefa `002` — “Lifecycle de spec”, em sessao nova
+(processo novo, sem `resume`). A `001A` esta `SESSION_CLOSED`.
 
 O workflow so podera ser recomendado para `agent-policy` depois de:
 

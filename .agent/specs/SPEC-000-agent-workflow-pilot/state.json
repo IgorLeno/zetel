@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "revision": 7,
+  "revision": 8,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
     "approved_at": "2026-07-30T00:00:00-03:00",
     "approved_by": "human-request-2026-07-30"
   },
-  "active_task": "001A",
+  "active_task": null,
   "tasks": [
     {
       "id": "001",
@@ -16,7 +16,7 @@
     },
     {
       "id": "001A",
-      "status": "IN_PROGRESS",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "001"
       ],
@@ -25,7 +25,7 @@
     },
     {
       "id": "002",
-      "status": "DRAFT",
+      "status": "READY",
       "blocked_by": [
         "001A"
       ]
@@ -84,15 +84,15 @@
     "id": "task-001A-hardening-2026-08-01",
     "agent": "cursor",
     "task_id": "001A",
-    "status": "IN_PROGRESS",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-08-01T20:32:00-03:00",
-    "closed_at": null,
-    "delivery_commit": null,
-    "delivery_remote": null,
-    "remote_confirmed_at": null,
-    "handoff": null,
+    "closed_at": "2026-08-01T20:48:00-03:00",
+    "delivery_commit": "6f91b87476942d0bd6aa53295c283fdbfcdf6af5",
+    "delivery_remote": "origin/chore/spec-session-workflow-pilot",
+    "remote_confirmed_at": "2026-08-01T20:48:00-03:00",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001A-hardening-6f91b87.md",
     "close_commit": null,
-    "bootstrap_exception": "Lifecycle commands ausentes; mutacao inicial via writeJsonAtomic aprovada pelo prompt 001A."
+    "bootstrap_exception": "Lifecycle commands ausentes; mutacoes 001A via writeJsonAtomic aprovadas pelo prompt."
   },
   "approval": {
     "spec": true,
