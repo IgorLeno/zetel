@@ -26,6 +26,5 @@ agentes quando ambos estiverem operacionais, duas revisoes independentes,
 contexto inicial substancialmente menor e retomada apenas por Git, handoff e
 context-pack.
 
-Checkpoint atual: a aprovacao humana foi registrada em 2026-07-30. A sessao de
-recuperacao fecha e envia somente o bootstrap; a tarefa 001 fica `READY` para
-um processo novo.
+Checkpoint atual: a tarefa 001 foi entregue em `5ec1d7b` e a sessao fechada.
+A tarefa 002 (`Lifecycle de spec`) esta `READY` para um processo novo.

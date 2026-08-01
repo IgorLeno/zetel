@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 5,
+  "revision": 6,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -9,7 +9,7 @@
   },
   "active_task": null,
   "tasks": [
-    {"id": "001", "status": "DONE", "blocked_by": []},
+    {"id": "001", "status": "SESSION_CLOSED", "blocked_by": []},
     {"id": "002", "status": "READY", "blocked_by": ["001"]},
     {"id": "003", "status": "DRAFT", "blocked_by": ["002"]},
     {"id": "004", "status": "DRAFT", "blocked_by": ["003"]},
@@ -23,13 +23,14 @@
     "id": "task-001-foundation-2026-08-01",
     "agent": "cursor",
     "task_id": "001",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-08-01T17:46:00-03:00",
-    "closed_at": null,
-    "delivery_commit": null,
-    "delivery_remote": null,
-    "remote_confirmed_at": null,
-    "handoff": null
+    "closed_at": "2026-08-01T17:59:54-03:00",
+    "delivery_commit": "5ec1d7b93e76f8a02ac27e287ffc3f019dbb0542",
+    "delivery_remote": "origin/chore/spec-session-workflow-pilot",
+    "remote_confirmed_at": "2026-08-01T17:59:54-03:00",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001-foundation-5ec1d7b.md",
+    "close_commit": null
   },
   "approval": {
     "spec": true,

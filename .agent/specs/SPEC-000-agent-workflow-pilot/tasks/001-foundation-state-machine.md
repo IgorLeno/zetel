@@ -1,14 +1,14 @@
 ---
 id: "001"
 title: Fundacao e state machine
-status: DONE
+status: SESSION_CLOSED
 blocked_by: []
 writer: cursor
 reviewer: cursor-subagent
-commit: null
-push: null
+commit: "5ec1d7b93e76f8a02ac27e287ffc3f019dbb0542"
+push: "origin/chore/spec-session-workflow-pilot"
 review_result: pass
-handoff: null
+handoff: ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001-foundation-5ec1d7b.md"
 ---
 
 ## Objetivo
