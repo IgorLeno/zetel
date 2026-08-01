@@ -71,15 +71,27 @@ Um workflow local, versionado e portavel que:
 
 ### R4. State machine
 
-O sistema deve suportar e validar:
+O sistema deve suportar e validar subconjuntos coerentes por entidade.
 
-`DRAFT -> NEEDS_CLARIFICATION -> READY_FOR_APPROVAL -> APPROVED -> READY ->
-IN_PROGRESS -> VALIDATING -> REVIEWING -> BLOCKED -> DONE -> PUSHED ->
-SESSION_CLOSED`
+Caminho feliz (tarefa):
 
-As entidades usam subconjuntos coerentes dessa sequencia. `BLOCKED` registra o
-estado de retorno e o motivo. Nao deve haver alteracao direta do JSON que seja
-aceita como transicao valida sem passar pelo validador.
+```text
+READY → IN_PROGRESS → VALIDATING → REVIEWING → DONE → PUSHED → SESSION_CLOSED
+```
+
+Ramo opcional de bloqueio:
+
+```text
+IN_PROGRESS | VALIDATING | REVIEWING
+    → BLOCKED
+    → retorno exato ao estado interrompido (return_to === from)
+```
+
+`BLOCKED` nao e passo obrigatorio entre `REVIEWING` e `DONE`. Ao entrar em
+`BLOCKED`, `return_to` deve ser o estado interrompido; o retorno so pode ir ao
+`return_to` persistido. Spec e sessao usam subconjuntos analogos. Nao deve
+haver alteracao direta do JSON que seja aceita como transicao valida sem
+passar pelo validador.
 
 ### R5. Gates
 

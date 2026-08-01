@@ -31,5 +31,9 @@
 ## Inicio da proxima sessao
 
 ```bash
-cd /home/plasma-test/Projetos/zetel && claude 'Leia .agent/specs/SPEC-000-agent-workflow-pilot/handoffs/000-bootstrap-7fece3d.md, SPEC-SUMMARY.md e tasks/001-foundation-state-machine.md. Execute somente a tarefa 001 em processo novo; nao use resume nem continue.'
+cd "$(git rev-parse --show-toplevel)" && claude 'Leia .agent/specs/SPEC-000-agent-workflow-pilot/handoffs/000-bootstrap-7fece3d.md, .agent/specs/SPEC-000-agent-workflow-pilot/SPEC-SUMMARY.md e .agent/specs/SPEC-000-agent-workflow-pilot/tasks/001-foundation-state-machine.md. Execute somente a tarefa 001 em processo novo; nao use resume nem continue.'
 ```
+
+> Correcao de portabilidade (pos-bootstrap, tarefa 001A): o comando acima deixou
+> de usar caminho absoluto de maquina local; o caracter historico do handoff
+> permanece.

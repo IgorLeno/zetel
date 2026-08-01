@@ -1,11 +1,12 @@
 # Tarefas: SPEC-000
 
-Status da decomposicao: `APPROVED`
+Status da decomposicao: `APPROVED` (com extensao aprovada `001A` em 2026-08-01)
 
 | ID | Titulo | Bloqueada por | Resultado vertical |
 | --- | --- | --- | --- |
 | 001 | Fundacao e state machine | — | Estado validavel, status legivel e guardas testadas |
-| 002 | Lifecycle de spec | 001 | Criar, aprovar e consultar spec com rastreabilidade |
+| 001A | Endurecimento das invariantes e escrita concorrente | 001 | State machine e escrita atomica endurecidas; CodeRabbit resolvido |
+| 002 | Lifecycle de spec | 001A | Criar, aprovar e consultar spec com rastreabilidade |
 | 003 | Lifecycle de tarefa e gates | 002 | Selecionar, iniciar, validar e fechar uma tarefa |
 | 004 | Revisao independente em dois eixos | 003 | Reviews separados bloqueiam ou liberam fechamento |
 | 005 | Handoff e nova sessao | 004 | Fechar sessao e iniciar processo novo com context-pack |
@@ -14,13 +15,36 @@ Status da decomposicao: `APPROVED`
 | 008 | Adaptadores curtos e perfil Zetel | 007 | Contexto inicial reduzido sem perder regras uteis |
 | 009 | Convergencia, Harvest e avaliacao | 008 | Spec encerrada com metricas e recomendacao objetiva |
 
+## Checkpoint
+
+Historico (bootstrap, 2026-07-30): a tarefa 001 estava `READY`; as demais
+`DRAFT` bloqueadas pela predecessora.
+
+Checkpoint durante a 001A (correcao pre-merge):
+
+```text
+001   SESSION_CLOSED
+001A  em execucao (IN_PROGRESS … SESSION_CLOSED ao final)
+002   DRAFT, blocked_by: ["001A"]
+```
+
+Checkpoint apos fechamento da 001A:
+
+```text
+001   SESSION_CLOSED
+001A  SESSION_CLOSED
+002   READY
+active_task: null
+session.status: SESSION_CLOSED
+```
+
 Regras:
 
-- A tarefa 001 passa a `READY`; as demais permanecem `DRAFT` e bloqueadas pela
-  predecessora.
 - Cada tarefa usa processo novo, writer unico e no maximo dois revisores.
 - Depois da 005, a proxima sessao deve ser iniciada por `agentctl session
   start-next`.
 - Nenhuma tarefa pode absorver a seguinte por conveniencia.
 - Correcao de review que exceda o escopo aprovado vira nova tarefa apos
   aprovacao.
+- A criacao da 001A e a reencadeacao da 002 foram aprovadas explicitamente
+  pelo prompt corretivo pre-merge.

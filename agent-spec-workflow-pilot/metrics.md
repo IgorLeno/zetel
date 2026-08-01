@@ -1,6 +1,8 @@
 # Metrics
 
-## Baseline do bootstrap
+## Baseline do bootstrap (`pre-task-001`)
+
+Medicoes historicas — nao reinterpretar como pos-001.
 
 - HEAD inicial: `1bacc0b8e2d79ae4a53d2b1c2c1760b99440eb33`.
 - Commits do piloto antes da recuperacao: `0`.
@@ -20,11 +22,7 @@
 - Reviews do bootstrap: `2` eixos, ambos `PASS`; independencia entre
   fornecedores nao comprovada nesta etapa.
 
-Metricas de duracao, tool calls, releituras, gates, reviews, trocas de agente e
-correcoes serao atualizadas por checkpoint. Ausencia de dado nao sera
-preenchida por estimativa apresentada como fato.
-
-## Fechamento recuperado em 2026-08-01
+## Fechamento recuperado em 2026-08-01 (`pre-task-001`)
 
 - Classificacao: `RECUPERACAO CONFIRMADA`.
 - Commit de entrega preservado: `7fece3d1aea93e4a099eae2d5d7548d8ad5a22a7`.
@@ -39,3 +37,17 @@ preenchida por estimativa apresentada como fato.
 - `git diff --check`: `PASS`.
 - Tarefas de implementacao iniciadas nesta sessao: `0`.
 - Handoff: `000-bootstrap-7fece3d.md`.
+
+## Pos tarefa 001 (evidencia ja versionada)
+
+- Entrega: `5ec1d7b93e76f8a02ac27e287ffc3f019dbb0542`
+- Fechamento: `5528881ea022c032fc17ba08a09d083787fdc839`
+- `agentctl spec status`: implementado
+- Demais comandos: pendentes
+- Testes focados agentctl na entrega 001: `15` (suite expandida na 001A)
+
+## Checkpoint 001A
+
+Contagens de gates e testes focados da 001A serao registradas nos reviews
+`001A-*` e no handoff de fechamento com SHA testado — nao antecipar numeros
+antes da execucao dos gates.

@@ -2,10 +2,16 @@
 
 ## Zetel
 
-- Caminho: `/home/plasma-test/Projetos/zetel`
-- Baseline: `1bacc0b8e2d79ae4a53d2b1c2c1760b99440eb33`
-- Remote: `origin`
-- Papel: unico repositorio autorizado para o piloto.
+```text
+repository: IgorLeno/zetel
+remote: origin
+branch: chore/spec-session-workflow-pilot
+baseline: 5528881ea022c032fc17ba08a09d083787fdc839
+```
+
+Papel: unico repositorio autorizado para o piloto.
+
+Baseline historico `pre-task-001`: `1bacc0b8e2d79ae4a53d2b1c2c1760b99440eb33`.
 
 ## Fora de escopo
 

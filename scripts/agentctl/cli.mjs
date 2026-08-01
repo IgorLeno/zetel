@@ -1,3 +1,5 @@
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 import { runSpecStatus } from './commands/spec-status.mjs';
 
 const EXIT_USAGE = 2;
@@ -11,9 +13,14 @@ export function runCli(argv, io = {}) {
   const stderr = io.stderr ?? process.stderr;
   const [command, subcommand, ...rest] = argv;
 
-  if (!command || command === 'help' || command === '--help' || command === '-h') {
+  if (!command) {
+    stderr.write(usageText());
+    return EXIT_USAGE;
+  }
+
+  if (command === 'help' || command === '--help' || command === '-h') {
     stdout.write(usageText());
-    return command ? 0 : EXIT_USAGE;
+    return 0;
   }
 
   if (command === 'spec' && subcommand === 'status') {
@@ -37,12 +44,16 @@ function usageText() {
   ].join('\n');
 }
 
-const isMain =
-  process.argv[1] &&
-  (process.argv[1].endsWith('/scripts/agentctl/cli.mjs') ||
-    process.argv[1].endsWith('\\scripts\\agentctl\\cli.mjs'));
+function isMainModule() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return import.meta.url === pathToFileURL(resolve(entry)).href;
+  } catch {
+    return false;
+  }
+}
 
-if (isMain) {
-  const code = runCli(process.argv.slice(2));
-  process.exit(code);
+if (isMainModule()) {
+  process.exitCode = runCli(process.argv.slice(2));
 }

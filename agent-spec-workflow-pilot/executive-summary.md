@@ -1,10 +1,19 @@
 # Executive summary
 
-O bootstrap do piloto foi recuperado e aprovado. Nao havia implementacao,
-commit local ou branch remota do piloto. A spec define nove tarefas verticais;
-a tarefa 001 e a unica liberada para a proxima sessao.
+O bootstrap do piloto foi recuperado e aprovado (`pre-task-001`). A tarefa 001
+entregou a fundacao (`state machine`, escrita atomica, `agentctl spec status`).
+A tarefa corretiva `001A` endurece invariantes e resolve findings do CodeRabbit
+antes de qualquer merge e antes de iniciar a 002.
 
-O piloto ainda nao esta pronto para `agent-policy`: nenhum comando `agentctl`,
-skill, launcher, review automatizado ou teste de fronteira de sessao foi
-implementado. Esta conclusao evita confundir planejamento aprovado com
-capacidade operacional.
+Estado operacional:
+
+- `spec status` implementado e testado
+- demais comandos `agentctl` ainda pendentes
+- nenhuma promocao para `agent-policy`
+
+```text
+repository: IgorLeno/zetel
+remote: origin
+branch: chore/spec-session-workflow-pilot
+baseline: 5528881ea022c032fc17ba08a09d083787fdc839
+```

@@ -14,7 +14,12 @@ export function runSpecStatus(args, io = {}) {
 
   if (!specId) {
     stderr.write(
-      'Uso: agentctl spec status <spec-id>\nProxima acao: informe o id da spec.\n',
+      [
+        'Uso: agentctl spec status <spec-id>',
+        'guard: usage',
+        'nextAction: informe o id da spec, por exemplo SPEC-000-agent-workflow-pilot.',
+        '',
+      ].join('\n'),
     );
     return 2;
   }
@@ -63,11 +68,15 @@ export function runSpecStatus(args, io = {}) {
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const guard =
+      error && typeof error === 'object' && 'guard' in error
+        ? String(/** @type {{ guard?: string }} */ (error).guard)
+        : 'runtime';
     const next =
       error && typeof error === 'object' && 'nextAction' in error
         ? String(/** @type {{ nextAction?: string }} */ (error).nextAction)
         : 'Verifique o estado e tente novamente.';
-    stderr.write(`${message}\nProxima acao: ${next}\n`);
+    stderr.write(`${message}\nguard: ${guard}\nnextAction: ${next}\n`);
     return 1;
   }
 }

@@ -11,6 +11,16 @@ export function resolveGitRoot(cwd = process.cwd()) {
     encoding: 'utf8',
   });
 
+  if (result.error) {
+    throw new StateMachineError(
+      `Guarda violada: falha ao executar Git em ${cwd}: ${result.error.message}.`,
+      {
+        guard: 'git-exec',
+        nextAction: 'Verifique se o binario git esta no PATH e se o cwd e acessivel.',
+      },
+    );
+  }
+
   if (result.status !== 0) {
     throw new StateMachineError(
       `Guarda violada: diretorio nao e um repositorio Git (${cwd}).`,

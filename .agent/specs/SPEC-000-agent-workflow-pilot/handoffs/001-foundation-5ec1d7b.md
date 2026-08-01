@@ -33,5 +33,11 @@
 ## Inicio da proxima sessao
 
 ```bash
-cd /home/plasma-test/Projetos/zetel && claude 'Leia .agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001-foundation-5ec1d7b.md, SPEC-SUMMARY.md e tasks/002-spec-lifecycle.md. Execute somente a tarefa 002 em processo novo; nao use resume nem continue.'
+cd "$(git rev-parse --show-toplevel)" && claude 'Leia .agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001-foundation-5ec1d7b.md, .agent/specs/SPEC-000-agent-workflow-pilot/SPEC-SUMMARY.md e .agent/specs/SPEC-000-agent-workflow-pilot/tasks/002-spec-lifecycle.md. Execute somente a tarefa 002 em processo novo; nao use resume nem continue.'
 ```
+
+> Nota historica: ao fechar a 001, a proxima tarefa liberada era a 002. A
+> correcao pre-merge 001A reencadeou temporariamente a 002 atras de si.
+>
+> Correcao de portabilidade (tarefa 001A): removido caminho absoluto local;
+> qualificacao completa dos artefatos sob `.agent/specs/...`.
