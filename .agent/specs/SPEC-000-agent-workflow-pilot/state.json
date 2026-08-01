@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 3,
+  "revision": 4,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -23,9 +23,13 @@
     "id": "recovery-bootstrap-2026-07-30",
     "agent": "codex",
     "task_id": null,
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-07-30T00:00:00-03:00",
-    "closed_at": null
+    "closed_at": "2026-08-01T17:39:03-03:00",
+    "delivery_commit": "7fece3d1aea93e4a099eae2d5d7548d8ad5a22a7",
+    "delivery_remote": "origin/chore/spec-session-workflow-pilot",
+    "remote_confirmed_at": "2026-08-01T17:39:03-03:00",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/000-bootstrap-7fece3d.md"
   },
   "approval": {
     "spec": true,
