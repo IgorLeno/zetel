@@ -1,13 +1,13 @@
 ---
 id: "001"
 title: Fundacao e state machine
-status: READY
+status: DONE
 blocked_by: []
-writer: claude
-reviewer: codex
+writer: cursor
+reviewer: cursor-subagent
 commit: null
 push: null
-review_result: pending
+review_result: pass
 handoff: null
 ---
 
@@ -52,4 +52,5 @@ Misturar estado de spec, tarefa e sessao; aceitar JSON editado fora das guardas.
 
 ## Resultado da revisao
 
-Pendente.
+`PASS` nos eixos spec compliance e engineering quality
+(`.agent/specs/SPEC-000-agent-workflow-pilot/reviews/001-*.md`).

@@ -1,7 +1,7 @@
 ---
 id: "002"
 title: Lifecycle de spec
-status: DRAFT
+status: READY
 blocked_by: ["001"]
 writer: codex
 reviewer: claude

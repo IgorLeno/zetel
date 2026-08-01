@@ -46,6 +46,9 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 
+# Runtime efemero do workflow .agent (context-pack, sessao local)
+.agent/runtime/
+
 # Artefatos temporários de análise/spike
 .codegraph/
 dft_reference.html
