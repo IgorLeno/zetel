@@ -46,6 +46,13 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 
+# Runtime efemero do workflow .agent (context-pack, sessao local)
+.agent/runtime/
+# Locks/temps da escrita atomica de state.json
+*.json.lock
+.agent/specs/**/.*.tmp
+
+
 # Artefatos temporários de análise/spike
 .codegraph/
 dft_reference.html

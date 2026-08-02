@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "revision": 10,
+  "spec": {
+    "id": "SPEC-000-agent-workflow-pilot",
+    "status": "APPROVED",
+    "approved_at": "2026-07-30T00:00:00-03:00",
+    "approved_by": "human-request-2026-07-30"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "status": "SESSION_CLOSED",
+      "blocked_by": []
+    },
+    {
+      "id": "001A",
+      "status": "SESSION_CLOSED",
+      "blocked_by": [
+        "001"
+      ],
+      "writer": "grok",
+      "reviewer": "agente ou subagente separado"
+    },
+    {
+      "id": "001B",
+      "status": "SESSION_CLOSED",
+      "blocked_by": [
+        "001A"
+      ],
+      "writer": "grok",
+      "reviewer": "agente ou subagente separado"
+    },
+    {
+      "id": "002",
+      "status": "READY",
+      "blocked_by": [
+        "001B"
+      ]
+    },
+    {
+      "id": "003",
+      "status": "DRAFT",
+      "blocked_by": [
+        "002"
+      ]
+    },
+    {
+      "id": "004",
+      "status": "DRAFT",
+      "blocked_by": [
+        "003"
+      ]
+    },
+    {
+      "id": "005",
+      "status": "DRAFT",
+      "blocked_by": [
+        "004"
+      ]
+    },
+    {
+      "id": "006",
+      "status": "DRAFT",
+      "blocked_by": [
+        "005"
+      ]
+    },
+    {
+      "id": "007",
+      "status": "DRAFT",
+      "blocked_by": [
+        "006"
+      ]
+    },
+    {
+      "id": "008",
+      "status": "DRAFT",
+      "blocked_by": [
+        "007"
+      ]
+    },
+    {
+      "id": "009",
+      "status": "DRAFT",
+      "blocked_by": [
+        "008"
+      ]
+    }
+  ],
+  "session": {
+    "id": "task-001B-final-invariants-2026-08-01",
+    "agent": "cursor",
+    "task_id": "001B",
+    "status": "SESSION_CLOSED",
+    "started_at": "2026-08-01T21:30:00-03:00",
+    "closed_at": "2026-08-01T21:40:00-03:00",
+    "delivery_commit": "7fb300f724a9f1c277b1c5c7f09e19b69be772c0",
+    "delivery_remote": "origin/chore/spec-session-workflow-pilot",
+    "remote_confirmed_at": "2026-08-01T21:40:00-03:00",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001B-final-invariants-7fb300f.md",
+    "close_commit": null,
+    "bootstrap_exception": "Lifecycle commands ausentes; mutacoes 001B via writeJsonAtomic aprovadas pelo prompt."
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true
+  }
+}
