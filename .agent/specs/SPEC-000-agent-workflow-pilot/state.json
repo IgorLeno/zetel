@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 16,
+  "revision": 18,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -34,14 +34,14 @@
     },
     {
       "id": "002",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "001B"
       ]
     },
     {
       "id": "003",
-      "status": "DRAFT",
+      "status": "READY",
       "blocked_by": [
         "002"
       ]
@@ -93,7 +93,7 @@
     "id": "task-002-spec-lifecycle-20260802141326",
     "agent": "codex",
     "task_id": "002",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-08-02T14:13:26.998Z",
     "bootstrap_exception": "Comandos de lifecycle de tarefa pertencem a 003; 002 iniciada via assertTransition, validateState e writeJsonAtomic com expectedRevision. Transicao 002/sessao para VALIDATING via assertTransition, validateState e writeJsonAtomic. Transicao 002/sessao para REVIEWING apos gates via assertTransition, validateState e writeJsonAtomic. Bloqueio de review registrado via assertTransition, validateState e writeJsonAtomic; return_to=REVIEWING. Retomada BLOCKED -> REVIEWING apos autorizacao humana informada para envio do fixed point ao Claude.",
     "validating_at": "2026-08-02T15:08:41.965Z",
@@ -110,7 +110,14 @@
       "engineering_quality": "PASS",
       "fixed_point_sha256": "772b353aa802b600ff9a1802acf78586320295205e17da88c36f5317dd3d5b85"
     },
-    "gates": ".agent/specs/SPEC-000-agent-workflow-pilot/reviews/002-gates.md"
+    "gates": ".agent/specs/SPEC-000-agent-workflow-pilot/reviews/002-gates.md",
+    "pushed_at": "2026-08-02T16:44:43.628Z",
+    "delivery_commit": "febf5fee04b572c4aee71d5f837328513697516a",
+    "delivery_remote": "origin/feat/spec-000-task-002-spec-lifecycle",
+    "remote_confirmed_at": "2026-08-02T16:44:43.628Z",
+    "closed_at": "2026-08-02T16:45:53.699Z",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002-spec-lifecycle-febf5fe.md",
+    "next_task": "003"
   },
   "approval": {
     "spec": true,

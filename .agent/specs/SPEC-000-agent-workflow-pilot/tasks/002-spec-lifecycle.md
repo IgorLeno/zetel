@@ -1,14 +1,14 @@
 ---
 id: "002"
 title: Lifecycle de spec
-status: DONE
+status: SESSION_CLOSED
 blocked_by: ["001B"]
 writer: codex
 reviewer: claude
-commit: null
-push: null
+commit: "febf5fee04b572c4aee71d5f837328513697516a"
+push: "origin/feat/spec-000-task-002-spec-lifecycle"
 review_result: PASS
-handoff: null
+handoff: ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002-spec-lifecycle-febf5fe.md"
 ---
 
 ## Objetivo

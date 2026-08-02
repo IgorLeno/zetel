@@ -26,8 +26,9 @@ agentes quando ambos estiverem operacionais, duas revisoes independentes,
 contexto inicial substancialmente menor e retomada apenas por Git, handoff e
 context-pack.
 
-Checkpoint atual: tarefas `001`, `001A` e `001B` em `SESSION_CLOSED` (entrega
-001B em `7fb300f`). A tarefa `002` (`Lifecycle de spec`) esta `DONE`, com
-`agentctl spec create`, `spec approve` e `spec status` implementados, gates
-verdes e duas revisoes independentes `PASS`. A tarefa `003` permanece `DRAFT`
-ate o push confirmado e o fechamento versionado da sessao 002.
+Checkpoint atual: tarefas `001`, `001A`, `001B` e `002` em `SESSION_CLOSED`.
+A tarefa `002` entregou `agentctl spec create`, `spec approve` e `spec status`,
+com gates verdes, duas revisoes independentes `PASS` e delivery
+`febf5fee04b572c4aee71d5f837328513697516a` confirmado no remote. A tarefa
+`003` (`Lifecycle de tarefa e gates`) esta `READY` para um processo Claude novo;
+nao foi iniciada nesta sessao.

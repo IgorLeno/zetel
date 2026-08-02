@@ -35,16 +35,16 @@ session.status: SESSION_CLOSED
 Historico: durante a 001B a 002 ficou `DRAFT` com `blocked_by: ["001B"]`
 (excecao bootstrap aprovada).
 
-Checkpoint da entrega 002, antes do push e handoff:
+Checkpoint apos fechamento da 002:
 
 ```text
 001   SESSION_CLOSED
 001A  SESSION_CLOSED
 001B  SESSION_CLOSED
-002   DONE
-003   DRAFT
+002   SESSION_CLOSED
+003   READY
 active_task: null
-session.status: DONE
+session.status: SESSION_CLOSED
 ```
 
 Regras:
