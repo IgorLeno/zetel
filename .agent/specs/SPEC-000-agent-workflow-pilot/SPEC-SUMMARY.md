@@ -27,6 +27,7 @@ contexto inicial substancialmente menor e retomada apenas por Git, handoff e
 context-pack.
 
 Checkpoint atual: tarefas `001`, `001A` e `001B` em `SESSION_CLOSED` (entrega
-001B em `7fb300f`). `agentctl spec status` implementado; demais comandos
-pendentes. A tarefa `002` (`Lifecycle de spec`) esta `READY` para um processo
-novo.
+001B em `7fb300f`). A tarefa `002` (`Lifecycle de spec`) esta `DONE`, com
+`agentctl spec create`, `spec approve` e `spec status` implementados, gates
+verdes e duas revisoes independentes `PASS`. A tarefa `003` permanece `DRAFT`
+ate o push confirmado e o fechamento versionado da sessao 002.

@@ -1,6 +1,8 @@
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { runSpecStatus } from './commands/spec-status.mjs';
+import { runSpecCreate } from './commands/spec-create.mjs';
+import { runSpecApprove } from './commands/spec-approve.mjs';
 
 const EXIT_USAGE = 2;
 
@@ -26,6 +28,8 @@ export function runCli(argv, io = {}) {
   if (command === 'spec' && subcommand === 'status') {
     return runSpecStatus(rest, io);
   }
+  if (command === 'spec' && subcommand === 'create') return runSpecCreate(rest, io);
+  if (command === 'spec' && subcommand === 'approve') return runSpecApprove(rest, io);
 
   stderr.write(`Comando desconhecido: ${[command, subcommand].filter(Boolean).join(' ')}\n`);
   stderr.write(usageText());
@@ -36,7 +40,9 @@ function usageText() {
   return [
     'agentctl — orquestracao deterministica Spec/Task/Session',
     '',
-    'Comandos disponiveis nesta fundacao:',
+    'Comandos disponiveis:',
+    '  agentctl spec create <spec-id> --kind <mini|full> --title <titulo>',
+    '  agentctl spec approve <spec-id> --approved-by <identidade> --confirm-human',
     '  agentctl spec status <spec-id>   Somente leitura; exit != 0 se estado invalido',
     '',
     'Root resolvido por: git rev-parse --show-toplevel',

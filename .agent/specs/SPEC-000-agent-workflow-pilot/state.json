@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 10,
+  "revision": 16,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -34,7 +34,7 @@
     },
     {
       "id": "002",
-      "status": "READY",
+      "status": "DONE",
       "blocked_by": [
         "001B"
       ]
@@ -90,18 +90,27 @@
     }
   ],
   "session": {
-    "id": "task-001B-final-invariants-2026-08-01",
-    "agent": "cursor",
-    "task_id": "001B",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-08-01T21:30:00-03:00",
-    "closed_at": "2026-08-01T21:40:00-03:00",
-    "delivery_commit": "7fb300f724a9f1c277b1c5c7f09e19b69be772c0",
-    "delivery_remote": "origin/chore/spec-session-workflow-pilot",
-    "remote_confirmed_at": "2026-08-01T21:40:00-03:00",
-    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001B-final-invariants-7fb300f.md",
-    "close_commit": null,
-    "bootstrap_exception": "Lifecycle commands ausentes; mutacoes 001B via writeJsonAtomic aprovadas pelo prompt."
+    "id": "task-002-spec-lifecycle-20260802141326",
+    "agent": "codex",
+    "task_id": "002",
+    "status": "DONE",
+    "started_at": "2026-08-02T14:13:26.998Z",
+    "bootstrap_exception": "Comandos de lifecycle de tarefa pertencem a 003; 002 iniciada via assertTransition, validateState e writeJsonAtomic com expectedRevision. Transicao 002/sessao para VALIDATING via assertTransition, validateState e writeJsonAtomic. Transicao 002/sessao para REVIEWING apos gates via assertTransition, validateState e writeJsonAtomic. Bloqueio de review registrado via assertTransition, validateState e writeJsonAtomic; return_to=REVIEWING. Retomada BLOCKED -> REVIEWING apos autorizacao humana informada para envio do fixed point ao Claude.",
+    "validating_at": "2026-08-02T15:08:41.965Z",
+    "reviewing_at": "2026-08-02T15:21:11.257Z",
+    "blocked_at": "2026-08-02T15:23:24.812Z",
+    "reviewing_resumed_at": "2026-08-02T15:55:47.504Z",
+    "external_review_authorization": {
+      "authorized_at": "2026-08-02T15:55:47.504Z",
+      "scope": "fixed point privado da tarefa 002: diff, codigo, testes e artefatos SPEC-000; duas revisoes Claude independentes"
+    },
+    "done_at": "2026-08-02T16:39:29.551Z",
+    "review_result": {
+      "spec_compliance": "PASS",
+      "engineering_quality": "PASS",
+      "fixed_point_sha256": "772b353aa802b600ff9a1802acf78586320295205e17da88c36f5317dd3d5b85"
+    },
+    "gates": ".agent/specs/SPEC-000-agent-workflow-pilot/reviews/002-gates.md"
   },
   "approval": {
     "spec": true,

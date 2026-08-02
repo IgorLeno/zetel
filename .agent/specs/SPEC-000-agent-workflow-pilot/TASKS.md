@@ -35,6 +35,18 @@ session.status: SESSION_CLOSED
 Historico: durante a 001B a 002 ficou `DRAFT` com `blocked_by: ["001B"]`
 (excecao bootstrap aprovada).
 
+Checkpoint da entrega 002, antes do push e handoff:
+
+```text
+001   SESSION_CLOSED
+001A  SESSION_CLOSED
+001B  SESSION_CLOSED
+002   DONE
+003   DRAFT
+active_task: null
+session.status: DONE
+```
+
 Regras:
 
 - Cada tarefa usa processo novo, writer unico e no maximo dois revisores.

@@ -60,7 +60,7 @@ const validState = {
 };
 
 describe('agentctl spec status', () => {
-  it('apresenta status sem modificar arquivos', () => {
+  it('reporta approval legada sem modificar arquivos', () => {
     const { dir, statePath } = writeRepoState(validState);
     const before = readFingerprint(statePath);
 
@@ -70,8 +70,8 @@ describe('agentctl spec status', () => {
       env: { ...process.env, PATH: process.env.PATH },
     });
 
-    expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/APPROVED/);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toMatch(/LEGACY_UNVERIFIED/);
     expect(result.stdout).toMatch(/001/);
     expect(result.stdout).toMatch(/READY/);
     expect(readFingerprint(statePath)).toEqual(before);

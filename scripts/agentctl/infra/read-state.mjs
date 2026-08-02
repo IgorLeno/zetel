@@ -2,18 +2,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseState, validateState, StateMachineError } from '../domain/state-machine.mjs';
 import { resolveGitRoot } from './git-root.mjs';
+import { assertSafeSpecId } from '../domain/spec-id.mjs';
 
 /**
  * @param {string} specId
  * @param {{ cwd?: string }} [options]
  */
 export function loadSpecState(specId, options = {}) {
-  if (typeof specId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(specId)) {
-    throw new StateMachineError('spec id invalido.', {
-      guard: 'spec-id',
-      nextAction: 'Use um id seguro, por exemplo SPEC-000-agent-workflow-pilot.',
-    });
-  }
+  assertSafeSpecId(specId);
 
   const root = resolveGitRoot(options.cwd);
   const path = join(root, '.agent', 'specs', specId, 'state.json');

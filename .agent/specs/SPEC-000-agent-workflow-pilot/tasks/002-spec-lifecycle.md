@@ -1,13 +1,13 @@
 ---
 id: "002"
 title: Lifecycle de spec
-status: READY
-blocked_by: ["001"]
+status: DONE
+blocked_by: ["001B"]
 writer: codex
 reviewer: claude
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
 ---
 
@@ -51,4 +51,8 @@ Aprovacao ambigua ou preservada depois de alteracao material.
 
 ## Resultado da revisao
 
-Pendente.
+Duas revisoes Claude independentes sobre o fixed point final passaram:
+`reviews/002-spec-compliance.md` e
+`reviews/002-engineering-quality.md`. O unico finding bloqueante da rodada 1,
+teste de artefato aprovado removido, foi corrigido; classificacoes e
+justificativas estao em `reviews/002-findings-resolution.md`.
