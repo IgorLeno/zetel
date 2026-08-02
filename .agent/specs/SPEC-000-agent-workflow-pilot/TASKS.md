@@ -1,6 +1,6 @@
 # Tarefas: SPEC-000
 
-Status da decomposicao: `APPROVED` (com extensao aprovada `001A` em 2026-08-01)
+Status da decomposicao: `APPROVED` (extensoes `001A`/`001B` aprovadas pre-merge)
 
 | ID | Titulo | Bloqueada por | Resultado vertical |
 | --- | --- | --- | --- |
@@ -21,17 +21,19 @@ Status da decomposicao: `APPROVED` (com extensao aprovada `001A` em 2026-08-01)
 Historico (bootstrap, 2026-07-30): a tarefa 001 estava `READY`; as demais
 `DRAFT` bloqueadas pela predecessora.
 
-Checkpoint durante a 001B (em curso):
+Checkpoint apos fechamento da 001B:
 
 ```text
 001   SESSION_CLOSED
 001A  SESSION_CLOSED
-001B  IN_PROGRESS
-002   DRAFT, blocked_by: ["001B"]
+001B  SESSION_CLOSED
+002   READY
+active_task: null
+session.status: SESSION_CLOSED
 ```
 
-Historico: apos a 001A a 002 estava `READY` com `blocked_by: ["001A"]`; a
-cadeia foi reencadeada pela 001B (excecao bootstrap aprovada).
+Historico: durante a 001B a 002 ficou `DRAFT` com `blocked_by: ["001B"]`
+(excecao bootstrap aprovada).
 
 Regras:
 

@@ -1,14 +1,14 @@
 ---
 id: "001B"
 title: Fechamento das invariantes remanescentes
-status: IN_PROGRESS
+status: SESSION_CLOSED
 blocked_by: ["001A"]
 writer: grok
 reviewer: agente ou subagente separado
-commit: null
-push: null
+commit: "7fb300f724a9f1c277b1c5c7f09e19b69be772c0"
+push: "origin/chore/spec-session-workflow-pilot"
 review_result: PASS
-handoff: null
+handoff: ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001B-final-invariants-7fb300f.md"
 ---
 
 ## Objetivo

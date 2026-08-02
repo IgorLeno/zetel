@@ -3,7 +3,7 @@
 Recomendacao atual: `CONTINUE O PILOTO; NAO PROMOVA PARA AGENT-POLICY`.
 
 Proxima unidade: tarefa `002` — “Lifecycle de spec”, em sessao nova
-(processo novo, sem `resume`). A `001A` esta `SESSION_CLOSED`.
+(processo novo, sem `resume`). A `001B` esta `SESSION_CLOSED`.
 
 O workflow so podera ser recomendado para `agent-policy` depois de:
 
@@ -19,5 +19,5 @@ O workflow so podera ser recomendado para `agent-policy` depois de:
 repository: IgorLeno/zetel
 remote: origin
 branch: chore/spec-session-workflow-pilot
-001A delivery/checkpoint baseline: 6f91b87476942d0bd6aa53295c283fdbfcdf6af5
+001B delivery/checkpoint baseline: 7fb300f724a9f1c277b1c5c7f09e19b69be772c0
 ```

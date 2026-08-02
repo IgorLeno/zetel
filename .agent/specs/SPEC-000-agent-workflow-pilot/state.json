@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "revision": 9,
+  "revision": 10,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
     "approved_at": "2026-07-30T00:00:00-03:00",
     "approved_by": "human-request-2026-07-30"
   },
-  "active_task": "001B",
+  "active_task": null,
   "tasks": [
     {
       "id": "001",
@@ -25,7 +25,7 @@
     },
     {
       "id": "001B",
-      "status": "IN_PROGRESS",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "001A"
       ],
@@ -34,7 +34,7 @@
     },
     {
       "id": "002",
-      "status": "DRAFT",
+      "status": "READY",
       "blocked_by": [
         "001B"
       ]
@@ -93,13 +93,13 @@
     "id": "task-001B-final-invariants-2026-08-01",
     "agent": "cursor",
     "task_id": "001B",
-    "status": "IN_PROGRESS",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-08-01T21:30:00-03:00",
-    "closed_at": null,
-    "delivery_commit": null,
-    "delivery_remote": null,
-    "remote_confirmed_at": null,
-    "handoff": null,
+    "closed_at": "2026-08-01T21:40:00-03:00",
+    "delivery_commit": "7fb300f724a9f1c277b1c5c7f09e19b69be772c0",
+    "delivery_remote": "origin/chore/spec-session-workflow-pilot",
+    "remote_confirmed_at": "2026-08-01T21:40:00-03:00",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001B-final-invariants-7fb300f.md",
     "close_commit": null,
     "bootstrap_exception": "Lifecycle commands ausentes; mutacoes 001B via writeJsonAtomic aprovadas pelo prompt."
   },

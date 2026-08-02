@@ -26,6 +26,7 @@ agentes quando ambos estiverem operacionais, duas revisoes independentes,
 contexto inicial substancialmente menor e retomada apenas por Git, handoff e
 context-pack.
 
-Checkpoint atual: tarefas `001` e `001A` em `SESSION_CLOSED` (entrega 001A em
-`6f91b87`). `agentctl spec status` implementado; demais comandos pendentes.
-A tarefa `002` (`Lifecycle de spec`) esta `READY` para um processo novo.
+Checkpoint atual: tarefas `001`, `001A` e `001B` em `SESSION_CLOSED` (entrega
+001B em `7fb300f`). `agentctl spec status` implementado; demais comandos
+pendentes. A tarefa `002` (`Lifecycle de spec`) esta `READY` para um processo
+novo.

@@ -1,7 +1,10 @@
 # 001B — Relatorio de gates
 
-Horario aproximado: 2026-08-01 ~21:30–21:35 -03:00  
+Horario aproximado: 2026-08-01 ~21:30–21:35 -03:00
+
 Working tree testada: dirty (pre-delivery) sobre `c3569b78373e45d1838f6aea1775bf544e995a62`
+
+Delivery commit: `7fb300f724a9f1c277b1c5c7f09e19b69be772c0`
 
 | Comando | Exit | Resultado | Notas |
 | --- | --- | --- | --- |
