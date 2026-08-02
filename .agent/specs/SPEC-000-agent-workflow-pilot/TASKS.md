@@ -6,7 +6,8 @@ Status da decomposicao: `APPROVED` (com extensao aprovada `001A` em 2026-08-01)
 | --- | --- | --- | --- |
 | 001 | Fundacao e state machine | — | Estado validavel, status legivel e guardas testadas |
 | 001A | Endurecimento das invariantes e escrita concorrente | 001 | State machine e escrita atomica endurecidas; CodeRabbit resolvido |
-| 002 | Lifecycle de spec | 001A | Criar, aprovar e consultar spec com rastreabilidade |
+| 001B | Fechamento das invariantes remanescentes | 001A | Saida BLOCKED, DONE/PUSHED, sessao/tarefa e fsync alinhados |
+| 002 | Lifecycle de spec | 001B | Criar, aprovar e consultar spec com rastreabilidade |
 | 003 | Lifecycle de tarefa e gates | 002 | Selecionar, iniciar, validar e fechar uma tarefa |
 | 004 | Revisao independente em dois eixos | 003 | Reviews separados bloqueiam ou liberam fechamento |
 | 005 | Handoff e nova sessao | 004 | Fechar sessao e iniciar processo novo com context-pack |
@@ -20,18 +21,17 @@ Status da decomposicao: `APPROVED` (com extensao aprovada `001A` em 2026-08-01)
 Historico (bootstrap, 2026-07-30): a tarefa 001 estava `READY`; as demais
 `DRAFT` bloqueadas pela predecessora.
 
-Checkpoint apos fechamento da 001A:
+Checkpoint durante a 001B (em curso):
 
 ```text
 001   SESSION_CLOSED
 001A  SESSION_CLOSED
-002   READY
-active_task: null
-session.status: SESSION_CLOSED
+001B  IN_PROGRESS
+002   DRAFT, blocked_by: ["001B"]
 ```
 
-(Historico da execucao 001A: a 002 ficou `DRAFT` com `blocked_by: ["001A"]`
-enquanto a correcao estava em curso.)
+Historico: apos a 001A a 002 estava `READY` com `blocked_by: ["001A"]`; a
+cadeia foi reencadeada pela 001B (excecao bootstrap aprovada).
 
 Regras:
 

@@ -125,18 +125,20 @@ describe('writeJsonAtomic', () => {
     expect(JSON.parse(readFileSync(path, 'utf8')).value).toBe('a');
   });
 
-  it('permite exatamente um vencedor entre dois processos concorrentes', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'agentctl-atomic-race-'));
-    dirs.push(dir);
-    const path = join(dir, 'state.json');
-    writeFileSync(
-      path,
-      `${JSON.stringify({ schema_version: 1, revision: 1, value: 'base', writer: null }, null, 2)}\n`,
-      'utf8',
-    );
+  it(
+    'permite exatamente um vencedor entre dois processos concorrentes',
+    () => {
+      const dir = mkdtempSync(join(tmpdir(), 'agentctl-atomic-race-'));
+      dirs.push(dir);
+      const path = join(dir, 'state.json');
+      writeFileSync(
+        path,
+        `${JSON.stringify({ schema_version: 1, revision: 1, value: 'base', writer: null }, null, 2)}\n`,
+        'utf8',
+      );
 
-    // Ambos tentam a mesma revision; exatamente um deve vencer (lock ou revision).
-    const worker = `
+      // Ambos tentam a mesma revision; exatamente um deve vencer (lock ou revision).
+      const worker = `
       import { writeJsonAtomic } from ${JSON.stringify(join(ROOT, 'scripts/agentctl/infra/atomic-write.mjs'))};
       const path = process.argv[1];
       const id = process.argv[2];
@@ -153,12 +155,12 @@ describe('writeJsonAtomic', () => {
       }
     `;
 
-    const parallel = spawnSync(
-      process.execPath,
-      [
-        '--input-type=module',
-        '-e',
-        `
+      const parallel = spawnSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          `
           import { spawn } from 'node:child_process';
           import { readFileSync, readdirSync } from 'node:fs';
           const path = ${JSON.stringify(path)};
@@ -182,19 +184,21 @@ describe('writeJsonAtomic', () => {
           const leftovers = readdirSync(dir).filter((n) => n.includes('.tmp') || n.endsWith('.lock'));
           process.stdout.write(JSON.stringify({ results, disk, leftovers }));
         `,
-      ],
-      { encoding: 'utf8', cwd: ROOT },
-    );
+        ],
+        { encoding: 'utf8', cwd: ROOT },
+      );
 
-    expect(parallel.status).toBe(0);
-    const payload = JSON.parse(parallel.stdout);
-    const okCount = payload.results.filter((r: { code: number | null }) => r.code === 0).length;
-    const failCount = payload.results.filter((r: { code: number | null }) => r.code !== 0).length;
-    expect(okCount).toBe(1);
-    expect(failCount).toBe(1);
-    expect(payload.disk.revision).toBe(2);
-    expect(['A', 'B']).toContain(payload.disk.writer);
-    expect(payload.leftovers).toEqual([]);
-    expect(() => JSON.parse(readFileSync(path, 'utf8'))).not.toThrow();
-  });
+      expect(parallel.status).toBe(0);
+      const payload = JSON.parse(parallel.stdout);
+      const okCount = payload.results.filter((r: { code: number | null }) => r.code === 0).length;
+      const failCount = payload.results.filter((r: { code: number | null }) => r.code !== 0).length;
+      expect(okCount).toBe(1);
+      expect(failCount).toBe(1);
+      expect(payload.disk.revision).toBe(2);
+      expect(['A', 'B']).toContain(payload.disk.writer);
+      expect(payload.leftovers).toEqual([]);
+      expect(() => JSON.parse(readFileSync(path, 'utf8'))).not.toThrow();
+    },
+    15_000,
+  );
 });

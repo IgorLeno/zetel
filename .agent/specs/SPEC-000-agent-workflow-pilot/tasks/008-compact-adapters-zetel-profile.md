@@ -29,13 +29,17 @@ decisoes e dividas carregam apenas quando pertinentes.
 - Skills/regras de Next.js/React/TS/testes/SQLite/Markdown/OpenRouter sao locais
   e path-scoped ou explicitas — somente quando comprovadas por codigo,
   configuracao, `AGENTS.md`/`CLAUDE.md` ou convencoes repetidas do projeto.
-- Verificacao individual (001A / CodeRabbit) das regras candidatas:
+- Verificacao individual (001A / 001B / CodeRabbit) das regras candidatas:
   - Next.js App Router — comprovada (stack obrigatoria em `AGENTS.md`/`CLAUDE.md`);
-    registrar como regra local path-scoped quando a 008 for executada.
-  - React Strict Mode — `NOT APPLICABLE`: nao existe como invariante aprovada
-    do Zetel (nenhuma mencao em config/`StrictMode`/regras inviolaveis).
-  - Identificadores TypeScript em camelCase — parcial/API: convencao em contratos
-    de memoria (`prd-v3`), nao invariante global; nao promover regra generica.
+    registrar como regra local path-scoped (`app/`, `components/`, rotas Next).
+  - React Strict Mode — `NOT APPLICABLE`: sem `reactStrictMode` em
+    `next.config.ts`, sem `<StrictMode>` em `app/layout.tsx`; nao declarar
+    garantia so porque Next moderno pode habilitar por padrao.
+  - Identificadores TypeScript em camelCase — `VALID — path-scoped` para
+    identificadores internos em `*.{ts,tsx}` (funcoes/variaveis/params), com
+    excecoes obrigatorias: campos de APIs externas, schemas, banco, JSON
+    persistido, protocolos, nomes exigidos por bibliotecas e compatibilidade
+    retroativa. Nao transformar automaticamente chaves externas em camelCase.
   - Uma conexao `better-sqlite3` por processo, sem pooling — comprovada
     (regra inviolavel #7 + `lib/db.ts` singleton); path-scoped a backend/SQLite.
 - Conceitos Vercel adotados sao versionados/provenientes; nenhum fetch por uso.

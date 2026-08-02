@@ -12,7 +12,13 @@ import { StateMachineError } from '../domain/state-machine.mjs';
 
 /**
  * Escrita atomica preparada para mutacoes futuras de state.json.
- * Usa lock exclusivo, releitura de revision, temp + rename e fsync do diretorio.
+ *
+ * Contrato de durabilidade:
+ * - Atomicidade logica: lock exclusivo + revisao + temp + rename.
+ * - Durabilidade do conteudo: fsync do arquivo temporario antes do rename.
+ * - Durabilidade da entrada do diretorio: tentativa best-effort apos o rename.
+ *   Falha de fsync do diretorio nao reverte a escrita ja visivel e nao deve
+ *   ser propagada como falsa falha da mutacao.
  *
  * @param {string} path
  * @param {Record<string, unknown>} data
@@ -116,12 +122,8 @@ export function writeJsonAtomic(path, data, options) {
         closeSync(fd);
       }
       renameSync(tempPath, path);
-      // Apos rename bem-sucedido o conteudo ja e visivel; fsync do dir e best-effort.
-      try {
-        fsyncDirectory(dir);
-      } catch {
-        // ignore: falha de durabilidade do diretorio nao deve reverter sucesso logico
-      }
+      // Rename ja tornou o conteudo visivel; nao propagar falha de fsync do dir.
+      fsyncDirectoryBestEffort(dir);
     } catch (error) {
       try {
         unlinkSync(tempPath);
@@ -149,14 +151,25 @@ export function writeJsonAtomic(path, data, options) {
 }
 
 /**
+ * Tenta durabilizar a entrada do diretorio apos rename bem-sucedido.
+ *
+ * Limitacao registrada: se o fsync do diretorio falhar, a mutacao logica ja
+ * persistiu via rename. Propagar o erro induziria o chamador a repetir uma
+ * escrita ja concluida (risco de falsa falha / double-apply). Por isso a falha
+ * e engolida de forma explicita — best-effort, nao parte do commit logico.
+ *
  * @param {string} dir
  */
-function fsyncDirectory(dir) {
-  const fd = openSync(dir, 'r');
+function fsyncDirectoryBestEffort(dir) {
   try {
-    fsyncSync(fd);
-  } finally {
-    closeSync(fd);
+    const fd = openSync(dir, 'r');
+    try {
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+  } catch {
+    // Best-effort: rename ja commitou a entrada nova no namespace do FS.
   }
 }
 

@@ -246,7 +246,7 @@ export function validateState(state) {
           'Defina blocked_by como array de ids string.',
         );
       } else {
-        pushBlockedByIntegrityErrors(push, task, index, seen);
+        pushBlockedByIntegrityErrors(push, task, index);
       }
       if (task.status === 'BLOCKED') {
         pushBlockedFieldErrors(push, task, `tasks[${index}]`, 'task');
@@ -314,21 +314,27 @@ export function validateState(state) {
   if (!isPlainObject(state.session)) {
     push('session ausente ou invalido.', 'schema', 'Inclua o objeto session.');
   } else {
-    // 1) Validar enum de status de forma independente.
+    // 1) Distinguir propriedade ausente de status: null (sem sessao iniciada).
+    const hasStatusProperty = Object.prototype.hasOwnProperty.call(state.session, 'status');
     const sessionStatus = state.session.status;
-    const hasSessionStatus = sessionStatus != null;
     let sessionStatusValid = false;
 
-    if (hasSessionStatus) {
-      if (!SESSION_STATUSES.includes(sessionStatus)) {
-        push(
-          `session.status invalido: ${String(sessionStatus)}.`,
-          'status',
-          `Use um status de sessao valido: ${SESSION_STATUSES.join(', ')}.`,
-        );
-      } else {
-        sessionStatusValid = true;
-      }
+    if (!hasStatusProperty) {
+      push(
+        'session.status ausente.',
+        'status',
+        'Defina session.status como null (sem sessao iniciada) ou um status de sessao valido.',
+      );
+    } else if (sessionStatus === null) {
+      pushNullSessionInvariantErrors(push, state);
+    } else if (!SESSION_STATUSES.includes(sessionStatus)) {
+      push(
+        `session.status invalido: ${String(sessionStatus)}.`,
+        'status',
+        `Use um status de sessao valido: ${SESSION_STATUSES.join(', ')}.`,
+      );
+    } else {
+      sessionStatusValid = true;
     }
 
     // 2) Se BLOCKED, validar reason/return_to independentemente do cruzamento.
@@ -336,10 +342,13 @@ export function validateState(state) {
       pushBlockedFieldErrors(push, state.session, 'session', 'session');
     }
 
-    // 3) Invariantes cruzadas sessao/tarefa.
+    // 3) Invariantes cruzadas sessao/tarefa (inclui DONE/PUSHED/SESSION_CLOSED).
     if (sessionStatusValid) {
       pushSessionTaskInvariantErrors(push, state, tasksById);
     }
+
+    // 4) Tarefa ativa exige sessao ativa correspondente (mesmo se status for null/ausente).
+    pushActiveTaskRequiresActiveSessionErrors(push, state);
   }
 
   if (!isPlainObject(state.approval)) {
@@ -428,10 +437,24 @@ export function assertTransition(entity, from, to, context = {}) {
   }
 
   if (from === 'BLOCKED') {
-    if (!context.return_to) {
+    if (
+      !context.return_to
+      || typeof context.return_to !== 'string'
+      || context.return_to.trim() === ''
+    ) {
       throw new StateMachineError(
         'Guarda violada: retorno de BLOCKED exige return_to registrado.',
         { guard: 'blocked-return-to', nextAction: 'Passe o return_to persistido no estado.' },
+      );
+    }
+    const allowedReturn = statusesThatCanBlock(entity);
+    if (!allowedReturn.includes(context.return_to)) {
+      throw new StateMachineError(
+        `Guarda violada: return_to=${context.return_to} nao e um destino valido ao sair de BLOCKED.`,
+        {
+          guard: 'blocked-return-to',
+          nextAction: 'use um estado que possua transição para BLOCKED',
+        },
       );
     }
     if (to !== context.return_to) {
@@ -559,9 +582,8 @@ function pushBlockedFieldErrors(push, entity, label, entityKind) {
  * @param {(message: string, guard: string, nextAction: string) => void} push
  * @param {{ id?: string, blocked_by: string[] }} task
  * @param {number} index
- * @param {Set<string>} seenIds
  */
-function pushBlockedByIntegrityErrors(push, task, index, seenIds) {
+function pushBlockedByIntegrityErrors(push, task, index) {
   const deps = task.blocked_by;
   const localSeen = new Set();
   for (const depId of deps) {
@@ -582,8 +604,7 @@ function pushBlockedByIntegrityErrors(push, task, index, seenIds) {
       );
     }
   }
-  // Referencias inexistentes: avaliadas apos coleta completa (seenIds pode estar incompleto aqui).
-  void seenIds;
+  // Referencias inexistentes: avaliadas na segunda passagem apos coleta completa dos ids.
 }
 
 /**
@@ -632,6 +653,63 @@ function pushDependencyCycleErrors(push, tasks) {
 
   for (const id of graph.keys()) {
     dfs(id, []);
+  }
+}
+
+/**
+ * `status: null` representa “nenhuma sessao iniciada” somente sem trabalho ativo.
+ * @param {(message: string, guard: string, nextAction: string) => void} push
+ * @param {Record<string, unknown>} state
+ */
+function pushNullSessionInvariantErrors(push, state) {
+  const session = /** @type {Record<string, unknown>} */ (state.session);
+  const active = findActiveTasks(state);
+
+  if (active.length > 0 || state.active_task != null) {
+    push(
+      'Guarda violada: session.status null com tarefa ativa.',
+      'session-task',
+      'Inicie a sessao (status ativo + task_id) ou remova a tarefa ativa.',
+    );
+  }
+
+  if (typeof session.task_id === 'string' && session.task_id.length > 0) {
+    push(
+      'Guarda violada: session.status null com session.task_id preenchido.',
+      'session-task',
+      'Zere session.task_id quando nao houver sessao iniciada.',
+    );
+  }
+
+  for (const field of SESSION_CLOSED_REQUIRED_FIELDS) {
+    if (typeof session[field] === 'string' && /** @type {string} */ (session[field]).trim() !== '') {
+      push(
+        `Guarda violada: session.status null com metadado de sessao encerrada (${field}).`,
+        'session-task',
+        'Remova metadados de fechamento ou use status SESSION_CLOSED.',
+      );
+      break;
+    }
+  }
+}
+
+/**
+ * Regra canonica: tarefa ativa ⇔ active_task ⇔ sessao ativa correspondente.
+ * @param {(message: string, guard: string, nextAction: string) => void} push
+ * @param {Record<string, unknown>} state
+ */
+function pushActiveTaskRequiresActiveSessionErrors(push, state) {
+  const active = findActiveTasks(state);
+  if (active.length !== 1) return;
+
+  const session = /** @type {Record<string, unknown>} */ (state.session);
+  const status = session.status;
+  if (!ACTIVE_TASK_STATUSES.includes(/** @type {string} */ (status))) {
+    push(
+      'Guarda violada: tarefa ativa sem sessao ativa correspondente.',
+      'session-task',
+      'Defina session.status ativo (IN_PROGRESS|VALIDATING|REVIEWING|BLOCKED) com task_id igual a active_task.',
+    );
   }
 }
 
@@ -688,7 +766,13 @@ function pushSessionTaskInvariantErrors(push, state, tasksById) {
   }
 
   if (status === 'DONE' || status === 'PUSHED') {
-    if (typeof session.task_id === 'string' && session.task_id.length > 0) {
+    if (typeof session.task_id !== 'string' || session.task_id.length === 0) {
+      push(
+        `session.task_id obrigatorio quando session.status e ${String(status)}.`,
+        'session-task',
+        'Registre a tarefa do checkpoint em session.task_id.',
+      );
+    } else {
       const task = tasksById.get(session.task_id);
       if (!task) {
         push(
@@ -703,6 +787,13 @@ function pushSessionTaskInvariantErrors(push, state, tasksById) {
           'Mantenha session.status alinhado ao status da tarefa da sessao.',
         );
       }
+    }
+    if (state.active_task != null) {
+      push(
+        `Guarda violada: session.status=${String(status)} exige active_task null.`,
+        'session-task',
+        'Zere active_task ao alcancar DONE/PUSHED da sessao.',
+      );
     }
     if (active.length > 0) {
       push(

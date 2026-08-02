@@ -44,4 +44,4 @@ Mensagens de erro devem citar a guarda (`guard:`) e a proxima acao
 
 Esses comandos devem reutilizar o dominio em `scripts/agentctl/domain/` e a
 escrita atomica em `scripts/agentctl/infra/atomic-write.mjs` (lock + revision +
-fsync de diretorio).
+fsync do conteudo; fsync de diretorio best-effort apos rename).

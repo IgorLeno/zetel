@@ -163,6 +163,39 @@ describe('assertTransition', () => {
         return_to: 'IN_PROGRESS',
       }),
     ).not.toThrow();
+
+    expect(() =>
+      assertTransition('task', 'BLOCKED', 'VALIDATING', {
+        return_to: 'VALIDATING',
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      assertTransition('task', 'BLOCKED', 'REVIEWING', {
+        return_to: 'REVIEWING',
+      }),
+    ).not.toThrow();
+  });
+
+  it('recusa saida de BLOCKED para destinos sem aresta para BLOCKED mesmo com to===return_to', () => {
+    for (const bad of ['DONE', 'PUSHED', 'SESSION_CLOSED', 'READY', 'DRAFT']) {
+      try {
+        assertTransition('task', 'BLOCKED', bad, { return_to: bad });
+        expect.unreachable(`deveria falhar BLOCKED -> ${bad}`);
+      } catch (error: unknown) {
+        expect(error).toMatchObject({ guard: 'blocked-return-to' });
+        const err = error as Error & { nextAction?: string };
+        expect(String(err.message)).toMatch(/return_to|BLOCKED/i);
+        expect(String(err.nextAction ?? '')).toMatch(/transi[cç][aã]o para BLOCKED|possua/i);
+      }
+    }
+
+    expect(() =>
+      assertTransition('task', 'BLOCKED', 'IN_PROGRESS', { return_to: '' }),
+    ).toThrow(/return_to/i);
+    expect(() =>
+      assertTransition('task', 'BLOCKED', 'IN_PROGRESS', { return_to: '   ' }),
+    ).toThrow(/return_to/i);
   });
 });
 
@@ -359,5 +392,183 @@ describe('active tasks, sessao e bloqueadores', () => {
     );
     expect(result.ok).toBe(false);
     expect(result.issues.some((i) => i.guard === 'status')).toBe(true);
+  });
+
+  it('rejeita propriedade session.status ausente', () => {
+    const result = validateState(
+      baseState({
+        session: {
+          id: null,
+          agent: null,
+          task_id: null,
+        },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((i) => i.guard === 'status')).toBe(true);
+    expect(result.errors.join(' ')).toMatch(/ausente/i);
+  });
+
+  it('aceita session.status null sem tarefa ativa', () => {
+    const result = validateState(baseState());
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejeita session.status null com tarefa ativa', () => {
+    const result = validateState(
+      baseState({
+        active_task: '001',
+        tasks: [{ id: '001', status: 'IN_PROGRESS', blocked_by: [] }],
+        session: {
+          id: null,
+          agent: null,
+          task_id: null,
+          status: null,
+        },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((i) => i.guard === 'session-task')).toBe(true);
+    expect(result.errors.join(' ')).toMatch(/tarefa ativa|sessao ativa|status null/i);
+  });
+
+  it('rejeita tarefa ativa sem sessao ativa correspondente', () => {
+    const result = validateState(
+      baseState({
+        active_task: '002',
+        tasks: [
+          { id: '001', status: 'SESSION_CLOSED', blocked_by: [] },
+          { id: '002', status: 'IN_PROGRESS', blocked_by: ['001'] },
+        ],
+        session: {
+          id: null,
+          agent: null,
+          task_id: null,
+          status: null,
+        },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(' ')).toMatch(/tarefa ativa sem sessao ativa|status null/i);
+  });
+
+  it('rejeita sessao ativa sem task_id', () => {
+    const result = validateState(
+      baseState({
+        active_task: '001',
+        tasks: [{ id: '001', status: 'IN_PROGRESS', blocked_by: [] }],
+        session: {
+          id: 's1',
+          agent: 'cursor',
+          task_id: null,
+          status: 'IN_PROGRESS',
+        },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((i) => i.guard === 'session-task')).toBe(true);
+    expect(result.errors.join(' ')).toMatch(/task_id|obrigatorio/i);
+  });
+
+  it('exige rastreabilidade em sessoes DONE e PUSHED', () => {
+    const doneNoTask = validateState(
+      baseState({
+        active_task: null,
+        tasks: [{ id: '001', status: 'DONE', blocked_by: [] }],
+        session: {
+          id: 's1',
+          agent: 'cursor',
+          task_id: null,
+          status: 'DONE',
+        },
+      }),
+    );
+    expect(doneNoTask.ok).toBe(false);
+    expect(doneNoTask.issues.some((i) => i.guard === 'session-task')).toBe(true);
+
+    const pushedNoTask = validateState(
+      baseState({
+        active_task: null,
+        tasks: [{ id: '001', status: 'PUSHED', blocked_by: [] }],
+        session: {
+          id: 's1',
+          agent: 'cursor',
+          task_id: null,
+          status: 'PUSHED',
+        },
+      }),
+    );
+    expect(pushedNoTask.ok).toBe(false);
+    expect(pushedNoTask.issues.some((i) => i.guard === 'session-task')).toBe(true);
+
+    const doneMissing = validateState(
+      baseState({
+        active_task: null,
+        tasks: [{ id: '001', status: 'DONE', blocked_by: [] }],
+        session: {
+          id: 's1',
+          agent: 'cursor',
+          task_id: '999',
+          status: 'DONE',
+        },
+      }),
+    );
+    expect(doneMissing.ok).toBe(false);
+    expect(doneMissing.errors.join(' ')).toMatch(/inexistente|999/i);
+
+    const pushedMismatch = validateState(
+      baseState({
+        active_task: null,
+        tasks: [{ id: '001', status: 'DONE', blocked_by: [] }],
+        session: {
+          id: 's1',
+          agent: 'cursor',
+          task_id: '001',
+          status: 'PUSHED',
+        },
+      }),
+    );
+    expect(pushedMismatch.ok).toBe(false);
+    expect(pushedMismatch.errors.join(' ')).toMatch(/incompativel/i);
+
+    const doneWithActive = validateState(
+      baseState({
+        active_task: '002',
+        tasks: [
+          { id: '001', status: 'DONE', blocked_by: [] },
+          { id: '002', status: 'IN_PROGRESS', blocked_by: ['001'] },
+        ],
+        session: {
+          id: 's1',
+          agent: 'cursor',
+          task_id: '001',
+          status: 'DONE',
+        },
+      }),
+    );
+    expect(doneWithActive.ok).toBe(false);
+    expect(doneWithActive.errors.join(' ')).toMatch(/active_task|ainda ativa/i);
+
+    const pushedOk = validateState(
+      baseState({
+        active_task: null,
+        tasks: [
+          { id: '001', status: 'PUSHED', blocked_by: [] },
+          { id: '002', status: 'DRAFT', blocked_by: ['001'] },
+        ],
+        session: {
+          id: 's1',
+          agent: 'cursor',
+          task_id: '001',
+          status: 'PUSHED',
+        },
+      }),
+    );
+    expect(pushedOk.ok).toBe(true);
+  });
+
+  it('SESSION_CLOSED continua valido com metadados completos', () => {
+    const closedOk = validateState(closedSessionState());
+    expect(closedOk.ok).toBe(true);
   });
 });

@@ -57,4 +57,5 @@ Merge, pull request, tarefa 002, E2E live, OpenRouter.
 
 ## Resultado da revisao
 
-Pendente.
+`PASS` — ver `reviews/001A-spec-compliance.md` e
+`reviews/001A-engineering-quality.md`.
