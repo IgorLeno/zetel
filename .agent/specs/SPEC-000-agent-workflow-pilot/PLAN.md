@@ -7,7 +7,7 @@ better-sqlite3 e pnpm. O repositorio ja possui gates amplos, mas o contexto dos
 agentes esta duplicado em dois arquivos de cerca de 40 KB e nao existe
 orquestracao deterministica por spec/tarefa/sessao.
 
-## Estado atual
+## Baseline original do piloto
 
 - Branch base `main` alinhada com `origin/main` em `1bacc0b`.
 - `AGENTS.md`: 300 linhas, 41.336 bytes.
@@ -17,6 +17,17 @@ orquestracao deterministica por spec/tarefa/sessao.
 - Historico e lessons em `spikes/lessons.md`.
 - `.claude/settings.json` local/ignorado desabilita manualmente skills do
   Grimperium.
+
+## Execucao adaptativa aprovada
+
+As tarefas 002A e 002B demonstraram que um processo uniforme impunha gates,
+reviews e contexto de tarefa FULL a mudancas documentais. A tarefa 002C
+introduz FAST, STANDARD e FULL antes do lifecycle de tarefas para que a CLI ja
+nasca selecionando somente evidencias proporcionais ao risco.
+
+Os adapters sao reduzidos imediatamente na 002C. A tarefa 008 permanece para o
+refinamento final das skills, dos adapters e do perfil tecnico Zetel depois que
+os comandos de lifecycle e context-pack estiverem implementados.
 
 ## Solucao
 
@@ -69,9 +80,10 @@ tarefas nem fazem push sem o comando de fechamento.
 
 ### 5. Revisao
 
-`task review` cria dois pacotes de entrada a partir do mesmo fixed point e da
-spec aprovada. Os relatorios ficam separados em `reviews/`. A agregacao le
-ambos somente depois de concluidos e falha se houver finding bloqueante.
+`task review` seleciona o custo pelo perfil. FAST dispensa review externo;
+STANDARD admite no maximo uma revisao e uma rodada; FULL pode criar dois
+pacotes independentes quando conformidade e qualidade forem eixos materialmente
+uteis. Qualquer finding bloqueante aplicavel impede o fechamento.
 
 ### 6. Context-pack e nova sessao
 
@@ -88,8 +100,9 @@ Nao usa `resume`, `continue`, `fork-session` ou transcript. O launcher faz
 ### 7. Adaptadores
 
 Extrair o conteudo historico atual para documentos tematicos versionados antes
-de encurtar `AGENTS.md` e `CLAUDE.md`. Ambos apontam para a mesma camada
-compartilhada, mas preservam sintaxe e recursos especificos de cada agente.
+de encurtar `AGENTS.md` e `CLAUDE.md`. A reducao inicial ocorre na 002C para
+diminuir contexto imediatamente. A tarefa 008 refina adapters, skills e perfil
+Zetel com os comandos completos disponiveis.
 
 ### 8. Protocolo de commit e fechamento
 
@@ -151,11 +164,11 @@ disponivel, sem exigir autorreferencia.
 3. Executaveis fake para argumentos do launcher e session IDs.
 4. Testes negativos de cada guarda.
 5. Smoke das CLIs reais, sem chamada destrutiva.
-6. Gates completos do Zetel antes de commit.
+6. Gates aplicaveis ao execution profile antes de commit.
 
 ## Estrategia de rollout
 
-Somente na branch do piloto. Ha um commit de entrega por spec/tarefa e um commit
+Somente em branch dedicada. Ha um commit de entrega por spec/tarefa e um commit
 pequeno de fechamento quando necessario para versionar handoff e estado depois
 da confirmacao remota. Convergencia/Harvest pode produzir entrega separada.
 Nao ha merge nem PR nesta fase.
@@ -179,14 +192,15 @@ inversa. Nenhum dado, migration ou servico externo precisa de rollback.
 ## Sequenciamento
 
 1. Fundacao e validador de estado.
-2. Lifecycle de spec.
-3. Lifecycle de tarefa e gates.
-4. Revisao em dois eixos.
-5. Handoff e nova sessao.
-6. Skills de spec.
-7. Skills de tarefa/sessao.
-8. Adaptadores, contexto e perfil Zetel.
-9. Convergencia, Harvest, metricas e conclusao.
+2. Lifecycle de spec e correcoes pre-merge 002A/002B.
+3. Perfis adaptativos e reducao imediata de contexto (002C).
+4. Lifecycle de tarefa e gates por perfil (003).
+5. Revisao independente proporcional ao risco (004).
+6. Handoff e nova sessao (005).
+7. Skills de spec (006).
+8. Skills de tarefa/sessao (007).
+9. Refinamento final de adapters, contexto e perfil Zetel (008).
+10. Convergencia, Harvest, metricas e conclusao (009).
 
 Cada item e uma tarefa/commit/push/sessao. Depois da tarefa 005, `start-next`
 torna-se obrigatorio para todas as tarefas restantes.
