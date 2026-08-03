@@ -2,13 +2,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { StateMachineError } from './state-machine.mjs';
 
 /**
- * Atualiza apenas campos operacionais do frontmatter, preservando em posicao
- * comentarios, linhas vazias, listas em bloco, mapas aninhados e chaves
- * desconhecidas. Nao depende de parser YAML externo.
+ * Prepara o conteudo atualizado do frontmatter sem gravar no disco.
  * @param {string} taskFile
  * @param {Record<string, string | number | null | undefined>} fields
  */
-export function updateOperationalFrontmatter(taskFile, fields) {
+export function prepareOperationalFrontmatter(taskFile, fields) {
   let raw;
   try {
     raw = readFileSync(taskFile, 'utf8');
@@ -19,6 +17,27 @@ export function updateOperationalFrontmatter(taskFile, fields) {
     });
   }
 
+  return renderOperationalFrontmatter(raw, fields);
+}
+
+/**
+ * Atualiza apenas campos operacionais do frontmatter, preservando em posicao
+ * comentarios, linhas vazias, listas em bloco, mapas aninhados e chaves
+ * desconhecidas. Nao depende de parser YAML externo.
+ * @param {string} taskFile
+ * @param {Record<string, string | number | null | undefined>} fields
+ */
+export function updateOperationalFrontmatter(taskFile, fields) {
+  const updated = prepareOperationalFrontmatter(taskFile, fields);
+  writeFileSync(taskFile, updated, 'utf8');
+  return updated;
+}
+
+/**
+ * @param {string} raw
+ * @param {Record<string, string | number | null | undefined>} fields
+ */
+export function renderOperationalFrontmatter(raw, fields) {
   const normalized = raw.replace(/\r\n?/g, '\n');
   const lines = normalized.split('\n');
   if (lines[0] !== '---') {
@@ -57,9 +76,7 @@ export function updateOperationalFrontmatter(taskFile, fields) {
     }
   }
 
-  const updated = ['---', ...frontLines, '---', ...lines.slice(end + 1)].join('\n').replace(/\n*$/, '\n');
-  writeFileSync(taskFile, updated, 'utf8');
-  return updated;
+  return ['---', ...frontLines, '---', ...lines.slice(end + 1)].join('\n').replace(/\n*$/, '\n');
 }
 
 /**

@@ -314,10 +314,25 @@ function parseStartArgs(args) {
 }
 
 /**
+ * Exige blockers em SESSION_CLOSED (mais estrito que DONE/PUSHED do helper
+ * compartilhado) e reutiliza isTaskBlockedByDependencies para a semantica base.
  * @param {{ id: string, blocked_by?: string[] }} task
  * @param {Array<{ id: string, status: string }>} tasks
  */
 function assertBlockersSessionClosed(task, tasks) {
+  if (isTaskBlockedByDependencies(task, tasks)) {
+    const open = (task.blocked_by ?? []).filter((depId) => {
+      const dep = tasks.find((item) => item.id === depId);
+      return !dep || (dep.status !== 'DONE' && dep.status !== 'PUSHED' && dep.status !== 'SESSION_CLOSED');
+    });
+    throw new StateMachineError(
+      `Tarefa bloqueada por dependencias abertas (${open.join(', ') || 'desconhecidas'}).`,
+      {
+        guard: 'blocked-by',
+        nextAction: 'Feche a sessao dos blockers antes de iniciar a tarefa.',
+      },
+    );
+  }
   const byId = new Map(tasks.map((item) => [item.id, item]));
   for (const depId of task.blocked_by ?? []) {
     const dep = byId.get(depId);
@@ -330,15 +345,5 @@ function assertBlockersSessionClosed(task, tasks) {
         },
       );
     }
-  }
-  // Helper compartilhado reforça a mesma semantica de bloqueio.
-  if (isTaskBlockedByDependencies(task, tasks)) {
-    throw new StateMachineError(
-      `Tarefa bloqueada por dependencias abertas.`,
-      {
-        guard: 'blocked-by',
-        nextAction: 'Feche a sessao dos blockers antes de iniciar a tarefa.',
-      },
-    );
   }
 }

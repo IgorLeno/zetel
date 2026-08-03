@@ -28,3 +28,9 @@ Revisão independente read-only no eixo `engineering-quality`.
 ## Resultado
 
 PASS — 0 findings bloqueantes.
+
+## Observacao (pre-merge hardening)
+
+Houve possivel clock skew entre `reviewed_at` historico e o relogio do host.
+O timestamp deste artefato historico nao sera usado como prova do ajuste final
+pre-merge; o PR #8 recebera uma nova revisao independente do HEAD final.

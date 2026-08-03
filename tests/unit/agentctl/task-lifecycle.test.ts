@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -27,11 +28,38 @@ import {
   assertValidWaiver,
   buildFixedPoint,
   captureWorkspaceFingerprint,
+  writeValidationEvidence,
 } from '../../../scripts/agentctl/domain/evidence.mjs';
 import { assertApplicableReviews } from '../../../scripts/agentctl/domain/review-evidence.mjs';
 import { updateOperationalFrontmatter } from '../../../scripts/agentctl/domain/task-frontmatter.mjs';
 import { detectTypescriptAffected } from '../../../scripts/agentctl/commands/task-validate.mjs';
 import { StateMachineError } from '../../../scripts/agentctl/domain/state-machine.mjs';
+
+function reviewExpected(overrides: Record<string, unknown> = {}) {
+  const evidenceRecordedAt = '2026-08-03T12:00:00.000Z';
+  const now = new Date('2026-08-03T12:10:00.000Z');
+  return {
+    taskId: '001',
+    fixedPoint: 'abc',
+    reviewsRequested: 1,
+    evidenceRecordedAt,
+    now,
+    ...overrides,
+  };
+}
+
+function writeReview(path: string, fields: Record<string, string | number>) {
+  writeFileSync(
+    path,
+    [
+      '---',
+      ...Object.entries(fields).map(([key, value]) => `${key}: ${value}`),
+      '---',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+}
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 const AGENTCTL = join(ROOT, 'agentctl');
@@ -206,6 +234,39 @@ describe('process runner safety', () => {
     expect(() => assertSafeArgv(['echo', 'a|b'])).toThrow(/command-argv|shell|metacaractere/i);
     expect(() => assertSafeArgv(['echo', '$(rm)'])).toThrow(/command-argv|shell|metacaractere/i);
     expect(() => assertSafeArgv('pnpm test:ci' as unknown as string[])).toThrow(/argv/i);
+  });
+
+  it('rejects known shell wrappers and allows legitimate runners', () => {
+    expect(() => assertSafeArgv(['env', 'bash', '-c', 'echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['/usr/bin/env', 'BaSh', '-C', 'echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['env', '-i', 'FOO=bar', '--', 'bash', '-c', 'echo hi'])).toThrow(
+      /interpretador de shell/i,
+    );
+    expect(() => assertSafeArgv(['env', '-S', 'bash -c echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['env', '--split-string=bash -c echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['npx', 'bash', '-c', 'echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['npx', '-c', 'bash -c echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['npx', '--call', 'bash -c echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['pnpm', 'exec', 'bash', '-c', 'echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['pnpm', '-r', 'exec', 'bash', '-c', 'echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['pnpm', '--filter=x', 'exec', 'bash', '-c', 'echo hi'])).toThrow(
+      /interpretador de shell/i,
+    );
+    expect(() => assertSafeArgv(['npm', 'exec', '--', 'sh', '-c', 'echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['npm', '--prefix', '.', 'exec', '--', 'sh', '-c', 'echo hi'])).toThrow(
+      /interpretador de shell/i,
+    );
+    expect(() => assertSafeArgv(['npm', 'exec', '-c', 'bash -c echo'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['yarn', 'dlx', 'bash', '-c', 'echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['yarn', '--cwd', '.', 'dlx', 'bash', '-c', 'echo hi'])).toThrow(
+      /interpretador de shell/i,
+    );
+    expect(() => assertSafeArgv(['bunx', 'sh', '-c', 'echo hi'])).toThrow(/interpretador de shell/i);
+
+    expect(() => assertSafeArgv(['pnpm', 'exec', 'vitest', 'run', 'arquivo.test.ts'])).not.toThrow();
+    expect(() => assertSafeArgv(['pnpm', '-r', 'exec', 'vitest', 'run', 'x.test.ts'])).not.toThrow();
+    expect(() => assertSafeArgv(['env', 'NODE_ENV=test', 'pnpm', 'test:ci'])).not.toThrow();
+    expect(() => assertSafeArgv(['npx', 'vitest', 'run', 'x.test.ts'])).not.toThrow();
   });
 
   it('applies timeout and uniform ENOENT results', () => {
@@ -622,54 +683,161 @@ describe('frontmatter, reviews and git probes', () => {
     const dir = repo();
     const pass = join(dir, '001-pass.md');
     const blocker = join(dir, '001-extra-block.md');
-    const now = new Date().toISOString();
-    writeFileSync(
-      pass,
-      [
-        '---',
-        'task_id: "001"',
-        'axis: engineering-quality',
-        'reviewer: codex',
-        'fixed_point: abc',
-        'result: PASS',
-        'blocking_findings: 0',
-        `reviewed_at: ${now}`,
-        '---',
-        '',
-      ].join('\n'),
-      'utf8',
-    );
-    writeFileSync(
-      blocker,
-      [
-        '---',
-        'task_id: "001"',
-        'axis: spec-compliance',
-        'reviewer: codex',
-        'fixed_point: abc',
-        'result: BLOCK',
-        'blocking_findings: 2',
-        `reviewed_at: ${now}`,
-        '---',
-        '',
-      ].join('\n'),
-      'utf8',
-    );
+    writeReview(pass, {
+      task_id: '"001"',
+      axis: 'engineering-quality',
+      reviewer: 'codex',
+      fixed_point: 'abc',
+      result: 'PASS',
+      blocking_findings: 0,
+      reviewed_at: '2026-08-03T12:05:00.000Z',
+    });
+    writeReview(blocker, {
+      task_id: '"001"',
+      axis: 'spec-compliance',
+      reviewer: 'codex',
+      fixed_point: 'abc',
+      result: 'BLOCK',
+      blocking_findings: 2,
+      reviewed_at: '2026-08-03T12:05:00.000Z',
+    });
     expect(() =>
-      assertApplicableReviews([pass, blocker], {
-        taskId: '001',
-        fixedPoint: 'abc',
-        reviewsRequested: 1,
-      }),
+      assertApplicableReviews([pass, blocker], reviewExpected({ reviewsRequested: 1 })),
     ).toThrow(/review-blocking|BLOCK/);
 
     expect(() =>
-      assertApplicableReviews([pass], {
-        taskId: '001',
-        fixedPoint: 'abc',
-        reviewsRequested: Number.NaN,
-      }),
+      assertApplicableReviews([pass], reviewExpected({ reviewsRequested: Number.NaN })),
     ).toThrow(/guard:\s*reviews|reviews_requested/i);
+  });
+
+  it('still validates existing reviews when reviews_requested is zero', () => {
+    const dir = repo();
+    const pass = join(dir, '001-optional-pass.md');
+    const blocker = join(dir, '001-optional-block.md');
+    const stale = join(dir, '001-optional-stale.md');
+    const invalid = join(dir, '001-optional-invalid.md');
+
+    expect(
+      assertApplicableReviews([], reviewExpected({ reviewsRequested: 0 })),
+    ).toEqual([]);
+
+    writeReview(pass, {
+      task_id: '"001"',
+      axis: 'engineering-quality',
+      reviewer: 'codex',
+      fixed_point: 'abc',
+      result: 'PASS',
+      blocking_findings: 0,
+      reviewed_at: '2026-08-03T12:05:00.000Z',
+    });
+    const optionalPass = assertApplicableReviews(
+      [pass],
+      reviewExpected({ reviewsRequested: 0 }),
+    );
+    expect(optionalPass).toHaveLength(1);
+    expect(optionalPass[0]?.result).toBe('PASS');
+
+    writeReview(blocker, {
+      task_id: '"001"',
+      axis: 'spec-compliance',
+      reviewer: 'codex',
+      fixed_point: 'abc',
+      result: 'BLOCK',
+      blocking_findings: 1,
+      reviewed_at: '2026-08-03T12:05:00.000Z',
+    });
+    expect(() =>
+      assertApplicableReviews([blocker], reviewExpected({ reviewsRequested: 0 })),
+    ).toThrow(/review-blocking|BLOCK/);
+
+    writeReview(stale, {
+      task_id: '"001"',
+      axis: 'spec-compliance',
+      reviewer: 'codex',
+      fixed_point: 'stale-fp',
+      result: 'PASS',
+      blocking_findings: 0,
+      reviewed_at: '2026-08-03T12:05:00.000Z',
+    });
+    expect(() =>
+      assertApplicableReviews([stale], reviewExpected({ reviewsRequested: 0 })),
+    ).toThrow(/review-stale|fixed_point/i);
+
+    writeReview(invalid, {
+      task_id: '"001"',
+      axis: 'not-an-axis',
+      reviewer: 'codex',
+      fixed_point: 'abc',
+      result: 'PASS',
+      blocking_findings: 0,
+      reviewed_at: '2026-08-03T12:05:00.000Z',
+    });
+    expect(() =>
+      assertApplicableReviews([invalid], reviewExpected({ reviewsRequested: 0 })),
+    ).toThrow(/review-invalid|axis/i);
+  });
+
+  it('validates reviewed_at chronology against evidence and clock skew', () => {
+    const dir = repo();
+    const file = join(dir, '001-chrono.md');
+    const base = {
+      task_id: '"001"',
+      axis: 'engineering-quality',
+      reviewer: 'codex',
+      fixed_point: 'abc',
+      result: 'PASS',
+      blocking_findings: 0,
+    };
+
+    writeReview(file, { ...base, reviewed_at: 'ontem' });
+    expect(() => assertApplicableReviews([file], reviewExpected())).toThrow(/reviewed_at invalido/i);
+
+    writeReview(file, { ...base, reviewed_at: '2026-08-03T11:59:00.000Z' });
+    expect(() => assertApplicableReviews([file], reviewExpected())).toThrow(/anterior a evidencia/i);
+
+    writeReview(file, { ...base, reviewed_at: '2026-08-03T12:20:00.000Z' });
+    expect(() => assertApplicableReviews([file], reviewExpected())).toThrow(/futuro|tolerancia/i);
+
+    writeReview(file, { ...base, reviewed_at: '2026-08-03T12:05:00.000Z' });
+    expect(assertApplicableReviews([file], reviewExpected())).toHaveLength(1);
+  });
+
+  it('writes validation evidence atomically without leftover temps', () => {
+    const dir = repo();
+    const specDir = join(dir, '.agent/specs/SPEC-atomic');
+    mkdirSync(join(specDir, 'evidence'), { recursive: true });
+    const first = {
+      schema_version: 1,
+      task_id: '001',
+      fixed_point: 'fp-1',
+      recorded_at: '2026-08-03T12:00:00.000Z',
+    };
+    const path = writeValidationEvidence(specDir, '001', first);
+    expect(path.endsWith('001-validation.json')).toBe(true);
+    const raw = readFileSync(path, 'utf8');
+    expect(raw.endsWith('\n')).toBe(true);
+    expect(JSON.parse(raw)).toMatchObject(first);
+    expect(readdirSync(join(specDir, 'evidence')).every((name) => !name.endsWith('.tmp'))).toBe(true);
+
+    const second = {
+      schema_version: 1,
+      task_id: '001',
+      fixed_point: 'fp-2',
+      recorded_at: '2026-08-03T12:01:00.000Z',
+      note: 'replaced',
+    };
+    writeValidationEvidence(specDir, '001', second);
+    expect(JSON.parse(readFileSync(path, 'utf8'))).toMatchObject(second);
+    expect(readdirSync(join(specDir, 'evidence')).filter((name) => name.endsWith('.tmp'))).toEqual([]);
+
+    // Falha simulada: diretorio final impede rename atomico; nao pode sobrar JSON parcial.
+    const failDir = join(dir, '.agent/specs/SPEC-atomic-fail');
+    const evidenceDir = join(failDir, 'evidence');
+    mkdirSync(evidenceDir, { recursive: true });
+    mkdirSync(join(evidenceDir, '001-validation.json'));
+    expect(() => writeValidationEvidence(failDir, '001', first)).toThrow(/evidence-write|escrita atomica/i);
+    expect(readdirSync(evidenceDir).filter((name) => name.endsWith('.tmp'))).toEqual([]);
+    expect(statSync(join(evidenceDir, '001-validation.json')).isDirectory()).toBe(true);
   });
 
   it('fails typescript detection when git probe errors', () => {
@@ -1009,6 +1177,115 @@ describe('agentctl task validate/close', () => {
     });
     expect(blocked.status).toBe(1);
     expect(blocked.stderr).toMatch(/guard:\s*review-blocking/i);
+  });
+
+  it('keeps TASKS.md byte-identical across start/validate/close', () => {
+    const dir = repo();
+    const bin = writeFakeBin(dir);
+    const id = 'SPEC-224-tasks-md';
+    const specDir = seedApprovedSpec(dir, id, [{ id: '001', status: 'READY', blocked_by: [] }]);
+    const tasksPath = join(specDir, 'TASKS.md');
+    const before = readFileSync(tasksPath);
+    const beforeMtime = statSync(tasksPath).mtimeMs;
+
+    expect(
+      run(
+        dir,
+        'task',
+        'start',
+        id,
+        '001',
+        '--agent',
+        'claude',
+        '--profile',
+        'FAST',
+        '--justification',
+        'doc',
+        '--reviews',
+        '0',
+      ).status,
+    ).toBe(0);
+
+    const env = { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` };
+    const validate = spawnSync(
+      AGENTCTL,
+      [
+        'task',
+        'validate',
+        id,
+        '001',
+        '--focused-json',
+        JSON.stringify(['pnpm', 'exec', 'vitest', 'run', 'x.test.ts']),
+      ],
+      { cwd: dir, encoding: 'utf8', env },
+    );
+    expect(validate.status, validate.stderr).toBe(0);
+
+    const close = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env,
+    });
+    expect(close.status, close.stderr).toBe(0);
+
+    const after = readFileSync(tasksPath);
+    expect(Buffer.compare(before, after)).toBe(0);
+    expect(statSync(tasksPath).mtimeMs).toBe(beforeMtime);
+  });
+
+  it('returns actionable task-file error when close frontmatter write fails after DONE', () => {
+    const dir = repo();
+    const bin = writeFakeBin(dir);
+    const id = 'SPEC-225-close-fm';
+    seedApprovedSpec(dir, id, [{ id: '001', status: 'READY', blocked_by: [] }]);
+    expect(
+      run(
+        dir,
+        'task',
+        'start',
+        id,
+        '001',
+        '--agent',
+        'claude',
+        '--profile',
+        'FAST',
+        '--justification',
+        'doc',
+        '--reviews',
+        '0',
+      ).status,
+    ).toBe(0);
+
+    const env = { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` };
+    const validate = spawnSync(
+      AGENTCTL,
+      [
+        'task',
+        'validate',
+        id,
+        '001',
+        '--focused-json',
+        JSON.stringify(['pnpm', 'exec', 'vitest', 'run', 'x.test.ts']),
+      ],
+      { cwd: dir, encoding: 'utf8', env },
+    );
+    expect(validate.status, validate.stderr).toBe(0);
+
+    const taskFile = join(dir, '.agent/specs', id, 'tasks/001-task.md');
+    chmodSync(taskFile, 0o444);
+    const close = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env,
+    });
+    chmodSync(taskFile, 0o644);
+    expect(close.status).toBe(1);
+    expect(close.stderr).toMatch(/guard:\s*task-file/i);
+    expect(close.stderr).toMatch(/DONE|state\.json/i);
+    expect(close.stderr).toMatch(/Reconcilie|reconcil/i);
+    const state = JSON.parse(readFileSync(join(dir, '.agent/specs', id, 'state.json'), 'utf8'));
+    expect(state.tasks[0].status).toBe('DONE');
+    expect(state.active_task).toBeNull();
   });
 
   it('preserves failed gate results under waiver rules', () => {

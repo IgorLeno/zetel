@@ -3,6 +3,9 @@ import { basename } from 'node:path';
 import { StateMachineError } from './state-machine.mjs';
 
 const AXES = new Set(['spec-compliance', 'engineering-quality']);
+const REVIEW_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const ISO_TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
 /**
  * @param {string} path
@@ -59,12 +62,11 @@ export function parseReviewReport(path) {
  *   taskId: string,
  *   fixedPoint: string,
  *   reviewsRequested: number,
+ *   evidenceRecordedAt: string,
+ *   now?: Date | string | number,
  * }} expected
  */
 export function assertApplicableReviews(reviewPaths, expected) {
-  if (expected.reviewsRequested === 0) {
-    return [];
-  }
   if (!Number.isFinite(expected.reviewsRequested)
     || !Number.isInteger(expected.reviewsRequested)
     || expected.reviewsRequested < 0) {
@@ -73,6 +75,17 @@ export function assertApplicableReviews(reviewPaths, expected) {
       nextAction: 'Corrija reviews_requested para um inteiro nao negativo permitido pelo perfil.',
     });
   }
+
+  // Zero significa "nenhum review obrigatorio"; arquivos existentes ainda contam.
+  const parsed = reviewPaths.map((path) => parseReviewReport(path));
+  for (const review of parsed) {
+    assertReviewMetadata(review, expected);
+  }
+
+  if (expected.reviewsRequested === 0) {
+    return parsed;
+  }
+
   if (reviewPaths.length < expected.reviewsRequested) {
     throw new StateMachineError(
       `Reviews insuficientes: ${reviewPaths.length} de ${expected.reviewsRequested}.`,
@@ -81,13 +94,6 @@ export function assertApplicableReviews(reviewPaths, expected) {
         nextAction: 'Adicione os relatorios versionados aplicaveis ao perfil antes de close.',
       },
     );
-  }
-
-  // Todos os arquivos encontrados sao parseados e verificados; extras bloqueantes
-  // nunca passam despercebidos.
-  const parsed = reviewPaths.map((path) => parseReviewReport(path));
-  for (const review of parsed) {
-    assertReviewMetadata(review, expected);
   }
 
   // Conjunto minimo exigido: primeiros N com eixos distintos e PASS limpo.
@@ -124,7 +130,12 @@ export function assertApplicableReviews(reviewPaths, expected) {
 
 /**
  * @param {ReturnType<typeof parseReviewReport>} review
- * @param {{ taskId: string, fixedPoint: string }} expected
+ * @param {{
+ *   taskId: string,
+ *   fixedPoint: string,
+ *   evidenceRecordedAt: string,
+ *   now?: Date | string | number,
+ * }} expected
  */
 function assertReviewMetadata(review, expected) {
   if (review.task_id !== expected.taskId) {
@@ -145,6 +156,7 @@ function assertReviewMetadata(review, expected) {
       nextAction: 'Preencha reviewer e reviewed_at.',
     });
   }
+  assertReviewedAtChronology(review, expected);
   if (review.fixed_point !== expected.fixedPoint) {
     throw new StateMachineError(`Review ${review.file} stale (fixed_point divergente).`, {
       guard: 'review-stale',
@@ -173,6 +185,76 @@ function assertReviewMetadata(review, expected) {
       nextAction: 'Registre result: PASS e blocking_findings: 0.',
     });
   }
+}
+
+/**
+ * @param {ReturnType<typeof parseReviewReport>} review
+ * @param {{
+ *   evidenceRecordedAt: string,
+ *   now?: Date | string | number,
+ * }} expected
+ */
+function assertReviewedAtChronology(review, expected) {
+  const reviewedMs = parseIsoTimestamp(review.reviewed_at);
+  if (reviewedMs == null) {
+    throw new StateMachineError(`Review ${review.file} com reviewed_at invalido.`, {
+      guard: 'review-invalid',
+      nextAction: 'Regere o review depois da validacao atual usando um timestamp real.',
+    });
+  }
+
+  const evidenceMs = parseIsoTimestamp(expected.evidenceRecordedAt);
+  if (evidenceMs == null) {
+    throw new StateMachineError('evidence.recorded_at invalido para checagem cronologica.', {
+      guard: 'review-invalid',
+      nextAction: 'Regere o review depois da validacao atual usando um timestamp real.',
+    });
+  }
+  if (reviewedMs < evidenceMs) {
+    throw new StateMachineError(
+      `Review ${review.file} anterior a evidencia de validacao.`,
+      {
+        guard: 'review-invalid',
+        nextAction: 'Regere o review depois da validacao atual usando um timestamp real.',
+      },
+    );
+  }
+
+  const nowMs = resolveNowMs(expected.now);
+  if (reviewedMs > nowMs + REVIEW_CLOCK_SKEW_MS) {
+    throw new StateMachineError(
+      `Review ${review.file} com reviewed_at no futuro alem da tolerancia.`,
+      {
+        guard: 'review-invalid',
+        nextAction: 'Regere o review depois da validacao atual usando um timestamp real.',
+      },
+    );
+  }
+}
+
+/**
+ * @param {unknown} value
+ * @returns {number | null}
+ */
+function parseIsoTimestamp(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!ISO_TIMESTAMP.test(trimmed)) return null;
+  const ms = Date.parse(trimmed);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * @param {Date | string | number | undefined} value
+ */
+function resolveNowMs(value) {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const ms = Date.parse(value);
+    if (Number.isFinite(ms)) return ms;
+  }
+  return Date.now();
 }
 
 /**

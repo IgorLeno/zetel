@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { writeTextAtomic } from '../infra/atomic-file.mjs';
 import { StateMachineError } from './state-machine.mjs';
 import { canonicalizeArtifact, sha256 } from './spec-artifacts.mjs';
 
@@ -168,10 +169,8 @@ export function buildFixedPoint(parts) {
  * @param {Record<string, unknown>} evidence
  */
 export function writeValidationEvidence(specDir, taskId, evidence) {
-  const dir = join(specDir, 'evidence');
-  mkdirSync(dir, { recursive: true });
-  const path = join(dir, `${taskId}-validation.json`);
-  writeFileSync(path, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
+  const path = join(specDir, 'evidence', `${taskId}-validation.json`);
+  writeTextAtomic(path, `${JSON.stringify(evidence, null, 2)}\n`);
   return path;
 }
 

@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { assertReviewsAllowed, buildGatePlan, isExecutionProfile } from '../domain/execution-profile.mjs';
 import {
@@ -10,7 +11,7 @@ import {
 import { assertApplicableReviews } from '../domain/review-evidence.mjs';
 import { assertSafeSpecId } from '../domain/spec-id.mjs';
 import { assertTransition, StateMachineError, validateState } from '../domain/state-machine.mjs';
-import { updateOperationalFrontmatter } from '../domain/task-frontmatter.mjs';
+import { prepareOperationalFrontmatter } from '../domain/task-frontmatter.mjs';
 import { resolveTaskFile } from '../domain/task-selection.mjs';
 import { writeJsonAtomic } from '../infra/atomic-write.mjs';
 import { loadSpecState } from '../infra/read-state.mjs';
@@ -124,10 +125,21 @@ export function runTaskClose(args, io = {}) {
       taskId,
       fixedPoint: String(evidence.fixed_point),
       reviewsRequested,
+      evidenceRecordedAt: String(evidence.recorded_at ?? ''),
+      now: new Date(),
     });
 
     assertTransition('task', 'REVIEWING', 'DONE');
     assertTransition('session', 'REVIEWING', 'DONE');
+
+    const reviewResult = reviewsRequested === 0 ? 'NOT_REQUIRED' : 'PASS';
+    const frontmatterFields = {
+      status: 'DONE',
+      validation: 'PASS',
+      review_result: reviewResult,
+    };
+    // Prepara o markdown antes da escrita atomica do estado para falhar cedo.
+    const preparedFrontmatter = prepareOperationalFrontmatter(taskFile, frontmatterFields);
 
     const doneAt = new Date().toISOString();
     const next = {
@@ -138,7 +150,7 @@ export function runTaskClose(args, io = {}) {
           ? {
               ...item,
               status: 'DONE',
-              review_result: reviewsRequested === 0 ? 'NOT_REQUIRED' : 'PASS',
+              review_result: reviewResult,
               validation: 'PASS',
             }
           : item,
@@ -167,11 +179,20 @@ export function runTaskClose(args, io = {}) {
     }
 
     const written = writeJsonAtomic(path, next, { expectedRevision: state.revision });
-    updateOperationalFrontmatter(taskFile, {
-      status: 'DONE',
-      validation: 'PASS',
-      review_result: reviewsRequested === 0 ? 'NOT_REQUIRED' : 'PASS',
-    });
+    try {
+      writeFileSync(taskFile, preparedFrontmatter, 'utf8');
+    } catch (error) {
+      throw new StateMachineError(
+        `Estado DONE persistido em state.json, mas frontmatter falhou: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        {
+          guard: 'task-file',
+          nextAction:
+            'Reconcilie o markdown da tarefa com status DONE, validation PASS e review_result alinhado; nao desfacca a escrita atomica ja confirmada.',
+        },
+      );
+    }
 
     stdout.write([
       `task_closed: ${taskId}`,

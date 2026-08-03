@@ -154,11 +154,22 @@ Comandos estruturados usam arrays JSON de argv e `spawn` com `shell: false`.
 Nao ha parser de shell; pipe, redirect, `&&` e substituicao sao rejeitados.
 Tambem sao rejeitadas invocacoes indiretas de interpretador (`sh`/`bash`/`dash`/
 `zsh`/`ksh`/`fish -c`, `cmd /c`, `powershell`/`pwsh -Command`), inclusive com
-caminhos absolutos e caixa variada. Argumentos com espacos internos legitimos
-permanecem permitidos. E2E live/OpenRouter nunca entra no plano. Todo gate usa
-timeout padrao de 15 minutos (`DEFAULT_TIMEOUT_MS`); override explicito por
-chamada e permitido. Timeout (exit 124) e ENOENT (exit 127) produzem resultado
-estruturado uniforme com `output` redigido, sem lancar antes da evidencia.
+caminhos absolutos, caixa variada e wrappers conhecidos (`env`, `npx`,
+`pnpm exec`/`dlx`, `npm exec`, `yarn dlx`, `bunx`), opcoes intermediarias e
+separador `--`. Wrappers legitimos que nao desembocam em shell `-c` continuam
+permitidos. Argumentos com espacos internos legitimos permanecem permitidos.
+E2E live/OpenRouter nunca entra no plano. Todo gate usa timeout padrao de
+15 minutos (`DEFAULT_TIMEOUT_MS`); override explicito por chamada e permitido.
+Timeout (exit 124) e ENOENT (exit 127) produzem resultado estruturado uniforme
+com `output` redigido, sem lancar antes da evidencia.
+
+`state.json` e a fonte de verdade do status operacional da tarefa/sessao.
+`TASKS.md` permanece como decomposicao documental aprovada da SPEC: IDs,
+titulos e `blocked_by` continuam protegidos e coerentes, mas o status na tabela
+representa apenas o checkpoint documental aprovado. Transicoes
+`READY`/`IN_PROGRESS`/`VALIDATING`/`REVIEWING`/`DONE`/`PUSHED`/`SESSION_CLOSED`
+pertencem ao `state.json` e ao frontmatter operacional individual. Comandos de
+lifecycle nunca modificam `TASKS.md`.
 
 ### `./agentctl task next`
 
@@ -199,14 +210,20 @@ test:ci + coverage + typecheck + diff-check.
 ### Evidencias, freshness, waivers e reviews
 
 Evidencia registra argv, categoria, timestamps, exit, HEAD, fingerprints e
-revision. Fixed point fica stale se HEAD/diff material/tarefa/perfil/plano
-mudarem. Reviews e `state.json` operacionais nao invalidam o tree hash;
+revision; a gravacao usa escrita atomica (temp exclusivo + fsync + rename) na
+pasta `evidence/`. Fixed point fica stale se HEAD/diff material/tarefa/perfil/
+plano mudarem. Reviews e `state.json` operacionais nao invalidam o tree hash;
 mudanca material da tarefa usa fingerprint canonico (campos operacionais
 excluidos). Waiver preserva falha original, exige identidade humana e nunca
 libera E2E live. Reviews versionados em `reviews/<task>-*.md` com
 `task_id`, `axis`, `reviewer`, `fixed_point`, `result`, `blocking_findings`,
-`reviewed_at`. FAST exige 0; STANDARD/FULL seguem `reviews_requested` do start.
-Checks externos pending nao sao reviews e nao bloqueiam.
+`reviewed_at` (ISO-8601, nao anterior a `evidence.recorded_at`, tolerancia
+maxima de 5 minutos para relogio futuro). `reviews_requested: 0` significa
+que nenhum review e obrigatorio, mas qualquer arquivo existente ainda e
+parseado/validado; `BLOCK`, findings, fixed point stale ou metadata invalida
+impedem o close. FAST exige 0 obrigatorios; STANDARD/FULL seguem
+`reviews_requested` do start. Checks externos pending nao sao reviews e nao
+bloqueiam.
 
 ### `./agentctl task close`
 

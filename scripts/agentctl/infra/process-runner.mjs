@@ -14,17 +14,36 @@ const SECRETISH = [
   /-----BEGIN[ A-Z]*PRIVATE KEY-----[\s\S]*?-----END[ A-Z]*PRIVATE KEY-----/g,
 ];
 
+const UNIX_SHELLS = new Set(['sh', 'bash', 'dash', 'zsh', 'ksh', 'fish']);
+
 /**
- * Detecta invocacao indireta de shell via interpretador + flag de comando.
+ * Detecta invocacao indireta de shell via interpretador + flag de comando,
+ * inclusive atras de wrappers conhecidos (env/npx/pnpm exec/npm exec/yarn/bunx).
  * @param {string[]} argv
  */
 export function assertNoIndirectShell(argv) {
   if (!Array.isArray(argv) || argv.length < 2) return;
+  assertShellInterpreter(argv);
+
+  let remaining = [...argv];
+  for (let depth = 0; depth < 8; depth += 1) {
+    const peeled = peelOneKnownWrapper(remaining);
+    if (!peeled) break;
+    remaining = peeled;
+    if (remaining.length >= 2) {
+      assertShellInterpreter(remaining);
+    }
+  }
+}
+
+/**
+ * @param {string[]} argv
+ */
+function assertShellInterpreter(argv) {
   const executable = normalizeExecutableName(argv[0]);
   const flags = argv.slice(1).map((part) => String(part).toLowerCase());
 
-  const unixShells = new Set(['sh', 'bash', 'dash', 'zsh', 'ksh', 'fish']);
-  if (unixShells.has(executable) && flags.some((flag) => flag === '-c' || flag === '-lc' || flag === '-ic')) {
+  if (UNIX_SHELLS.has(executable) && flags.some((flag) => flag === '-c' || flag === '-lc' || flag === '-ic')) {
     throwIndirectShell(argv[0], '-c');
   }
 
@@ -45,6 +64,176 @@ export function assertNoIndirectShell(argv) {
 }
 
 /**
+ * Remove um wrapper conhecido da frente do argv. Retorna null se nao houver.
+ * @param {string[]} argv
+ * @returns {string[] | null}
+ */
+function peelOneKnownWrapper(argv) {
+  if (!Array.isArray(argv) || argv.length === 0) return null;
+  const executable = normalizeExecutableName(argv[0]);
+
+  if (executable === 'env') {
+    return peelEnvWrapper(argv);
+  }
+  if (executable === 'npx' || executable === 'bunx') {
+    return peelPackageRunnerArgs(argv.slice(1), executable);
+  }
+  if (executable === 'pnpm') {
+    const sub = findSubcommand(argv.slice(1), ['exec', 'dlx']);
+    if (!sub) return null;
+    return peelPackageRunnerArgs(sub.rest, `pnpm ${sub.name}`);
+  }
+  if (executable === 'npm') {
+    const sub = findSubcommand(argv.slice(1), ['exec']);
+    if (!sub) return null;
+    return peelPackageRunnerArgs(sub.rest, 'npm exec');
+  }
+  if (executable === 'yarn') {
+    const sub = findSubcommand(argv.slice(1), ['dlx', 'exec']);
+    if (!sub) return null;
+    return peelPackageRunnerArgs(sub.rest, `yarn ${sub.name}`);
+  }
+  return null;
+}
+
+/**
+ * Localiza subcomando apos flags globais do package manager.
+ * @param {string[]} args
+ * @param {string[]} names
+ * @returns {{ name: string, rest: string[] } | null}
+ */
+function findSubcommand(args, names) {
+  const wanted = new Set(names.map((name) => name.toLowerCase()));
+  let index = 0;
+  while (index < args.length) {
+    const part = String(args[index]);
+    if (part === '--') {
+      index += 1;
+      break;
+    }
+    if (!part.startsWith('-')) break;
+    // Flags globais com valor separado mais comuns.
+    if (
+      part === '-C'
+      || part === '--dir'
+      || part === '--prefix'
+      || part === '--cwd'
+      || part === '--filter'
+      || part === '-F'
+      || part === '-w'
+      || part === '--workspace-root'
+    ) {
+      index += part.includes('=') ? 1 : 2;
+      continue;
+    }
+    if (part.startsWith('--filter=') || part.startsWith('--prefix=') || part.startsWith('--cwd=')
+      || part.startsWith('--dir=')) {
+      index += 1;
+      continue;
+    }
+    index += 1;
+  }
+  if (index >= args.length) return null;
+  const name = String(args[index]).toLowerCase();
+  if (!wanted.has(name)) return null;
+  return { name, rest: args.slice(index + 1) };
+}
+
+/**
+ * @param {string[]} argv env + args
+ * @returns {string[] | null}
+ */
+function peelEnvWrapper(argv) {
+  let index = 1;
+  while (index < argv.length) {
+    const part = String(argv[index]);
+    if (part === '--') {
+      index += 1;
+      break;
+    }
+    if (part.startsWith('-')) {
+      // -S/--split-string reconstroi argv via split shell-like; rejeitar.
+      if (isEnvSplitStringFlag(part)) {
+        throwIndirectShell(argv[0], '-S');
+      }
+      // Opcoes curtas/longas conhecidas do env (-i, -u NAME, --ignore-environment...).
+      if (part === '-u' || part === '--unset') {
+        index += 2;
+        continue;
+      }
+      if (part.startsWith('-u') && part.length > 2) {
+        index += 1;
+        continue;
+      }
+      if (part.startsWith('--unset=')) {
+        index += 1;
+        continue;
+      }
+      index += 1;
+      continue;
+    }
+    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(part)) {
+      index += 1;
+      continue;
+    }
+    break;
+  }
+  if (index >= argv.length) return null;
+  return argv.slice(index);
+}
+
+/** @param {string} part */
+function isEnvSplitStringFlag(part) {
+  const lower = part.toLowerCase();
+  if (lower === '--split-string' || lower.startsWith('--split-string=')) return true;
+  if (lower.startsWith('--')) return false;
+  // GNU env: -S, -Sstring, ou cluster curto contendo S (ex.: -iS).
+  return /^-([^-]*s)/i.test(part);
+}
+
+/**
+ * Consome opcoes intermediarias limitadas e separador `--` ate o comando alvo.
+ * Rejeita -c/--call/--shell: o valor e o proprio comando shell.
+ * @param {string[]} args
+ * @param {string} runnerLabel
+ * @returns {string[] | null}
+ */
+function peelPackageRunnerArgs(args, runnerLabel) {
+  let index = 0;
+  while (index < args.length) {
+    const part = String(args[index]);
+    const lower = part.toLowerCase();
+    if (part === '--') {
+      index += 1;
+      break;
+    }
+    if (!part.startsWith('-')) break;
+    if (
+      lower === '-c'
+      || lower === '--call'
+      || lower === '--shell'
+      || lower.startsWith('--call=')
+      || lower.startsWith('--shell=')
+    ) {
+      throwIndirectShell(runnerLabel, '--call');
+    }
+    // Opcoes com valor separado: --package name, -p name, --workspace, etc.
+    if (
+      part === '-p'
+      || part === '--package'
+      || part === '-w'
+      || part === '--workspace'
+    ) {
+      index += 2;
+      continue;
+    }
+    index += 1;
+  }
+  if (index >= args.length) return null;
+  return args.slice(index);
+}
+
+/**
  * @param {string} command
  * @param {string} flag
  */
@@ -61,7 +250,7 @@ function throwIndirectShell(command, flag) {
 /** @param {string} command */
 function normalizeExecutableName(command) {
   const base = basename(String(command)).toLowerCase();
-  return base.endsWith('.exe') ? base : base;
+  return base;
 }
 
 /**
