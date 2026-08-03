@@ -27,8 +27,14 @@ contexto inicial substancialmente menor e retomada apenas por Git, handoff e
 context-pack.
 
 Checkpoint atual: tarefas `001`, `001A`, `001B` e `002` em `SESSION_CLOSED`.
-A tarefa `002` entregou `agentctl spec create`, `spec approve` e `spec status`,
-com gates verdes, duas revisoes independentes `PASS` e delivery
-`febf5fee04b572c4aee71d5f837328513697516a` confirmado no remote. A tarefa
-`003` (`Lifecycle de tarefa e gates`) esta `READY` para um processo Claude novo;
-nao foi iniciada nesta sessao.
+A tarefa `002A` executa as correcoes pre-merge do lifecycle de spec encontradas
+apos o fechamento da 002. A 002A chegou a `DONE` com gates completos e dois
+reviews Claude Code `PASS`; a tarefa `003`
+(`Lifecycle de tarefa e gates`) permanece `DRAFT`, bloqueada por `002A`, e nao
+foi iniciada.
+
+O fixed point revisado endurece o parser de `spec create`, adiciona
+reapproval legada explicita, separa integrity ausente de malformada e valida
+conteudo, frontmatter e coerencia de tarefas. `SPEC-SUMMARY.md` continua
+obrigatorio e contextual fora do digest material; seus marcadores continuam
+bloqueando approval.

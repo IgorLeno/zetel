@@ -612,3 +612,15 @@ No blocking violations identified. The fixed-point implementation is **spec-comp
 ---
 
 **END OF REVIEW**
+
+---
+
+## Errata pré-merge registrada pela tarefa 002A
+
+O trecho original "Malformed integrity envelopes caught (14 mutations tested)"
+estava incorreto. A lista versionada no fixed point da tarefa 002 continha
+**9 mutações**, como já indicado na seção "Additional coverage" deste mesmo
+relatório. A tarefa 002A não altera o veredicto histórico: registra esta errata
+de forma explícita e amplia a revalidação corrente para **15 mutações**,
+incluindo `integrity` como `null`, array e string, `manifest` string, `digest`
+numérico e envelope parcial.

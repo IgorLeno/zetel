@@ -14,7 +14,22 @@ atomica com `expectedRevision`.
 | `active_task` | string \| null | Id da unica tarefa ativa, ou null |
 | `tasks` | array | Cada item: `id`, `status`, `blocked_by[]` |
 | `session` | objeto | Metadados da sessao corrente/ultima |
-| `approval` | objeto | Booleans: spec, plan, tasks, architecture_decisions |
+| `approval` | objeto | Booleans obrigatorios e envelope de integridade opcional |
+
+### Approval de spec
+
+- Propriedade `approval.integrity` ausente distingue approval legada de uma
+  approval ainda pendente. Se o workflow ja estiver aprovado, `spec status`
+  informa `LEGACY_UNVERIFIED`; caso contrario, `PENDING`.
+- Propriedade `approval.integrity` presente e invalida — inclusive `null`,
+  array, string, manifest/digest malformados ou envelope parcial — informa
+  `TAMPERED`; presenca invalida nunca e tratada como legado.
+- Reapproval legada e uma migracao explicita do envelope, nao uma transicao
+  `APPROVED -> APPROVED`. Ela preserva os metadados anteriores em
+  `approval.legacy_approval` com `migrated_at` e motivo
+  `integrity-envelope-migration`.
+- Approval ja integra nao pode ser sobrescrita; mudanca posterior exige futura
+  revisao de spec.
 
 ## Subconjuntos de status
 

@@ -76,7 +76,57 @@ function approve(dir: string, id: string) {
   expect(run(dir, 'spec', 'approve', id, '--approved-by', 'Ana Silva', '--confirm-human').status).toBe(0);
 }
 
+function makeLegacyApproval(dir: string, id: string, kind?: 'mini' | 'full') {
+  expect(run(dir, 'spec', 'create', id, '--kind', kind ?? 'full', '--title', 'Documento legado').status).toBe(0);
+  completeForApproval(dir, id);
+  const statePath = join(dir, '.agent/specs', id, 'state.json');
+  const state = JSON.parse(readFileSync(statePath, 'utf8'));
+  state.spec.status = 'APPROVED';
+  state.spec.approved_by = 'Aprovadora Legada';
+  state.spec.approved_at = '2026-01-02T03:04:05.000Z';
+  if (kind) state.spec.kind = kind;
+  else delete state.spec.kind;
+  state.approval = {
+    spec: true,
+    plan: true,
+    tasks: true,
+    architecture_decisions: true,
+  };
+  writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  return { specDir: join(dir, '.agent/specs', id), statePath, state };
+}
+
 describe('agentctl spec lifecycle via public launcher', () => {
+  it('rejects malformed spec create flags with usage exit 2 and no created tree', () => {
+    const dir = repo();
+    const cases = [
+      ['SPEC-120-missing-kind', '--title', 'Foo'],
+      ['SPEC-121-missing-title', '--kind', 'mini'],
+      ['SPEC-122-kind-value', '--kind', '--title', 'Foo'],
+      ['SPEC-123-title-value', '--kind', 'mini', '--title'],
+      ['SPEC-124-duplicate-kind', '--kind', 'mini', '--kind', 'full', '--title', 'Foo'],
+      ['SPEC-125-duplicate-title', '--kind', 'mini', '--title', 'Foo', '--title', 'Bar'],
+      ['SPEC-126-unknown', '--kind', 'mini', '--title', 'Foo', '--other', 'x'],
+      ['SPEC-127-extra', '--kind', 'mini', '--title', 'Foo', 'extra'],
+      ['SPEC-128-repro-one', 'mini', '--title', 'Foo'],
+      ['SPEC-129-repro-two', '--kind', 'mini', 'full'],
+    ];
+    for (const args of cases) {
+      const result = run(dir, 'spec', 'create', ...args);
+      expect(result.status, args.join(' ')).toBe(2);
+      expect(result.stderr, args.join(' ')).toMatch(/guard:\s*usage/i);
+    }
+    const specsDir = join(dir, '.agent/specs');
+    expect(existsSync(specsDir) ? readdirSync(specsDir) : []).toEqual([]);
+  }, 15_000);
+
+  it('accepts inverted create flag order and a quoted title with spaces', () => {
+    const dir = repo();
+    const result = run(dir, 'spec', 'create', 'SPEC-130-inverted', '--title', 'Titulo com espacos', '--kind', 'mini');
+    expect(result.status).toBe(0);
+    expect(readFileSync(join(dir, '.agent/specs/SPEC-130-inverted/SPEC.md'), 'utf8')).toContain('Titulo com espacos');
+  });
+
   it('creates complete mini and full specs in the Git root without overwriting a collision', () => {
     const dir = repo();
     const nested = join(dir, 'nested/working/directory');
@@ -132,9 +182,9 @@ describe('agentctl spec lifecycle via public launcher', () => {
     expect(pending.stdout).toMatch(/approval_status: PENDING/);
     expect(pending.stdout).toMatch(/open_approval_markers:/);
 
-    const openQuestion = run(dir, 'spec', 'approve', 'SPEC-103-approval', '--approved-by', 'Ana');
-    expect(openQuestion.status).toBe(2);
-    expect(openQuestion.stderr).toMatch(/confirm-human/i);
+    const openQuestion = run(dir, 'spec', 'approve', 'SPEC-103-approval', '--approved-by', 'Ana', '--confirm-human');
+    expect(openQuestion.status).toBe(1);
+    expect(openQuestion.stderr).toMatch(/guard:\s*approval-readiness/i);
 
     completeForApproval(dir, 'SPEC-103-approval');
     const noConfirm = run(dir, 'spec', 'approve', 'SPEC-103-approval', '--approved-by', 'Ana');
@@ -257,6 +307,12 @@ describe('agentctl spec lifecycle via public launcher', () => {
     const statePath = join(dir, '.agent/specs', id, 'state.json');
     const base = JSON.parse(readFileSync(statePath, 'utf8'));
     const mutations: Array<[string, (state: any) => void]> = [
+      ['integrity_null', (state) => { state.approval.integrity = null; }],
+      ['integrity_array', (state) => { state.approval.integrity = []; }],
+      ['integrity_string', (state) => { state.approval.integrity = 'invalid'; }],
+      ['manifest_string', (state) => { state.approval.integrity.manifest = 'invalid'; }],
+      ['digest_number', (state) => { state.approval.integrity.digest = 42; }],
+      ['partial_envelope', (state) => { state.approval.integrity = { manifest: state.approval.integrity.manifest }; }],
       ['confirmed_human', (state) => { state.approval.integrity.confirmed_human = false; }],
       ['approved_by', (state) => { state.approval.integrity.approved_by = ''; }],
       ['algorithm', (state) => { state.approval.integrity.algorithm = 'SHA-1'; }],
@@ -286,7 +342,15 @@ describe('agentctl spec lifecycle via public launcher', () => {
       if (id.endsWith('duplicate')) {
         writeFileSync(join(specDir, 'tasks/002-duplicate.md'), readFileSync(join(specDir, 'tasks/001-initial-delivery.md'), 'utf8'), 'utf8');
       } else {
-        writeFileSync(join(specDir, 'TASKS.md'), `${readFileSync(join(specDir, 'TASKS.md'), 'utf8')}| 999 | Fantasma | — | DRAFT |\n`, 'utf8');
+        const tasksPath = join(specDir, 'TASKS.md');
+        writeFileSync(
+          tasksPath,
+          readFileSync(tasksPath, 'utf8').replace(
+            '| 001 | Entrega inicial | — | DRAFT |\n',
+            '| 001 | Entrega inicial | — | DRAFT |\n| 999 | Fantasma | — | DRAFT |\n',
+          ),
+          'utf8',
+        );
       }
       const result = run(dir, 'spec', 'approve', id, '--approved-by', 'Ana Silva', '--confirm-human');
       expect(result.status).toBe(1);
@@ -309,6 +373,139 @@ describe('agentctl spec lifecycle via public launcher', () => {
     writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
     const result = run(dir, 'spec', 'status', id);
     expect(result.stdout).toMatch(/002: DRAFT.*blocked_by: 001/);
+    expect(result.stdout).not.toMatch(/002: DRAFT.*blocked_by_deps/);
+    expect(result.stdout).toMatch(/001: SESSION_CLOSED.*blocked_by: -/);
+  });
+
+  it.each([
+    ['SPEC.md vazio', 'SPEC.md', '   \n'],
+    ['SPEC.md apenas titulo', 'SPEC.md', '# Apenas titulo\n'],
+    ['PLAN.md vazio', 'PLAN.md', '\n\t\n'],
+    ['SPEC-SUMMARY.md apenas titulo', 'SPEC-SUMMARY.md', '# Summary\n'],
+    ['TASKS.md sem tabela', 'TASKS.md', '# Tarefas\n\nTexto substantivo sem tabela.\n'],
+    ['tarefa sem frontmatter', 'tasks/001-initial-delivery.md', '## Corpo\n\nid: "001"\ntitle: "Entrega inicial"\nblocked_by: []\n'],
+    ['tarefa sem corpo substantivo', 'tasks/001-initial-delivery.md', '---\nid: "001"\ntitle: "Entrega inicial"\nstatus: DRAFT\nblocked_by: []\n---\n\n## Objetivo\n'],
+  ])('rejects non-substantive or structurally invalid readiness: %s', (_label, relativePath, content) => {
+    const dir = repo();
+    const id = `SPEC-131-${relativePath.replace(/[^a-z]/gi, '-').replace(/-+/g, '-').toLowerCase()}`;
+    expect(run(dir, 'spec', 'create', id, '--kind', 'mini', '--title', 'Titulo').status).toBe(0);
+    completeForApproval(dir, id);
+    writeFileSync(join(dir, '.agent/specs', id, relativePath), content, 'utf8');
+    const result = run(dir, 'spec', 'approve', id, '--approved-by', 'Ana Silva', '--confirm-human');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/guard:\s*approval-readiness/i);
+  });
+
+  it.each([
+    ['titulo', 'title: "Entrega inicial"', 'title: "Titulo divergente"'],
+    ['blocked-by', 'blocked_by: []', 'blocked_by: ["999"]'],
+  ])('rejects task %s divergence before approval', (_field, from, to) => {
+    const dir = repo();
+    const id = `SPEC-132-${_field}`;
+    expect(run(dir, 'spec', 'create', id, '--kind', 'full', '--title', 'Titulo').status).toBe(0);
+    completeForApproval(dir, id);
+    const taskPath = join(dir, '.agent/specs', id, 'tasks/001-initial-delivery.md');
+    writeFileSync(taskPath, readFileSync(taskPath, 'utf8').replace(from, to), 'utf8');
+    const result = run(dir, 'spec', 'approve', id, '--approved-by', 'Ana Silva', '--confirm-human');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/guard:\s*(approval-readiness|state-invalid)/i);
+  });
+
+  it('requires every canonical full-template section for a normal approval', () => {
+    const dir = repo();
+    const id = 'SPEC-133-full-sections';
+    expect(run(dir, 'spec', 'create', id, '--kind', 'full', '--title', 'Titulo').status).toBe(0);
+    completeForApproval(dir, id);
+    const specPath = join(dir, '.agent/specs', id, 'SPEC.md');
+    writeFileSync(specPath, readFileSync(specPath, 'utf8').replace('## Arquitetura', 'Arquitetura sem heading canonico'), 'utf8');
+    const result = run(dir, 'spec', 'approve', id, '--approved-by', 'Ana Silva', '--confirm-human');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/guard:\s*approval-readiness/i);
+  });
+
+  it('requires --reapprove for legacy approvals and rejects it in normal or integral approvals', () => {
+    const dir = repo();
+    const legacy = makeLegacyApproval(dir, 'SPEC-134-legacy-no-kind');
+    const noMode = run(dir, 'spec', 'approve', 'SPEC-134-legacy-no-kind', '--approved-by', 'Ana Silva', '--confirm-human');
+    expect(noMode.status).toBe(1);
+    expect(noMode.stderr).toMatch(/reapprove/i);
+    const noKind = run(dir, 'spec', 'approve', 'SPEC-134-legacy-no-kind', '--approved-by', 'Ana Silva', '--confirm-human', '--reapprove');
+    expect(noKind.status).toBe(1);
+    expect(noKind.stderr).toMatch(/--kind/i);
+    expect(JSON.parse(readFileSync(legacy.statePath, 'utf8')).revision).toBe(legacy.state.revision);
+
+    expect(run(dir, 'spec', 'create', 'SPEC-135-ready', '--kind', 'mini', '--title', 'Titulo').status).toBe(0);
+    completeForApproval(dir, 'SPEC-135-ready');
+    const readyReapprove = run(dir, 'spec', 'approve', 'SPEC-135-ready', '--approved-by', 'Ana Silva', '--confirm-human', '--reapprove');
+    expect(readyReapprove.status).toBe(1);
+
+    expect(run(dir, 'spec', 'create', 'SPEC-135-integral', '--kind', 'mini', '--title', 'Titulo').status).toBe(0);
+    approve(dir, 'SPEC-135-integral');
+    const integralPath = join(dir, '.agent/specs/SPEC-135-integral/state.json');
+    const before = fingerprint(integralPath);
+    const integralReapprove = run(dir, 'spec', 'approve', 'SPEC-135-integral', '--approved-by', 'Outra Pessoa', '--confirm-human', '--reapprove');
+    expect(integralReapprove.status).toBe(1);
+    expect(integralReapprove.stderr).toMatch(/revisao de spec/i);
+    expect(fingerprint(integralPath)).toEqual(before);
+  });
+
+  it('migrates a legacy approval without kind and preserves its historical metadata atomically', () => {
+    const dir = repo();
+    const id = 'SPEC-136-legacy-migration';
+    const { specDir, statePath, state } = makeLegacyApproval(dir, id);
+    writeFileSync(join(specDir, 'SPEC.md'), 'Documento legado substantivo com problema, resultado e decisoes aprovadas.\n', 'utf8');
+    writeFileSync(join(specDir, 'PLAN.md'), 'Plano legado substantivo com etapas, verificacao, riscos e rollback.\n', 'utf8');
+
+    const result = run(dir, 'spec', 'approve', id, '--approved-by', 'Nova Pessoa', '--confirm-human', '--reapprove', '--kind', 'full');
+    expect(result.status).toBe(0);
+    const migrated = JSON.parse(readFileSync(statePath, 'utf8'));
+    expect(migrated.revision).toBe(state.revision + 1);
+    expect(migrated.spec).toMatchObject({ status: 'APPROVED', kind: 'full', approved_by: 'Nova Pessoa' });
+    expect(migrated.approval.integrity).toMatchObject({ kind: 'full', confirmed_human: true, approved_by: 'Nova Pessoa' });
+    expect(migrated.approval.legacy_approval).toMatchObject({
+      approved_by: 'Aprovadora Legada',
+      approved_at: '2026-01-02T03:04:05.000Z',
+      status: 'APPROVED',
+      reason: 'integrity-envelope-migration',
+    });
+    expect(migrated.approval.legacy_approval.migrated_at).toMatch(/Z$/);
+
+    const beforeStatus = treeFingerprint(specDir);
+    const status = run(dir, 'spec', 'status', id);
+    expect(status.status).toBe(0);
+    expect(status.stdout).toMatch(/approval_status: APPROVED/);
+    expect(treeFingerprint(specDir)).toEqual(beforeStatus);
+  });
+
+  it('accepts a compatible legacy kind, rejects a divergent kind, and enforces human confirmation', () => {
+    const dir = repo();
+    makeLegacyApproval(dir, 'SPEC-137-compatible', 'mini');
+    expect(run(dir, 'spec', 'approve', 'SPEC-137-compatible', '--approved-by', 'Ana Silva', '--confirm-human', '--reapprove', '--kind', 'mini').status).toBe(0);
+
+    const divergent = makeLegacyApproval(dir, 'SPEC-138-divergent', 'full');
+    const mismatch = run(dir, 'spec', 'approve', 'SPEC-138-divergent', '--approved-by', 'Ana Silva', '--confirm-human', '--reapprove', '--kind', 'mini');
+    expect(mismatch.status).toBe(1);
+    expect(mismatch.stderr).toMatch(/kind.*diverge/i);
+    expect(JSON.parse(readFileSync(divergent.statePath, 'utf8')).approval.integrity).toBeUndefined();
+
+    makeLegacyApproval(dir, 'SPEC-139-human', 'mini');
+    expect(run(dir, 'spec', 'approve', 'SPEC-139-human', '--approved-by', 'Ana Silva', '--reapprove').status).toBe(2);
+    expect(run(dir, 'spec', 'approve', 'SPEC-139-human', '--approved-by', 'agent', '--confirm-human', '--reapprove').status).toBe(1);
+  });
+
+  it('returns actionable readiness for a legacy noncanonical TASKS.md table', () => {
+    const dir = repo();
+    const id = 'SPEC-140-legacy-table';
+    const { specDir } = makeLegacyApproval(dir, id, 'full');
+    writeFileSync(
+      join(specDir, 'TASKS.md'),
+      '# Tarefas\n\n| ID | Titulo | Bloqueada por | Resultado vertical |\n| --- | --- | --- | --- |\n| 001 | Entrega inicial | — | Entrega |\n',
+      'utf8',
+    );
+    const result = run(dir, 'spec', 'approve', id, '--approved-by', 'Ana Silva', '--confirm-human', '--reapprove');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/guard:\s*approval-readiness/i);
+    expect(result.stderr).toMatch(/tabela canonica/i);
   });
 
   it('cleans a staging directory if creation fails after staging starts', () => {

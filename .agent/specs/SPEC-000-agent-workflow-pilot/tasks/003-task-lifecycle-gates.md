@@ -1,8 +1,8 @@
 ---
 id: "003"
 title: Lifecycle de tarefa e gates
-status: READY
-blocked_by: ["002"]
+status: DRAFT
+blocked_by: ["002A"]
 writer: claude
 reviewer: codex
 commit: null

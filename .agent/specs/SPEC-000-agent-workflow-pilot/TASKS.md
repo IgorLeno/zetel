@@ -8,7 +8,8 @@ Status da decomposicao: `APPROVED` (extensoes `001A`/`001B` aprovadas pre-merge)
 | 001A | Endurecimento das invariantes e escrita concorrente | 001 | State machine e escrita atomica endurecidas; CodeRabbit resolvido |
 | 001B | Fechamento das invariantes remanescentes | 001A | Saida BLOCKED, DONE/PUSHED, sessao/tarefa e fsync alinhados |
 | 002 | Lifecycle de spec | 001B | Criar, aprovar e consultar spec com rastreabilidade |
-| 003 | Lifecycle de tarefa e gates | 002 | Selecionar, iniciar, validar e fechar uma tarefa |
+| 002A | Correções pré-merge do lifecycle de spec | 002 | Endurecer parser, reapproval, integrity e readiness antes do merge |
+| 003 | Lifecycle de tarefa e gates | 002A | Selecionar, iniciar, validar e fechar uma tarefa |
 | 004 | Revisao independente em dois eixos | 003 | Reviews separados bloqueiam ou liberam fechamento |
 | 005 | Handoff e nova sessao | 004 | Fechar sessao e iniciar processo novo com context-pack |
 | 006 | Skills de intake, spec e planejamento | 005 | Primeira metade das skills funciona nos dois agentes |
@@ -46,6 +47,18 @@ Checkpoint apos fechamento da 002:
 active_task: null
 session.status: SESSION_CLOSED
 ```
+
+Checkpoint durante a correcao pre-merge 002A:
+
+```text
+002   SESSION_CLOSED
+002A  DONE
+003   DRAFT, blocked_by: ["002A"]
+active_task: null
+session.status: DONE
+```
+
+A tarefa 003 nao pode voltar a `READY` ate o fechamento versionado da 002A.
 
 Regras:
 

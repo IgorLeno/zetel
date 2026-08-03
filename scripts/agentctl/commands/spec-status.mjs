@@ -18,7 +18,7 @@ export function runSpecStatus(args, io = {}) {
   if (!specId) {
     stderr.write(
       [
-        'Uso: agentctl spec status <spec-id>',
+        'Uso: ./agentctl spec status <spec-id>',
         'guard: usage',
         'nextAction: informe o id da spec, por exemplo SPEC-000-agent-workflow-pilot.',
         '',
@@ -53,7 +53,6 @@ export function runSpecStatus(args, io = {}) {
     const lines = [
       `spec: ${state.spec.id}`,
       `kind: ${state.spec.kind ?? '-'}`,
-      `status: ${state.spec.status}`,
       `workflow_status: ${state.spec.status}`,
       `approval_status: ${approval.status}`,
       `revision: ${state.revision}`,
@@ -77,7 +76,7 @@ export function runSpecStatus(args, io = {}) {
       flags.push(`blocked_by: ${task.blocked_by.join(', ') || '-'}`);
       if (blocked) flags.push('blocked_by_deps');
       if (active.some((item) => item.id === task.id)) flags.push('active');
-      const suffix = flags.length ? ` [${flags.join(', ')}]` : '';
+      const suffix = ` [${flags.join(', ')}]`;
       lines.push(`  - ${task.id}: ${task.status}${suffix}`);
     }
 
@@ -101,11 +100,12 @@ export function runSpecStatus(args, io = {}) {
 
 /** @param {string} statePath @param {any} state */
 function inspectApproval(statePath, state) {
-  const integrity = state.approval?.integrity;
+  const hasIntegrity = Object.prototype.hasOwnProperty.call(state.approval, 'integrity');
+  const integrity = state.approval.integrity;
   const specDir = dirname(statePath);
   const current = collectApprovalArtifacts(specDir);
   const coherence = checkTaskCoherence(specDir, state);
-  if (!integrity || !Array.isArray(integrity.manifest) || typeof integrity.digest !== 'string') {
+  if (!hasIntegrity) {
     const legacy = state.spec.status === 'APPROVED' || state.approval?.spec === true;
     return {
       status: legacy ? 'LEGACY_UNVERIFIED' : 'PENDING',
@@ -120,16 +120,21 @@ function inspectApproval(statePath, state) {
   }
   const integrityValidation = validateIntegrityRecord(integrity, state.spec);
   if (!integrityValidation.ok) {
+    const record = integrity && typeof integrity === 'object' && !Array.isArray(integrity) ? integrity : {};
     return {
       status: 'TAMPERED',
-      approvedBy: integrity.approved_by ?? state.spec.approved_by ?? null,
-      approvedAt: integrity.approved_at ?? state.spec.approved_at ?? null,
-      algorithm: integrity.algorithm ?? null,
-      formatVersion: integrity.format_version ?? null,
-      registeredDigest: integrity.digest ?? null,
+      approvedBy: record.approved_by ?? state.spec.approved_by ?? null,
+      approvedAt: record.approved_at ?? state.spec.approved_at ?? null,
+      algorithm: record.algorithm ?? null,
+      formatVersion: record.format_version ?? null,
+      registeredDigest: record.digest ?? null,
       currentDigest: null,
       missing: current.missing,
-      changed: integrityValidation.issues.map((issue) => `approval.integrity: ${issue}`),
+      changed: [
+        ...integrityValidation.issues.map((issue) => `approval.integrity: ${issue}`),
+        ...current.readinessIssues,
+        ...coherence,
+      ],
       openMarkers: current.openMarkers,
       nextAction: 'Solicite nova aprovacao humana com um registro de integridade valido.',
     };
@@ -142,7 +147,7 @@ function inspectApproval(statePath, state) {
   }
   for (const artifactPath of actual.keys()) if (!expected.has(artifactPath)) changed.push(artifactPath);
   const currentDigest = aggregateDigest(current.manifest);
-  const tampered = current.missing.length > 0 || changed.length > 0 || coherence.length > 0 || current.openMarkers.length > 0 || currentDigest !== integrity.digest;
+  const tampered = current.missing.length > 0 || changed.length > 0 || current.readinessIssues.length > 0 || coherence.length > 0 || current.openMarkers.length > 0 || currentDigest !== integrity.digest;
   return {
     status: tampered ? 'TAMPERED' : 'APPROVED',
     approvedBy: integrity.approved_by ?? state.spec.approved_by ?? null,
@@ -152,7 +157,7 @@ function inspectApproval(statePath, state) {
     registeredDigest: integrity.digest,
     currentDigest,
     missing: current.missing,
-    changed: [...new Set([...changed, ...coherence])].sort(),
+    changed: [...new Set([...changed, ...current.readinessIssues, ...coherence])].sort(),
     openMarkers: current.openMarkers,
     nextAction: tampered
       ? 'Restaure os artefatos aprovados ou solicite nova aprovacao humana.'
