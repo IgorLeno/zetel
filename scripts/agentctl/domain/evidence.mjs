@@ -244,6 +244,23 @@ export function assertEvidenceFresh(evidence, current) {
 }
 
 /**
+ * Garante freshness antes de persistir evidencia PASS.
+ * @param {string} specDir
+ * @param {string} taskId
+ * @param {Record<string, unknown>} evidence
+ * @param {{
+ *   root: string,
+ *   taskFile: string,
+ *   profile: string,
+ *   plan: unknown,
+ * }} current
+ */
+export function assertFreshAndWriteValidationEvidence(specDir, taskId, evidence, current) {
+  assertEvidenceFresh(evidence, current);
+  return writeValidationEvidence(specDir, taskId, evidence);
+}
+
+/**
  * @param {Record<string, unknown>} evidence
  * @param {Array<{ category: string, argv: string[] }>} requiredPlan
  */

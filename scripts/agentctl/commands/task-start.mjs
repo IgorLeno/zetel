@@ -10,13 +10,13 @@ import {
   ACTIVE_TASK_STATUSES,
   assertTransition,
   findActiveTasks,
-  isTaskBlockedByDependencies,
   StateMachineError,
   validateState,
 } from '../domain/state-machine.mjs';
 import { updateOperationalFrontmatter } from '../domain/task-frontmatter.mjs';
 import { resolveTaskFile } from '../domain/task-selection.mjs';
 import { writeJsonAtomic } from '../infra/atomic-write.mjs';
+import { assertInitialCommit } from '../infra/git-baseline.mjs';
 import { loadSpecState } from '../infra/read-state.mjs';
 import { writeError } from '../infra/write-error.mjs';
 
@@ -29,13 +29,14 @@ export function runTaskStart(args, io = {}) {
   const stderr = io.stderr ?? process.stderr;
   try {
     const parsed = parseStartArgs(args);
-    const { path, state, validation } = loadSpecState(parsed.specId, { cwd: io.cwd });
+    const { root, path, state, validation } = loadSpecState(parsed.specId, { cwd: io.cwd });
     if (!validation.ok) {
       throw new StateMachineError(validation.errors.join(' '), {
         guard: 'state-invalid',
         nextAction: 'Corrija o estado antes de iniciar a tarefa.',
       });
     }
+    assertInitialCommit(root);
 
     const active = findActiveTasks(state);
     if (active.length > 0 || state.active_task != null) {
@@ -314,25 +315,14 @@ function parseStartArgs(args) {
 }
 
 /**
- * Exige blockers em SESSION_CLOSED (mais estrito que DONE/PUSHED do helper
- * compartilhado) e reutiliza isTaskBlockedByDependencies para a semantica base.
+ * Exige blockers em SESSION_CLOSED.
+ * Intencional vs state machine: DONE/PUSHED/SESSION_CLOSED satisfazem
+ * dependencia tecnica em task next; task start exige SESSION_CLOSED para
+ * iniciar a proxima sessao.
  * @param {{ id: string, blocked_by?: string[] }} task
  * @param {Array<{ id: string, status: string }>} tasks
  */
 function assertBlockersSessionClosed(task, tasks) {
-  if (isTaskBlockedByDependencies(task, tasks)) {
-    const open = (task.blocked_by ?? []).filter((depId) => {
-      const dep = tasks.find((item) => item.id === depId);
-      return !dep || (dep.status !== 'DONE' && dep.status !== 'PUSHED' && dep.status !== 'SESSION_CLOSED');
-    });
-    throw new StateMachineError(
-      `Tarefa bloqueada por dependencias abertas (${open.join(', ') || 'desconhecidas'}).`,
-      {
-        guard: 'blocked-by',
-        nextAction: 'Feche a sessao dos blockers antes de iniciar a tarefa.',
-      },
-    );
-  }
   const byId = new Map(tasks.map((item) => [item.id, item]));
   for (const depId of task.blocked_by ?? []) {
     const dep = byId.get(depId);

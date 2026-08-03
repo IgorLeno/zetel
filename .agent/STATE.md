@@ -12,7 +12,7 @@ atomica com `expectedRevision`.
 | `revision` | inteiro >= 1 | Incrementado a cada escrita atomica |
 | `spec` | objeto | `id`, `status`, metadados de aprovacao |
 | `active_task` | string \| null | Id da unica tarefa ativa, ou null |
-| `tasks` | array | Cada item: `id`, `status`, `blocked_by[]`; opcionalmente `execution_profile`, `profile_justification`, `profile_approved_by`, `profile_elevated_by`, `reviews_requested`, `review_justification`, `validation`, `fixed_point`, `gates_plan` |
+| `tasks` | array | Cada item: `id`, `status`, `blocked_by[]`; opcionalmente `execution_profile`, `profile_justification`, `profile_approved_by`, `profile_elevated_by`, `reviews_requested`, `review_justification`, `validation`, `review_result` |
 | `session` | objeto | Metadados da sessao corrente/ultima; em validacao/review pode referenciar `validation`, `fixed_point`, `gates_plan`, `reviews_requested`, `review_justification`, `profile_elevated_by` |
 | `approval` | objeto | Booleans obrigatorios e envelope de integridade opcional |
 

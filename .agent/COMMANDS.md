@@ -150,6 +150,9 @@ assinatura destacada, attestation de CI ou digest publicado fora do
 ./agentctl task close <spec-id> <task-id>
 ```
 
+Os comandos `task next`, `task start`, `task validate` e `task close`
+exigem que o repositorio possua ao menos um commit inicial valido.
+
 Comandos estruturados usam arrays JSON de argv e `spawn` com `shell: false`.
 Nao ha parser de shell; pipe, redirect, `&&` e substituicao sao rejeitados.
 Tambem sao rejeitadas invocacoes indiretas de interpretador (`sh`/`bash`/`dash`/

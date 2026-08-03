@@ -37,19 +37,48 @@ export function assertNoIndirectShell(argv) {
 }
 
 /**
+ * Cluster curto Unix que inclui a letra `c` (ex.: -c, -ec, -xc, -lec).
+ * @param {string} flag
+ */
+function isUnixShellCommandFlag(flag) {
+  return /^-[^-]*c/i.test(flag);
+}
+
+/**
+ * Flag PowerShell que e forma ou prefixo de -Command / -EncodedCommand.
+ * `-ec` e bloqueado explicitamente (contrato adversarial; nao e prefixo literal
+ * de EncodedCommand, que comeca com `-en`).
+ * @param {string} flag
+ */
+function isPowerShellCommandFlag(flag) {
+  const normalized = String(flag).toLowerCase();
+  if (normalized.length < 2 || !normalized.startsWith('-') || normalized.startsWith('--')) {
+    return false;
+  }
+  return (
+    '-command'.startsWith(normalized)
+    || '-encodedcommand'.startsWith(normalized)
+    || normalized === '-ec'
+  );
+}
+
+/**
  * @param {string[]} argv
  */
 function assertShellInterpreter(argv) {
   const executable = normalizeExecutableName(argv[0]);
-  const flags = argv.slice(1).map((part) => String(part).toLowerCase());
+  const flags = argv.slice(1);
 
-  if (UNIX_SHELLS.has(executable) && flags.some((flag) => flag === '-c' || flag === '-lc' || flag === '-ic')) {
+  if (UNIX_SHELLS.has(executable) && flags.some((flag) => isUnixShellCommandFlag(String(flag)))) {
     throwIndirectShell(argv[0], '-c');
   }
 
   if (
     (executable === 'cmd' || executable === 'cmd.exe')
-    && flags.some((flag) => flag === '/c' || flag === '/k')
+    && flags.some((flag) => {
+      const lower = String(flag).toLowerCase();
+      return lower === '/c' || lower === '/k';
+    })
   ) {
     throwIndirectShell(argv[0], '/c');
   }
@@ -57,7 +86,7 @@ function assertShellInterpreter(argv) {
   if (
     (executable === 'powershell' || executable === 'powershell.exe'
       || executable === 'pwsh' || executable === 'pwsh.exe')
-    && flags.some((flag) => flag === '-command' || flag === '-c' || flag === '-encodedcommand')
+    && flags.some((flag) => isPowerShellCommandFlag(String(flag)))
   ) {
     throwIndirectShell(argv[0], '-Command');
   }

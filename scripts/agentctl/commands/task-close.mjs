@@ -14,6 +14,7 @@ import { assertTransition, StateMachineError, validateState } from '../domain/st
 import { prepareOperationalFrontmatter } from '../domain/task-frontmatter.mjs';
 import { resolveTaskFile } from '../domain/task-selection.mjs';
 import { writeJsonAtomic } from '../infra/atomic-write.mjs';
+import { assertInitialCommit } from '../infra/git-baseline.mjs';
 import { loadSpecState } from '../infra/read-state.mjs';
 import { writeError } from '../infra/write-error.mjs';
 
@@ -33,6 +34,7 @@ export function runTaskClose(args, io = {}) {
         nextAction: 'Corrija o estado antes de fechar a tarefa.',
       });
     }
+    assertInitialCommit(root);
 
     if (state.active_task !== taskId) {
       throw new StateMachineError(

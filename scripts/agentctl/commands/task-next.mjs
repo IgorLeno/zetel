@@ -4,6 +4,7 @@ import { assertApprovedIntegrity } from '../domain/spec-approval-guard.mjs';
 import { assertSafeSpecId } from '../domain/spec-id.mjs';
 import { StateMachineError } from '../domain/state-machine.mjs';
 import { selectNextReadyTask } from '../domain/task-selection.mjs';
+import { assertInitialCommit } from '../infra/git-baseline.mjs';
 import { loadSpecState } from '../infra/read-state.mjs';
 import { writeError } from '../infra/write-error.mjs';
 
@@ -23,6 +24,7 @@ export function runTaskNext(args, io = {}) {
         nextAction: 'Corrija state.json antes de consultar a proxima tarefa.',
       });
     }
+    assertInitialCommit(root);
     // Mesma guarda de task start: APPROVED + integrity valida (rejeita LEGACY/TAMPERED).
     assertApprovedIntegrity(path, state);
 

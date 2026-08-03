@@ -20,13 +20,17 @@ import {
   runStructuredCommand,
   summarizeOutputSafe,
 } from '../../../scripts/agentctl/infra/process-runner.mjs';
+import { assertInitialCommit } from '../../../scripts/agentctl/infra/git-baseline.mjs';
 import {
   assertReviewsAllowed,
   buildGatePlan,
 } from '../../../scripts/agentctl/domain/execution-profile.mjs';
 import {
+  assertFreshAndWriteValidationEvidence,
   assertValidWaiver,
   buildFixedPoint,
+  buildValidationEvidence,
+  captureDefinitionFingerprint,
   captureWorkspaceFingerprint,
   writeValidationEvidence,
 } from '../../../scripts/agentctl/domain/evidence.mjs';
@@ -80,6 +84,20 @@ function repo() {
     spawnSync('git', ['config', 'user.name', 'Task Test'], { cwd: dir, encoding: 'utf8' }).status,
   ).toBe(0);
   return dir;
+}
+
+/** Remove a ref do branch atual, deixando HEAD unborn sem apagar `.git` nem arquivos. */
+function makeHeadUnborn(dir: string) {
+  const sym = spawnSync('git', ['symbolic-ref', 'HEAD'], { cwd: dir, encoding: 'utf8' });
+  expect(sym.status, sym.stderr).toBe(0);
+  const ref = sym.stdout.trim();
+  expect(spawnSync('git', ['update-ref', '-d', ref], { cwd: dir, encoding: 'utf8' }).status).toBe(0);
+  const verify = spawnSync('git', ['rev-parse', '--verify', 'HEAD'], {
+    cwd: dir,
+    encoding: 'utf8',
+    shell: false,
+  });
+  expect(verify.status).not.toBe(0);
 }
 
 function run(dir: string, ...args: string[]) {
@@ -267,6 +285,42 @@ describe('process runner safety', () => {
     expect(() => assertSafeArgv(['pnpm', '-r', 'exec', 'vitest', 'run', 'x.test.ts'])).not.toThrow();
     expect(() => assertSafeArgv(['env', 'NODE_ENV=test', 'pnpm', 'test:ci'])).not.toThrow();
     expect(() => assertSafeArgv(['npx', 'vitest', 'run', 'x.test.ts'])).not.toThrow();
+  });
+
+  it('rejects Unix shell flag clusters containing c and PowerShell abbreviations', () => {
+    const blocked: string[][] = [
+      ['bash', '-ec', 'comando'],
+      ['sh', '-xc', 'comando'],
+      ['zsh', '-lec', 'comando'],
+      ['dash', '-uc', 'comando'],
+      ['env', 'bash', '-ec', 'echo hi'],
+      ['pnpm', 'exec', 'bash', '-xc', 'echo hi'],
+      ['pwsh', '-c', 'Get-Process'],
+      ['pwsh', '-Comm', 'Get-Process'],
+      ['pwsh', '-Command', 'Get-Process'],
+      ['pwsh', '-e', 'YWJj'],
+      ['pwsh', '-ec', 'YWJj'],
+      ['pwsh', '-EncodedCommand', 'YWJj'],
+      ['powershell.exe', '-Enc', 'YWJj'],
+      ['env', 'pwsh', '-Comm', 'Get-Process'],
+    ];
+    for (const argv of blocked) {
+      let thrown: unknown;
+      try {
+        assertSafeArgv(argv);
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, `esperava rejeicao para ${JSON.stringify(argv)}`).toBeInstanceOf(Error);
+      expect((thrown as { guard?: string }).guard).toBe('command-argv');
+      expect((thrown as { nextAction?: string }).nextAction).toMatch(/argv estruturado/i);
+    }
+
+    expect(() => assertSafeArgv(['bash', '-e'])).not.toThrow();
+    expect(() => assertSafeArgv(['sh', '-x'])).not.toThrow();
+    expect(() => assertSafeArgv(['pnpm', 'exec', 'vitest'])).not.toThrow();
+    expect(() => assertSafeArgv(['env', 'NODE_ENV=test', 'pnpm', 'test:ci'])).not.toThrow();
+    expect(() => assertSafeArgv(['echo', 'hello world'])).not.toThrow();
   });
 
   it('applies timeout and uniform ENOENT results', () => {
@@ -1234,6 +1288,9 @@ describe('agentctl task validate/close', () => {
   });
 
   it('returns actionable task-file error when close frontmatter write fails after DONE', () => {
+    if (typeof process.getuid === 'function' && process.getuid() === 0) {
+      return;
+    }
     const dir = repo();
     const bin = writeFakeBin(dir);
     const id = 'SPEC-225-close-fm';
@@ -1336,6 +1393,203 @@ describe('agentctl task validate/close', () => {
         profile: 'FULL',
       }),
     ).toMatch(/^[a-f0-9]{64}$/);
+  });
+});
+
+describe('Politica A — git baseline', () => {
+  it('rejects unborn HEAD and accepts the first commit', () => {
+    const dir = repo();
+    expect(() => assertInitialCommit(dir)).toThrow(/guard|commit Git inicial|git-baseline/i);
+    try {
+      assertInitialCommit(dir);
+    } catch (error) {
+      expect((error as { guard?: string }).guard).toBe('git-baseline');
+      expect((error as { nextAction?: string }).nextAction).toMatch(/commit inicial/i);
+    }
+
+    writeFileSync(join(dir, 'README.md'), 'baseline\n', 'utf8');
+    expect(spawnSync('git', ['add', 'README.md'], { cwd: dir, encoding: 'utf8' }).status).toBe(0);
+    expect(
+      spawnSync('git', ['commit', '-m', 'initial'], { cwd: dir, encoding: 'utf8' }).status,
+    ).toBe(0);
+    expect(assertInitialCommit(dir)).toMatch(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i);
+  });
+
+  function restoreInitialCommit(dir: string, marker: string) {
+    writeFileSync(join(dir, marker), `${marker}\n`, 'utf8');
+    expect(spawnSync('git', ['add', '.'], { cwd: dir, encoding: 'utf8' }).status).toBe(0);
+    const commit = spawnSync('git', ['commit', '-m', marker], { cwd: dir, encoding: 'utf8' });
+    expect(commit.status, commit.stderr).toBe(0);
+    expect(assertInitialCommit(dir)).toMatch(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i);
+  }
+
+  it('rejects lifecycle commands on unborn HEAD without mutating state or leaving locks', () => {
+    const dir = repo();
+    const bin = writeFakeBin(dir);
+    const id = 'SPEC-230-unborn';
+    seedApprovedSpec(dir, id, [{ id: '001', status: 'READY', blocked_by: [] }]);
+    const statePath = join(dir, '.agent/specs', id, 'state.json');
+    const before = readFileSync(statePath, 'utf8');
+    const beforeRevision = JSON.parse(before).revision;
+
+    makeHeadUnborn(dir);
+
+    const next = run(dir, 'task', 'next', id);
+    expect(next.status).toBe(1);
+    expect(next.stderr).toMatch(/guard:\s*git-baseline/i);
+    expect(next.stderr).not.toMatch(/typescript-detect/i);
+
+    const start = run(
+      dir,
+      'task',
+      'start',
+      id,
+      '001',
+      '--agent',
+      'claude',
+      '--profile',
+      'FAST',
+      '--justification',
+      'doc',
+      '--reviews',
+      '0',
+    );
+    expect(start.status).toBe(1);
+    expect(start.stderr).toMatch(/guard:\s*git-baseline/i);
+    expect(readFileSync(statePath, 'utf8')).toBe(before);
+    expect(JSON.parse(readFileSync(statePath, 'utf8')).revision).toBe(beforeRevision);
+    expect(existsSync(`${statePath}.lock`)).toBe(false);
+
+    restoreInitialCommit(dir, '.restore-1');
+    expect(
+      run(
+        dir,
+        'task',
+        'start',
+        id,
+        '001',
+        '--agent',
+        'claude',
+        '--profile',
+        'FAST',
+        '--justification',
+        'doc',
+        '--reviews',
+        '0',
+      ).status,
+    ).toBe(0);
+
+    makeHeadUnborn(dir);
+    const mid = readFileSync(statePath, 'utf8');
+    const midRevision = JSON.parse(mid).revision;
+    const midStatus = JSON.parse(mid).tasks[0].status;
+
+    const env = { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` };
+    const validate = spawnSync(
+      AGENTCTL,
+      [
+        'task',
+        'validate',
+        id,
+        '001',
+        '--focused-json',
+        JSON.stringify(['pnpm', 'exec', 'vitest', 'run', 'x.test.ts']),
+      ],
+      { cwd: dir, encoding: 'utf8', env },
+    );
+    expect(validate.status).toBe(1);
+    expect(validate.stderr).toMatch(/guard:\s*git-baseline/i);
+    expect(validate.stderr).not.toMatch(/typescript-detect/i);
+    expect(readFileSync(statePath, 'utf8')).toBe(mid);
+    expect(JSON.parse(readFileSync(statePath, 'utf8')).revision).toBe(midRevision);
+    expect(JSON.parse(readFileSync(statePath, 'utf8')).tasks[0].status).toBe(midStatus);
+    expect(existsSync(`${statePath}.lock`)).toBe(false);
+
+    restoreInitialCommit(dir, '.restore-2');
+    const validateOk = spawnSync(
+      AGENTCTL,
+      [
+        'task',
+        'validate',
+        id,
+        '001',
+        '--focused-json',
+        JSON.stringify(['pnpm', 'exec', 'vitest', 'run', 'x.test.ts']),
+      ],
+      { cwd: dir, encoding: 'utf8', env },
+    );
+    expect(validateOk.status, validateOk.stderr).toBe(0);
+
+    const beforeClose = readFileSync(statePath, 'utf8');
+    const beforeCloseRevision = JSON.parse(beforeClose).revision;
+    makeHeadUnborn(dir);
+
+    const close = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env,
+    });
+    expect(close.status).toBe(1);
+    expect(close.stderr).toMatch(/guard:\s*git-baseline/i);
+    expect(readFileSync(statePath, 'utf8')).toBe(beforeClose);
+    expect(JSON.parse(readFileSync(statePath, 'utf8')).revision).toBe(beforeCloseRevision);
+    expect(JSON.parse(readFileSync(statePath, 'utf8')).tasks[0].status).toBe('REVIEWING');
+    expect(existsSync(`${statePath}.lock`)).toBe(false);
+  });
+});
+
+describe('freshness before PASS evidence write', () => {
+  it('fails assertEvidenceFresh before overwriting an existing PASS artifact', () => {
+    const dir = repo();
+    writeFileSync(join(dir, 'seed.txt'), 'seed\n', 'utf8');
+    expect(spawnSync('git', ['add', '.'], { cwd: dir, encoding: 'utf8' }).status).toBe(0);
+    expect(spawnSync('git', ['commit', '-m', 'seed'], { cwd: dir, encoding: 'utf8' }).status).toBe(0);
+
+    const specDir = join(dir, '.agent/specs/SPEC-231-stale');
+    const taskFile = join(specDir, 'tasks/001-task.md');
+    mkdirSync(join(specDir, 'evidence'), { recursive: true });
+    mkdirSync(join(specDir, 'tasks'), { recursive: true });
+    writeFileSync(taskFile, '---\nid: "001"\nstatus: VALIDATING\n---\n', 'utf8');
+
+    const plan = [{ category: 'focused', argv: ['pnpm', 'exec', 'vitest', 'run', 'x.test.ts'] }];
+    const workspace = captureWorkspaceFingerprint(dir);
+    const definition = captureDefinitionFingerprint(taskFile, 'FAST', plan);
+    const first = {
+      ...buildValidationEvidence({
+        taskId: '001',
+        profile: 'FAST',
+        revision: 3,
+        workspace,
+        definition,
+        commands: [
+          {
+            category: 'focused',
+            argv: plan[0].argv,
+            exit_code: 0,
+            result: 'PASS',
+          },
+        ],
+      }),
+      validation_result: 'PASS',
+    };
+    const evidencePath = writeValidationEvidence(specDir, '001', first);
+    const before = readFileSync(evidencePath, 'utf8');
+
+    const stale = {
+      ...first,
+      fixed_point: '0'.repeat(64),
+      validation_result: 'PASS',
+    };
+    expect(() =>
+      assertFreshAndWriteValidationEvidence(specDir, '001', stale, {
+        root: dir,
+        taskFile,
+        profile: 'FAST',
+        plan,
+      }),
+    ).toThrow(/evidence-stale|fingerprint/i);
+    expect(readFileSync(evidencePath, 'utf8')).toBe(before);
+    expect(JSON.parse(before).fixed_point).toBe(first.fixed_point);
   });
 });
 

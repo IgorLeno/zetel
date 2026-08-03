@@ -6,7 +6,7 @@ import {
   resolveProfileChange,
 } from '../domain/execution-profile.mjs';
 import {
-  assertEvidenceFresh,
+  assertFreshAndWriteValidationEvidence,
   buildValidationEvidence,
   captureDefinitionFingerprint,
   captureWorkspaceFingerprint,
@@ -19,6 +19,7 @@ import { updateOperationalFrontmatter } from '../domain/task-frontmatter.mjs';
 import { resolveTaskFile } from '../domain/task-selection.mjs';
 import { parseValidateArgs } from '../domain/validation-plan.mjs';
 import { writeJsonAtomic } from '../infra/atomic-write.mjs';
+import { assertInitialCommit } from '../infra/git-baseline.mjs';
 import { runStructuredCommand } from '../infra/process-runner.mjs';
 import { loadSpecState } from '../infra/read-state.mjs';
 import { writeError } from '../infra/write-error.mjs';
@@ -40,6 +41,7 @@ export function runTaskValidate(args, io = {}) {
         nextAction: 'Corrija o estado antes de validar.',
       });
     }
+    assertInitialCommit(root);
 
     if (state.active_task !== parsed.taskId) {
       throw new StateMachineError(
@@ -260,13 +262,12 @@ export function runTaskValidate(args, io = {}) {
       commands: commandEvidence,
     });
     evidence.validation_result = 'PASS';
-    const evidencePath = writeValidationEvidence(dirname(path), parsed.taskId, evidence);
-    try {
-      assertEvidenceFresh(evidence, { root, taskFile, profile, plan });
-    } catch (error) {
-      // Mantem VALIDATING; nao grava PASS/REVIEWING parcial.
-      throw error;
-    }
+    const evidencePath = assertFreshAndWriteValidationEvidence(
+      dirname(path),
+      parsed.taskId,
+      evidence,
+      { root, taskFile, profile, plan },
+    );
 
     assertTransition('task', 'VALIDATING', 'REVIEWING');
     assertTransition('session', 'VALIDATING', 'REVIEWING');
