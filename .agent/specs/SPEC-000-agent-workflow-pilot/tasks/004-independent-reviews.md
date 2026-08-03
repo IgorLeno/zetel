@@ -1,7 +1,7 @@
 ---
 id: "004"
 title: Revisao independente em dois eixos
-status: DRAFT
+status: READY
 blocked_by: ["003A"]
 writer: codex
 reviewer: claude

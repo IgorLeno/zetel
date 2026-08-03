@@ -1,14 +1,14 @@
 ---
 id: "003A"
 title: "Endurecimento pré-merge do lifecycle de tarefa"
-status: DONE
+status: SESSION_CLOSED
 blocked_by: ["003"]
 writer: codex
 reviewer: codex-independent-engineering
-commit: null
-push: null
+commit: 8c215d2f705b099f1f1c65b5f90e3638cf84b279
+push: origin/feat/spec-000-task-003-task-lifecycle-gates
 review_result: PASS
-handoff: null
+handoff: .agent/specs/SPEC-000-agent-workflow-pilot/handoffs/003A-task-lifecycle-hardening-8c215d2.md
 execution_profile: FULL
 profile_justification: "Correções de segurança, execução de processos, atomicidade, evidências e lifecycle."
 validation: PASS

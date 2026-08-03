@@ -13,8 +13,8 @@ Status da decomposicao: `APPROVED` (extensoes `001A`/`001B`, `002C` e
 | 002B | Fechamento documental pré-merge | 002A | SESSION_CLOSED |
 | 002C | Perfis adaptativos e redução de contexto | 002B | SESSION_CLOSED |
 | 003 | Lifecycle de tarefa e gates | 002C | SESSION_CLOSED |
-| 003A | Endurecimento pré-merge do lifecycle de tarefa | 003 | READY |
-| 004 | Revisao independente em dois eixos | 003A | DRAFT |
+| 003A | Endurecimento pré-merge do lifecycle de tarefa | 003 | SESSION_CLOSED |
+| 004 | Revisao independente em dois eixos | 003A | READY |
 | 005 | Handoff e nova sessao | 004 | DRAFT |
 | 006 | Skills de intake, spec e planejamento | 005 | DRAFT |
 | 007 | Skills de tarefa, revisao e sessao | 006 | DRAFT |
@@ -173,3 +173,17 @@ Regras:
   aprovacao.
 - A criacao da 001A e a reencadeacao da 002 foram aprovadas explicitamente
   pelo prompt corretivo pre-merge.
+
+Checkpoint final da sessao 003A (perfil FULL):
+
+```text
+003   SESSION_CLOSED
+003A  SESSION_CLOSED, blocked_by: ["003"], execution_profile: FULL
+004   READY, blocked_by: ["003A"]
+active_task: null
+session.status: SESSION_CLOSED
+session.task_id: "003A"
+```
+
+SESSION_CLOSED da 003A foi registrado pelo bootstrap pos-push autorizado,
+nao pelo comando task close.
