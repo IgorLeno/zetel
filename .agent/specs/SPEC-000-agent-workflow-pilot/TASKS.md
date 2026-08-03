@@ -1,6 +1,7 @@
 # Tarefas: SPEC-000
 
-Status da decomposicao: `APPROVED` (extensoes `001A`/`001B` aprovadas pre-merge)
+Status da decomposicao: `APPROVED` (extensoes `001A`/`001B` e `002C`
+aprovadas pelo humano)
 
 | ID | Titulo | Bloqueada por | Resultado vertical |
 | --- | --- | --- | --- |
@@ -10,7 +11,8 @@ Status da decomposicao: `APPROVED` (extensoes `001A`/`001B` aprovadas pre-merge)
 | 002 | Lifecycle de spec | 001B | Criar, aprovar e consultar spec com rastreabilidade |
 | 002A | Correções pré-merge do lifecycle de spec | 002 | Endurecer parser, reapproval, integrity e readiness antes do merge |
 | 002B | Fechamento documental pré-merge | 002A | Alinhar contratos documentais e encerrar threads válidos antes do merge |
-| 003 | Lifecycle de tarefa e gates | 002B | Selecionar, iniciar, validar e fechar uma tarefa |
+| 002C | Perfis adaptativos e redução de contexto | 002B | Aplicar FAST/STANDARD/FULL e encurtar adapters |
+| 003 | Lifecycle de tarefa e gates | 002C | Selecionar, iniciar, validar e fechar uma tarefa conforme o perfil |
 | 004 | Revisao independente em dois eixos | 003 | Reviews separados bloqueiam ou liberam fechamento |
 | 005 | Handoff e nova sessao | 004 | Fechar sessao e iniciar processo novo com context-pack |
 | 006 | Skills de intake, spec e planejamento | 005 | Primeira metade das skills funciona nos dois agentes |
@@ -85,9 +87,26 @@ session.status: SESSION_CLOSED
 
 A tarefa 003 foi somente liberada para `READY` e nao foi iniciada.
 
+Checkpoint durante a 002C:
+
+```text
+002B  SESSION_CLOSED
+002C  IN_PROGRESS, blocked_by: ["002B"]
+003   DRAFT, blocked_by: ["002C"]
+active_task: "002C"
+session.status: IN_PROGRESS
+```
+
+A insercao da 002C e o reencadeamento temporario da 003 sao excecao bootstrap
+aprovada: os comandos de lifecycle que automatizarao o fluxo pertencem a 003.
+O estado ainda passa por `assertTransition`, `validateState`,
+`writeJsonAtomic` e `expectedRevision`.
+
 Regras:
 
 - Cada tarefa usa processo novo, writer unico e no maximo dois revisores.
+- Cada tarefa registra FAST, STANDARD ou FULL e justificativa; gates e reviews
+  seguem `.agent/EXECUTION_PROFILES.md`.
 - Depois da 005, a proxima sessao deve ser iniciada por `agentctl session
   start-next`.
 - Nenhuma tarefa pode absorver a seguinte por conveniencia.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 30,
+  "revision": 34,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -54,10 +54,22 @@
       ]
     },
     {
-      "id": "003",
-      "status": "READY",
+      "id": "002C",
+      "status": "DONE",
       "blocked_by": [
         "002B"
+      ],
+      "writer": "codex",
+      "reviewer": "lightweight-independent-review",
+      "execution_profile": "STANDARD",
+      "profile_approved_by": "human-request-2026-08-03",
+      "review_result": "PASS"
+    },
+    {
+      "id": "003",
+      "status": "DRAFT",
+      "blocked_by": [
+        "002C"
       ]
     },
     {
@@ -104,28 +116,25 @@
     }
   ],
   "session": {
-    "id": "task-002B-premerge-documentation-closure-20260803054719",
+    "id": "task-002C-adaptive-execution-20260803",
     "agent": "codex",
-    "task_id": "002B",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-08-03T05:47:19.314Z",
-    "bootstrap_exception": "Lifecycle de tarefa pertence a 003; 002B registrada por insercao DRAFT, assertTransition DRAFT -> READY -> IN_PROGRESS, reencadeamento 003 READY -> DRAFT, validateState e writeJsonAtomic com expectedRevision.",
-    "validating_at": "2026-08-03T05:51:06.455Z",
-    "focused_tests": "89/89 PASS fora do sandbox; tentativa confinada falhou com spawnSync git EPERM",
-    "reviewing_at": "2026-08-03T05:55:09.435Z",
-    "gates": ".agent/specs/SPEC-000-agent-workflow-pilot/reviews/002B-gates.md",
-    "done_at": "2026-08-03T06:15:06.714Z",
+    "task_id": "002C",
+    "status": "DONE",
+    "started_at": "2026-08-03T08:54:31.401Z",
+    "execution_profile": "STANDARD",
+    "profile_approved_by": "human-request-2026-08-03",
+    "bootstrap_exception": "Lifecycle de tarefa pertence a 003; 002C foi inserida e transitada DRAFT -> READY -> IN_PROGRESS com assertTransition. O reencadeamento aprovado de 003 READY -> DRAFT e a abertura desta nova sessao foram aplicados antes de validateState e writeJsonAtomic com expectedRevision.",
+    "validating_at": "2026-08-03T09:00:32.905Z",
+    "reviewing_at": "2026-08-03T09:02:28.172Z",
+    "focused_tests": "12/12 PASS",
+    "typecheck": "PASS",
+    "diff_check": "PASS",
+    "gates": ".agent/specs/SPEC-000-agent-workflow-pilot/reviews/002C-gates.md",
+    "done_at": "2026-08-03T09:08:01.200Z",
     "review_result": {
-      "spec_compliance": "PASS",
-      "engineering_quality": "PASS",
-      "fixed_point_sha256": "125ac1519483674d0f5a4625598903dca4d831c2948cd793d537c60618a7d7d7"
-    },
-    "delivery_commit": "f13adc46d5d90f4953fc66370e3bfe1bdd25a078",
-    "remote": "origin/feat/spec-000-task-002-spec-lifecycle",
-    "pushed_at": "2026-08-03T06:35:03.187Z",
-    "closed_at": "2026-08-03T06:36:39.328Z",
-    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002B-premerge-documentation-closure-f13adc4.md",
-    "next_task": "003"
+      "lightweight_independent_review": "PASS",
+      "fixed_point_sha256": "2823344c44f8b9357577cffefb1e903ca97a88465ed4c943f0f19272a6fa9306"
+    }
   },
   "approval": {
     "spec": true,

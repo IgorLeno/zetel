@@ -31,7 +31,7 @@ Um workflow local, versionado e portavel que:
 2. exige aprovacao humana da spec, do plano e da decomposicao;
 3. executa exatamente uma tarefa vertical por sessao;
 4. bloqueia transicoes invalidas;
-5. exige gates e duas revisoes independentes antes do fechamento;
+5. exige gates e revisoes proporcionais ao perfil e ao risco;
 6. confirma commit, push, remote sincronizado e arvore limpa antes de encerrar;
 7. inicia Codex ou Claude Code em processo novo, sem `resume`;
 8. permite ao outro agente retomar apenas pelo Git, handoff e context-pack;
@@ -96,27 +96,36 @@ passar pelo validador.
 ### R5. Gates
 
 - Testes focados devem preceder gates amplos.
-- Gates padrao: `pnpm build`, `pnpm test:ci`, `pnpm test:coverage`,
-  `pnpm typecheck` e `git diff --check`.
+- Gates sao selecionados pelo `execution_profile` FAST, STANDARD ou FULL,
+  conforme `.agent/EXECUTION_PROFILES.md` e `.agent/QUALITY.md`.
+- FAST usa verificacao focada e diff-check; STANDARD acrescenta somente gates
+  diretamente aplicaveis; FULL exige a suite ampla definida em QUALITY.
+- Gates amplos executam no maximo uma vez no fixed point. Apos correcao
+  material, repetem-se testes impactados e apenas gates ainda aplicaveis.
 - E2E live nao pode executar sem variavel, chave e autorizacao adequadas.
 - `DONE` exige evidencias recentes dos gates aplicaveis.
 
 ### R6. Revisao
 
-- Revisoes de spec compliance e engineering quality geram relatorios
-  separados.
-- Revisores nao recebem o relatorio um do outro antes de concluir.
+- FAST nao exige review externo; STANDARD permite no maximo uma revisao
+  independente e uma rodada; FULL pode usar duas revisoes independentes quando
+  os eixos de conformidade e qualidade forem materialmente uteis.
+- Quando houver dois eixos, eles geram relatorios separados e revisores nao
+  recebem o relatorio um do outro antes de concluir.
 - Achado bloqueante em qualquer eixo impede `DONE`, commit e push.
-- O escritor nao pode ser o unico revisor.
+- Revisao desnecessaria nao deve ser criada para ortografia ou docs triviais.
 
 ### R7. Git
 
-- O piloto usa `chore/spec-session-workflow-pilot`.
-- Nao cria PR e nao faz merge em `main`.
+- O piloto usa uma branch dedicada por entrega e nao faz merge em `main` sem
+  aprovacao humana explicita.
 - Spec aprovada e cada tarefa concluida recebem commit e push proprios.
 - O fechamento versionado usa um commit de entrega e, quando o handoff precisa
   referenciar esse SHA, um commit pequeno de fechamento. O segundo commit pode
   conter apenas `state.json`, handoff e metricas da sessao.
+- FAST e STANDARD podem usar fechamento enxuto. Dois commits continuam
+  obrigatorios quando o handoff precisa referenciar o delivery SHA, mas nao para
+  toda correcao trivial sem esse requisito.
 - Force push, reescrita remota e exclusao de branch remota sao proibidos.
 - Alteracoes preexistentes do usuario nao podem ser sobrescritas ou incluidas
   sem relacao com a tarefa.
@@ -199,7 +208,8 @@ erros de contexto, handoff, troca de agente, idempotencia, gates e correcoes.
 - [ ] `agentctl` oferece todos os comandos solicitados.
 - [ ] Transicoes invalidas e tarefa bloqueada falham com mensagem acionavel.
 - [ ] `DONE` falha sem gates e `SESSION_CLOSED` falha sem push confirmado.
-- [ ] Duas revisoes separadas bloqueiam fechamento quando necessario.
+- [ ] Revisoes proporcionais bloqueiam fechamento quando houver finding
+  bloqueante.
 - [ ] Pelo menos tres tarefas sao executadas em processos novos.
 - [ ] Nenhuma sessao executa duas tarefas.
 - [ ] Pelo menos uma retomada Codex -> Claude e uma Claude -> Codex sao
@@ -229,6 +239,8 @@ erros de contexto, handoff, troca de agente, idempotencia, gates e correcoes.
 - O Git versionado e a fonte de continuidade entre sessoes.
 - O writer e unico; revisores podem ser no maximo dois.
 - Branch/worktree sao escolhas de risco, nao obrigacoes universais.
+- O perfil de execucao e escolhido pelo menor custo compativel; risco pode
+  eleva-lo, e downgrade exige justificativa ou aprovacao humana.
 - O runtime completo do Spec Kit e pacotes completos de terceiros nao serao
   instalados.
 - Skills externas serao referencias ou adaptacoes com proveniencia, nunca
@@ -243,7 +255,7 @@ erros de contexto, handoff, troca de agente, idempotencia, gates e correcoes.
 
 - Migrar Caderneta, Grimperium ou qualquer outro repositorio.
 - Alterar comportamento funcional, schema ou dados do Zetel.
-- Merge em `main`, criacao de PR, deploy ou release.
+- Merge em `main`, deploy ou release.
 - Instalar Spec Kit, Superpowers, Matt Pocock Skills ou Vercel Skills.
 - Criar politica global `agent-policy`.
 - Executar benchmark caro, E2E live ou chamadas OpenRouter.
@@ -257,7 +269,7 @@ erros de contexto, handoff, troca de agente, idempotencia, gates e correcoes.
 | `start-next` iniciar outra sessao cedo | Guarda de `SESSION_CLOSED` e operacao humana |
 | Adaptadores duplicarem conteudo | Fonte canonica e adaptadores gerados/validados |
 | Hooks causarem escrita oculta | Sem hooks mutantes no piloto; comandos explicitos |
-| Gates amplos consumirem tempo | Focados primeiro; amplo antes de commit |
+| Gates amplos consumirem tempo | Perfis adaptativos; amplo uma vez no fixed point |
 | Claude indisponivel/autenticacao | Registrar bloqueio; nao simular comparacao |
 | Metricas de token imprecisas | Declarar metodo e separar contagem de estimativa |
 
@@ -281,7 +293,7 @@ Estas propostas foram aprovadas junto com a spec:
 - Testes de falha para arvore suja, remote atrasado, gates ausentes e review
   bloqueante.
 - Smoke real das CLIs apenas em modo diagnostico/controlado.
-- Gates completos do Zetel antes de cada commit de tarefa.
+- Gates aplicaveis ao perfil antes de cada commit de tarefa.
 
 ## Dependencias
 
@@ -296,7 +308,7 @@ Estas propostas foram aprovadas junto com a spec:
 - SHA local e SHA remota apos push.
 - `git status --porcelain` vazio no fechamento.
 - IDs/processos novos ou evidencia tecnica equivalente.
-- Relatorios separados das duas revisoes.
+- Relatorios das revisoes aplicaveis ao perfil.
 - Medidas antes/depois pelo mesmo metodo.
 - Handoff consumido pelo agente diferente sem transcript.
 
@@ -315,3 +327,20 @@ Estas propostas foram aprovadas junto com a spec:
 
 Alteracao material de escopo, decomposicao ou decisoes acima exige nova
 aprovacao humana.
+
+## Addendum aprovado — 2026-08-03
+
+O solicitante aprovou a tarefa 002C para corrigir o custo excessivo observado
+nas execucoes 002A e 002B. A partir deste addendum:
+
+- toda tarefa registra FAST, STANDARD ou FULL e uma justificativa;
+- gates, reviews, handoff, tempo e contexto sao proporcionais ao risco;
+- state machine, escrita atomica, seguranca e banco permanecem sempre FULL,
+  enquanto documentacao relacionada nao e elevada automaticamente;
+- checks de CodeRabbit, Vercel e GitHub Actions sao assincronos; a sessao faz
+  push, registra `pending` quando aplicavel e nao espera bots;
+- R11 e R12 continuam integrais: adapters curtos e context-pack minimo;
+- 002C antecede 003, que implementara o contrato executavel atualizado.
+
+A solicitacao humana de 2026-08-03 e a evidencia formal desta alteracao de
+SPEC, plano e decomposicao.
