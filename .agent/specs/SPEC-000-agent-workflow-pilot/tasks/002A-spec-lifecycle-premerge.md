@@ -1,14 +1,14 @@
 ---
 id: "002A"
 title: "Correções pré-merge do lifecycle de spec"
-status: DONE
+status: SESSION_CLOSED
 blocked_by: ["002"]
 writer: codex
 reviewer: claude
-commit: null
-push: null
+commit: "227aa661570cad14dda58566008a5b9d51af9ef1"
+push: "origin/feat/spec-000-task-002-spec-lifecycle"
 review_result: pass
-handoff: null
+handoff: "../handoffs/002A-spec-lifecycle-premerge-227aa66.md"
 ---
 
 ## Objetivo
@@ -49,7 +49,7 @@ tecnicamente pronta para merge sem iniciar a tarefa 003.
       read-only e sem compartilhamento de relatórios.
 - [x] Corrigir qualquer finding bloqueante e repetir testes, gates e reviews se
       o diff material mudar.
-- [ ] Entregar e fechar em dois commits, ambos enviados por push normal para a
+- [x] Entregar e fechar em dois commits, ambos enviados por push normal para a
       branch existente, sem merge e sem iniciar 003.
 - [ ] Atualizar o corpo do PR #6, aguardar a nova análise CodeRabbit e triar
       todos os threads sem resolução automática injustificada.

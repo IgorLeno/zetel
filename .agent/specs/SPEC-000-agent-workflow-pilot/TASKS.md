@@ -52,13 +52,13 @@ Checkpoint durante a correcao pre-merge 002A:
 
 ```text
 002   SESSION_CLOSED
-002A  DONE
-003   DRAFT, blocked_by: ["002A"]
+002A  SESSION_CLOSED
+003   READY, blocked_by: ["002A"]
 active_task: null
-session.status: DONE
+session.status: SESSION_CLOSED
 ```
 
-A tarefa 003 nao pode voltar a `READY` ate o fechamento versionado da 002A.
+A tarefa 003 esta `READY` apos o fechamento da 002A, mas nao foi iniciada.
 
 Regras:
 

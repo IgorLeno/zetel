@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 22,
+  "revision": 24,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -41,14 +41,14 @@
     },
     {
       "id": "002A",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "002"
       ]
     },
     {
       "id": "003",
-      "status": "DRAFT",
+      "status": "READY",
       "blocked_by": [
         "002A"
       ]
@@ -100,13 +100,18 @@
     "id": "task-002A-spec-lifecycle-premerge-20260803041217",
     "agent": "codex",
     "task_id": "002A",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-08-03T04:12:17.128Z",
     "bootstrap_exception": "Lifecycle de tarefa pertence a 003; 002A registrada por insercao DRAFT, assertTransition DRAFT -> READY -> IN_PROGRESS, reencadeamento 003 READY -> DRAFT, validateState e writeJsonAtomic com expectedRevision. Transicao 002A/sessao IN_PROGRESS -> VALIDATING via assertTransition, validateState e writeJsonAtomic com expectedRevision apos implementacao e 89/89 testes focados verdes. Transicao 002A/sessao VALIDATING -> REVIEWING via assertTransition, validateState e writeJsonAtomic com expectedRevision apos gates completos e fixed point SHA-256 5a4e7e2f3f4b5e63ad9a2663f3e609efaab9bec2b764f4d9b32dadbb4f4cb01e.",
     "validating_at": "2026-08-03T04:31:16.058Z",
     "reviewing_at": "2026-08-03T04:53:25.537Z",
     "review_result": "PASS (2 Claude Code read-only processes; same provider)",
-    "done_at": "2026-08-03T05:03:01.067Z"
+    "done_at": "2026-08-03T05:03:01.067Z",
+    "delivery_commit": "227aa661570cad14dda58566008a5b9d51af9ef1",
+    "remote": "origin/feat/spec-000-task-002-spec-lifecycle",
+    "pushed_at": "2026-08-03T05:06:06.774Z",
+    "closed_at": "2026-08-03T05:07:07.441Z",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002A-spec-lifecycle-premerge-227aa66.md"
   },
   "approval": {
     "spec": true,
