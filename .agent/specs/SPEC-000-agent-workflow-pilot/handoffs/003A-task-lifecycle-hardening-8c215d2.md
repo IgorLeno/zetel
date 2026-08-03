@@ -57,3 +57,9 @@ integridade e evidências) sem reabrir a 003 nem iniciar a 004.
 ## Checks externos
 
 pending-not-waited
+
+## Integrity refresh
+
+Após o closing commit, `TASKS.md` operacional deixou o digest stale.
+Refresh bootstrap autorizado restaurou `approval.integrity` (comando
+`spec approve --reapprove` bloqueia envelope existente).
