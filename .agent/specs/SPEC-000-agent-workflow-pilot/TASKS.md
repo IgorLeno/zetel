@@ -102,6 +102,18 @@ aprovada: os comandos de lifecycle que automatizarao o fluxo pertencem a 003.
 O estado ainda passa por `assertTransition`, `validateState`,
 `writeJsonAtomic` e `expectedRevision`.
 
+Checkpoint final apos fechamento da 002C:
+
+```text
+002B  SESSION_CLOSED
+002C  SESSION_CLOSED
+003   READY, blocked_by: ["002C"]
+active_task: null
+session.status: SESSION_CLOSED
+```
+
+A tarefa 003 foi liberada, mas nao iniciada.
+
 Regras:
 
 - Cada tarefa usa processo novo, writer unico e no maximo dois revisores.

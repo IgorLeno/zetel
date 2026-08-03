@@ -1,14 +1,14 @@
 ---
 id: "002C"
 title: "Perfis adaptativos de execução e redução imediata de contexto"
-status: DONE
+status: SESSION_CLOSED
 blocked_by: ["002B"]
 writer: codex
 reviewer: lightweight-independent-review
-commit: null
-push: null
+commit: 67db0873e9ee5bff58c86ce2c7987f840fabbd3f
+push: origin/chore/spec-000-task-002c-adaptive-execution
 review_result: pass
-handoff: null
+handoff: .agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002C-adaptive-execution-67db087.md
 execution_profile: STANDARD
 profile_justification: "Mudança documental localizada no workflow, sem runtime do produto, migration, segurança, concorrência ou API pública."
 profile_approved_by: human-request-2026-08-03
@@ -29,7 +29,7 @@ imediatamente os adapters sem alterar código funcional do Zetel.
 - [x] Preservar contexto, arquitetura e histórico antes de reduzir os adapters.
 - [x] Executar testes focados e `git diff --check` no fixed point.
 - [x] Obter uma revisão read-only e corrigir apenas findings materiais.
-- [ ] Fechar em dois commits, publicar, abrir PR e não iniciar a tarefa 003.
+- [x] Preparar o fechamento em dois commits sem iniciar a tarefa 003.
 
 ## Critérios de aceitação
 
