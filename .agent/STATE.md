@@ -12,9 +12,15 @@ atomica com `expectedRevision`.
 | `revision` | inteiro >= 1 | Incrementado a cada escrita atomica |
 | `spec` | objeto | `id`, `status`, metadados de aprovacao |
 | `active_task` | string \| null | Id da unica tarefa ativa, ou null |
-| `tasks` | array | Cada item: `id`, `status`, `blocked_by[]` |
-| `session` | objeto | Metadados da sessao corrente/ultima |
+| `tasks` | array | Cada item: `id`, `status`, `blocked_by[]`; opcionalmente `execution_profile`, `profile_justification`, `profile_approved_by`, `reviews_requested` |
+| `session` | objeto | Metadados da sessao corrente/ultima; em validacao pode referenciar evidencia (`validation`, `fixed_point`, `gates_plan`) |
 | `approval` | objeto | Booleans obrigatorios e envelope de integridade opcional |
+
+Evidencias de `task validate` ficam em
+`.agent/specs/<spec-id>/evidence/<task-id>-validation.json` e sao
+referenciadas pela sessao. `task close` exige fixed point fresco, gates
+aplicaveis PASS e reviews proporcionais ao perfil; nao avanca para
+`PUSHED`/`SESSION_CLOSED`.
 
 ### Approval de spec
 

@@ -1,14 +1,18 @@
 ---
 id: "003"
 title: Lifecycle de tarefa e gates
-status: READY
+status: DONE
 blocked_by: ["002C"]
 writer: claude
 reviewer: codex
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: FULL
+profile_justification: "Implementação de lifecycle, state machine, execução de processos, persistência atômica e validação de evidências."
+validation: PASS
+validated_at: "2026-08-03T12:35:35.314Z"
 ---
 
 ## Objetivo
@@ -60,4 +64,7 @@ reduzido sem justificativa.
 
 ## Resultado da revisao
 
-Pendente.
+Dois reviews PASS no fixed point
+`3b53d6be8fd693afd90a93881ab3e05a2391dbce163f01dc254f5849f0e63ff9`:
+`003-spec-compliance.md` e `003-engineering-quality.md` (apos correcao de
+redacao de stdout/stderr na evidencia).

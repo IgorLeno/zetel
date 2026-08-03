@@ -5,7 +5,19 @@ import { join, sep } from 'node:path';
 const REQUIRED_LAYOUT_ARTIFACTS = Object.freeze(['SPEC.md', 'SPEC-SUMMARY.md', 'PLAN.md', 'TASKS.md']);
 const HASHED_ROOT_ARTIFACTS = new Set(['SPEC.md', 'PLAN.md', 'TASKS.md']);
 const OPERATIONAL_TASK_FIELDS = new Set([
-  'status', 'commit', 'push', 'review_result', 'handoff', 'validation', 'validated_at', 'reviewed_at',
+  'status',
+  'commit',
+  'push',
+  'review_result',
+  'handoff',
+  'validation',
+  'validated_at',
+  'reviewed_at',
+  'execution_profile',
+  'profile_justification',
+  'profile_approved_by',
+  'reviews_requested',
+  'review_justification',
 ]);
 const OPEN_MARKER = /^[ \t]*(?:OPEN_QUESTION:|TODO_APPROVAL:|\{\{[A-Z0-9_]+\}\})/m;
 const REQUIRED_TEMPLATE_SECTIONS = Object.freeze({

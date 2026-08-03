@@ -41,5 +41,9 @@ bloqueando approval.
 
 A tarefa `002B` encerrou em `SESSION_CLOSED` após alinhar o fechamento
 documental pre-merge, com gates completos, dois reviews finais `PASS`, delivery
-confirmado no remote e triagem final do PR #6. A tarefa `003` está somente
-`READY`, com `blocked_by: ["002B"]`, e nao foi iniciada.
+confirmado no remote e triagem final do PR #6.
+
+A tarefa `002C` encerrou em `SESSION_CLOSED` com perfis adaptativos. A tarefa
+`003` (`Lifecycle de tarefa e gates`) entregou `task next/start/validate/close`
+com perfil `FULL`, evidencias/fingerprint, reviews proporcionais e esta `DONE`
+apos dogfood do proprio lifecycle.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 36,
+  "revision": 44,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -70,10 +70,16 @@
     },
     {
       "id": "003",
-      "status": "READY",
+      "status": "DONE",
       "blocked_by": [
         "002C"
-      ]
+      ],
+      "writer": "claude",
+      "reviewer": "codex",
+      "execution_profile": "FULL",
+      "profile_justification": "Implementação de lifecycle, state machine, execução de processos, persistência atômica e validação de evidências.",
+      "validation": "PASS",
+      "review_result": "PASS"
     },
     {
       "id": "004",
@@ -119,31 +125,76 @@
     }
   ],
   "session": {
-    "id": "task-002C-adaptive-execution-20260803",
-    "agent": "codex",
-    "task_id": "002C",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-08-03T08:54:31.401Z",
-    "execution_profile": "STANDARD",
-    "profile_approved_by": "human-request-2026-08-03",
-    "bootstrap_exception": "Lifecycle de tarefa pertence a 003; 002C foi inserida e transitada DRAFT -> READY -> IN_PROGRESS com assertTransition. O reencadeamento aprovado de 003 READY -> DRAFT e a abertura desta nova sessao foram aplicados antes de validateState e writeJsonAtomic com expectedRevision.",
-    "validating_at": "2026-08-03T09:00:32.905Z",
-    "reviewing_at": "2026-08-03T09:02:28.172Z",
-    "focused_tests": "12/12 PASS",
-    "typecheck": "PASS",
-    "diff_check": "PASS",
-    "gates": ".agent/specs/SPEC-000-agent-workflow-pilot/reviews/002C-gates.md",
-    "done_at": "2026-08-03T09:08:01.200Z",
+    "id": "task-003-lifecycle-gates-20260803",
+    "agent": "claude",
+    "task_id": "003",
+    "status": "DONE",
+    "started_at": "2026-08-03T12:11:40.187Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Implementação de lifecycle, state machine, execução de processos, persistência atômica e validação de evidências.",
+    "reviews_requested": 2,
+    "bootstrap_exception": "task start ainda ausente nesta sessao; 003 READY->IN_PROGRESS via assertTransition; sessao nova substitui SESSION_CLOSED terminal (sem aresta SESSION_CLOSED->IN_PROGRESS) antes de validateState e writeJsonAtomic com expectedRevision.",
+    "validating_at": "2026-08-03T12:19:28.442Z",
+    "reviewing_at": "2026-08-03T12:35:35.314Z",
+    "validation_result": "PASS",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/agentctl/"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "validation": ".agent/specs/SPEC-000-agent-workflow-pilot/evidence/003-validation.json",
+    "fixed_point": "3b53d6be8fd693afd90a93881ab3e05a2391dbce163f01dc254f5849f0e63ff9",
+    "return_from_review_at": "2026-08-03T12:27:49.292Z",
+    "correction_reason": "engineering-quality blocking finding: redact process output in evidence",
+    "done_at": "2026-08-03T12:35:46.827Z",
+    "active_task_cleared": true,
     "review_result": {
-      "lightweight_independent_review": "PASS",
-      "fixed_point_sha256": "2823344c44f8b9357577cffefb1e903ca97a88465ed4c943f0f19272a6fa9306"
+      "engineering-quality": "PASS",
+      "spec-compliance": "PASS"
     },
-    "delivery_commit": "67db0873e9ee5bff58c86ce2c7987f840fabbd3f",
-    "remote": "origin/chore/spec-000-task-002c-adaptive-execution",
-    "pushed_at": "2026-08-03T09:10:58.076Z",
-    "closed_at": "2026-08-03T09:11:28.990Z",
-    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002C-adaptive-execution-67db087.md",
-    "next_task": "003",
     "external_checks": "pending-not-waited"
   },
   "approval": {

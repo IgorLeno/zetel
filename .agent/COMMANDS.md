@@ -128,12 +128,86 @@ assinatura destacada, attestation de CI ou digest publicado fora do
 - Exit `1` se o estado for invalido; exit `2` se faltar `<spec-id>`
   (`guard: usage`).
 
+## Lifecycle de tarefa (tarefa 003)
+
+```text
+./agentctl task next <spec-id>
+./agentctl task start <spec-id> <task-id> \
+  --agent <agent> \
+  --profile <FAST|STANDARD|FULL> \
+  --justification "<texto>" \
+  [--reviews <0|1|2>] \
+  [--review-justification "<texto>"] \
+  [--profile-approved-by "<identidade humana>"]
+./agentctl task validate <spec-id> <task-id> \
+  [--focused-json <argv-json>]... \
+  [--integration-json <argv-json>]... \
+  [--plan-file <path>] \
+  [--profile <FAST|STANDARD|FULL>] \
+  [--justification "<texto>"] \
+  [--profile-approved-by "<identidade humana>"] \
+  [--require-test-ci]
+./agentctl task close <spec-id> <task-id>
+```
+
+Comandos estruturados usam arrays JSON de argv e `spawn` com `shell: false`.
+Nao ha parser de shell; pipe, redirect, `&&` e substituicao sao rejeitados.
+E2E live/OpenRouter nunca entra no plano.
+
+### `./agentctl task next`
+
+Somente leitura. Exige spec `APPROVED`, valida o state e devolve a primeira
+tarefa `READY` na ordem do array cujo `blocked_by` esteja todo em
+`SESSION_CLOSED`. Ignora DRAFT, ativas, DONE, PUSHED e SESSION_CLOSED. Nao
+altera revision, mtime, lock nem estado. Exit `1` com `guard: no-ready-task`
+quando nao houver candidato.
+
+### `./agentctl task start`
+
+Exige spec aprovada e integra, tarefa `READY`, blockers `SESSION_CLOSED`,
+agente/perfil/justificativa e ausencia de tarefa/sessao ativa. Matriz de
+reviews: FAST=0; STANDARD=0|1; FULL=0|1|2 (FULL com <2 exige
+`--review-justification`). Escalada e permitida; downgrade exige
+`--profile-approved-by`. Usa `assertTransition`, `validateState`,
+`writeJsonAtomic` e `expectedRevision` (uma revision). Substitui sessao
+`SESSION_CLOSED`/nula por nova sessao `IN_PROGRESS` (aresta terminal nao existe).
+
+### `./agentctl task validate`
+
+Opera somente na tarefa ativa. Transiciona `IN_PROGRESS -> VALIDATING`, executa
+o plano de gates do perfil, para na primeira falha e permanece `VALIDATING`.
+Em sucesso, grava evidencia em
+`.agent/specs/<spec-id>/evidence/<task-id>-validation.json` com fingerprint/
+fixed point e transiciona `VALIDATING -> REVIEWING`. Retry em `VALIDATING` e
+permitido. `--plan-file` aceita JSON operacional:
+`{ "focused": [["pnpm","exec",...]], "integrations": [], "require_test_ci": false }`.
+
+Gates: FAST = focados + `git diff --check`; STANDARD = focados + integracoes
+declaradas + typecheck se TS afetado + `test:ci` so com `--require-test-ci` +
+diff-check; FULL = focados + build + test:ci + coverage + typecheck +
+diff-check.
+
+### Evidencias, freshness, waivers e reviews
+
+Evidencia registra argv, categoria, timestamps, exit, HEAD, fingerprints e
+revision. Fixed point fica stale se HEAD/diff material/tarefa/perfil/plano
+mudarem. Reviews e `state.json` operacionais nao invalidam o tree hash;
+mudanca material da tarefa usa fingerprint canonico (campos operacionais
+excluidos). Waiver preserva falha original, exige identidade humana e nunca
+libera E2E live. Reviews versionados em `reviews/<task>-*.md` com
+`task_id`, `axis`, `reviewer`, `fixed_point`, `result`, `blocking_findings`,
+`reviewed_at`. FAST exige 0; STANDARD/FULL seguem `reviews_requested` do start.
+Checks externos pending nao sao reviews e nao bloqueiam.
+
+### `./agentctl task close`
+
+Exige tarefa/sessao `REVIEWING`, evidencias atuais PASS e reviews aplicaveis.
+Transiciona ambos para `DONE`, zera `active_task` e registra `done_at`. Nao faz
+commit, push, PR, handoff, `PUSHED`, `SESSION_CLOSED` nem inicia a proxima
+tarefa (fronteira com 004/005).
+
 ## Reservado para tarefas seguintes
 
-- `task next` / `start` / `validate` / `close` / `review`
-- `session close` / `session start-next`
+- `task review` (004)
+- `session close` / `session start-next` (005)
 - `spec converge` / harvest
-
-Esses comandos devem reutilizar o dominio em `scripts/agentctl/domain/` e a
-escrita atomica em `scripts/agentctl/infra/atomic-write.mjs` (lock + revision +
-fsync do conteudo; fsync de diretorio best-effort apos rename).
