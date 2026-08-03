@@ -45,5 +45,5 @@ confirmado no remote e triagem final do PR #6.
 
 A tarefa `002C` encerrou em `SESSION_CLOSED` com perfis adaptativos. A tarefa
 `003` (`Lifecycle de tarefa e gates`) entregou `task next/start/validate/close`
-com perfil `FULL`, evidencias/fingerprint, reviews proporcionais e esta `DONE`
-apos dogfood do proprio lifecycle.
+com perfil `FULL`, evidencias/fingerprint e reviews proporcionais; encerrou em
+`SESSION_CLOSED`. A tarefa `004` esta `READY` e nao iniciada.

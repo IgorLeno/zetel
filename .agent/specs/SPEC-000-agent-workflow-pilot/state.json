@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 44,
+  "revision": 46,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -70,7 +70,7 @@
     },
     {
       "id": "003",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "002C"
       ],
@@ -79,11 +79,14 @@
       "execution_profile": "FULL",
       "profile_justification": "Implementação de lifecycle, state machine, execução de processos, persistência atômica e validação de evidências.",
       "validation": "PASS",
-      "review_result": "PASS"
+      "review_result": "PASS",
+      "commit": "d14e9149b4802bd0dcd3684e5afbb89a7a1fd8be",
+      "push": "origin/feat/spec-000-task-003-task-lifecycle-gates",
+      "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/003-task-lifecycle-d14e914.md"
     },
     {
       "id": "004",
-      "status": "DRAFT",
+      "status": "READY",
       "blocked_by": [
         "003"
       ]
@@ -128,12 +131,12 @@
     "id": "task-003-lifecycle-gates-20260803",
     "agent": "claude",
     "task_id": "003",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-08-03T12:11:40.187Z",
     "execution_profile": "FULL",
     "profile_justification": "Implementação de lifecycle, state machine, execução de processos, persistência atômica e validação de evidências.",
     "reviews_requested": 2,
-    "bootstrap_exception": "task start ainda ausente nesta sessao; 003 READY->IN_PROGRESS via assertTransition; sessao nova substitui SESSION_CLOSED terminal (sem aresta SESSION_CLOSED->IN_PROGRESS) antes de validateState e writeJsonAtomic com expectedRevision.",
+    "bootstrap_exception": "session close pertence a 005; fechamento pos-push da 003 usa assertTransition DONE->PUSHED->SESSION_CLOSED, handoff versionado e liberacao 004 DRAFT->READY sem iniciar 004.",
     "validating_at": "2026-08-03T12:19:28.442Z",
     "reviewing_at": "2026-08-03T12:35:35.314Z",
     "validation_result": "PASS",
@@ -195,7 +198,13 @@
       "engineering-quality": "PASS",
       "spec-compliance": "PASS"
     },
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "delivery_commit": "d14e9149b4802bd0dcd3684e5afbb89a7a1fd8be",
+    "remote": "origin/feat/spec-000-task-003-task-lifecycle-gates",
+    "pushed_at": "2026-08-03T12:36:39.178Z",
+    "closed_at": "2026-08-03T12:36:39.199Z",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/003-task-lifecycle-d14e914.md",
+    "next_task": "004"
   },
   "approval": {
     "spec": true,

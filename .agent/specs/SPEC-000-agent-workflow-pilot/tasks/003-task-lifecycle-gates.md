@@ -1,14 +1,14 @@
 ---
 id: "003"
 title: Lifecycle de tarefa e gates
-status: DONE
+status: SESSION_CLOSED
 blocked_by: ["002C"]
 writer: claude
 reviewer: codex
-commit: null
-push: null
+commit: d14e9149b4802bd0dcd3684e5afbb89a7a1fd8be
+push: origin/feat/spec-000-task-003-task-lifecycle-gates
 review_result: PASS
-handoff: null
+handoff: .agent/specs/SPEC-000-agent-workflow-pilot/handoffs/003-task-lifecycle-d14e914.md
 execution_profile: FULL
 profile_justification: "Implementação de lifecycle, state machine, execução de processos, persistência atômica e validação de evidências."
 validation: PASS

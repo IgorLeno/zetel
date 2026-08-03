@@ -114,19 +114,20 @@ session.status: SESSION_CLOSED
 
 A tarefa 003 foi liberada, mas nao iniciada.
 
-Checkpoint da sessao 003 apos `task close` (perfil FULL):
+Checkpoint final da sessao 003 (perfil FULL):
 
 ```text
 002C  SESSION_CLOSED
-003   DONE, blocked_by: ["002C"], execution_profile: FULL
-004   DRAFT, blocked_by: ["003"]
+003   SESSION_CLOSED, blocked_by: ["002C"], execution_profile: FULL
+004   READY, blocked_by: ["003"]
 active_task: null
-session.status: DONE
+session.status: SESSION_CLOSED
+session.task_id: "003"
 ```
 
-Comandos entregues: `task next/start/validate/close`. Fechamento versionado
-(PUSHED/SESSION_CLOSED) e liberacao da 004 permanecem no bootstrap pos-push
-ate a tarefa 005.
+Comandos entregues: `task next/start/validate/close`. Fechamento
+PUSHED/SESSION_CLOSED e liberacao da 004 usaram bootstrap pos-push
+(`session close` permanece na 005). A 004 nao foi iniciada.
 
 Regras:
 
