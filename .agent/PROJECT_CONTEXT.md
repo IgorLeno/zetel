@@ -36,6 +36,8 @@ padrão: selecione apenas as relacionadas à tarefa atual.
 
 - DT-M12-1: `note_model` e `memory_model` persistem em settings, mas sugestões
   inline ainda usam o resolvedor de chat. Separar chamadas é decisão de produto.
-- E2E live usa OpenRouter real, é opt-in e tem budget; não pertence ao gate
-  padrão e exige autorização humana.
+- E2E live/OpenRouter exige simultaneamente `ZETEL_E2E_LIVE=1`,
+  `OPENROUTER_API_KEY` não vazia, `ZETEL_E2E_MAX_CALLS` definido como orçamento
+  finito e positivo e autorização humana explícita; roda fora dos gates padrão
+  e nunca é executado automaticamente pela CI padrão.
 - SQLite e artefatos HTML ficam fora do Git. O vault Markdown é amigável a Git.

@@ -8,21 +8,25 @@ Zetel é um parceiro de estudos local-first textual, em Next.js, com vault Obsid
 
 **Estado atual: Módulo 14 concluído (14.1–14.4; Gate 14.4 aprovado em 2026-06-03). Zetel Redesign no app shell: tokens CSS de leitura (`--read-width`, `--read-font`, `--read-size`, `--read-lh`, `--density`), design system violeta-indigo (14.2), zonas de UI topbar/leitura/chat/cards/iframes (14.3), modo mãos-livres com Web Speech API contínua e toggles `micAtivo`/`autoPlay` (14.4; substitui o chip `inputMode × outputMode` do 13.4 na UI, preservando `interactionMode` no backend via `autoPlay`). Módulo 13 concluído (13.1–13.4; Gate 13.4 em 2026-06-02). Módulo 12 concluído (gate 2026-06-01). Próximo passo: PRD v5 — prompts editáveis em runtime e modo internet.**
 
-**Módulo 12.1 (E2E Live — Fase 1 + Fase 2) completo.** E2E live é opt-in (`ZETEL_E2E_LIVE=1`); CI padrão nunca usa OpenRouter. Budget guard (`ZETEL_E2E_MAX_CALLS`, default 3) em `setup-live.ts` via `checkBudget` exportada para uso nos specs. Artefatos de falha coletados automaticamente em `test-results/e2e-live/` via `collect-artifacts.ts`. Summarizer opcional em `scripts/e2e-live-summarize.mjs` (funciona sem e com chave). GitHub Actions manual (`workflow_dispatch`) em `.github/workflows/e2e-live.yml` com secret `OPENROUTER_API_KEY` obrigatório. Qualquer mudança em `lib/openrouter.ts`, `lib/study-guide-service.ts`, `lib/chat-prompt.ts` ou `app/api/zetels/[id]/chat/route.ts` deve ser validada com `pnpm test:e2e:live` manualmente quando chave disponível. Gate mínimo permanece: `pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`. Ver `docs/TESTING.md` (seção "E2E Live com OpenRouter").
+**Módulo 12.1 (E2E Live — Fase 1 + Fase 2) completo.** Registro histórico: E2E live era opt-in (`ZETEL_E2E_LIVE=1`) e usava guarda de orçamento (`ZETEL_E2E_MAX_CALLS`, default 3) em `setup-live.ts` via `checkBudget`; artefatos de falha eram coletados em `test-results/e2e-live/` via `collect-artifacts.ts`, e o workflow era manual (`workflow_dispatch`) em `.github/workflows/e2e-live.yml`. Contrato atual: E2E live/OpenRouter exige simultaneamente `ZETEL_E2E_LIVE=1`, `OPENROUTER_API_KEY` não vazia, `ZETEL_E2E_MAX_CALLS` definido como orçamento finito e positivo e autorização humana explícita; roda fora dos gates padrão e nunca é executado automaticamente pela CI padrão. Ver `docs/TESTING.md` (seção "E2E Live com OpenRouter").
 
 **Dívida técnica DT-M12-1 (não bloqueia gate):** `note_model` e `memory_model` persistem em settings e na UI, mas não afetam o modelo em runtime — ver tabela abaixo. `chat_model` está wired em `app/api/zetels/[id]/chat/route.ts` (`chat_model` → `default_model` → env). Sugestão de nota/memória no chat usa o mesmo resolvedor (`chat_model`), não `note_model`/`memory_model`. Wiring real exige separar geração de sugestão em chamadas LLM próprias — decisão de produto; dívida herdada no PRD v4 (Parte D); absorver em patch pré-Módulo 13 ou durante 13.x (fechar D28).
 
-#### Resumo
+### Resumo
+
 MVP textual entregue após gate manual (gate 8 → release com orientador pendente).
 
-#### Data de conclusão
+### Data de conclusão
+
 2026-05-30
 
-#### Build / Gate
+### Build / Gate
+
 - `pnpm build` limpo
 - Gate 8 → release: validação manual com orientador pendente
 
-#### Entregáveis
+### Entregáveis
+
 - Robustez de erros API: `leitura/route.ts`; reads de `notes/titles`, `memory` GET, `memory/titles` (try/catch + JSON estruturado)
 - **M6-1 fechada:** `config/prompts/parceiro.md` via `ensureParceiroPrompt` em `lib/chat-prompt.ts` (self-heal sem clobber); seed em `lib/vault.ts`; `partnerPrompt` em `buildOpenRouterMessages` (regra #5)
 - **M6-3 fechada:** `ChatPanel` sempre montado em `LeituraPanel`; visibilidade via CSS `display:none` (stream não se perde ao recolher)
@@ -30,14 +34,17 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 - `docs/BACKUP.md` criado
 - Ver `spikes/lessons.md` (Módulo 8)
 
-#### Dívidas fechadas
+### Dívidas fechadas
+
 - **M6-1** — prompt do parceiro lido do vault sob demanda
 - **M6-3** — chat recolhível sem perder stream
 
-#### Dívidas pendentes
+### Dívidas pendentes
+
 - **M6-2** — saudação automática quando histórico vazio (I1); pós-MVP
 
-#### Próximos passos
+### Próximos passos
+
 - Gate visual/manual do Documento Técnico refinado, se necessário.
 - Próximo passo operacional: **PRD v5 — Prompts editáveis e modo internet**. O Módulo 14 foi encerrado com Gate 14.4 aprovado (Zetel Redesign + modo mãos-livres).
 
@@ -45,9 +52,9 @@ MVP textual entregue após gate manual (gate 8 → release com orientador penden
 
 **Módulo 11 (Guia de Estudo: experiência interativa) concluído em 2026-05-31; gate 11.4 aprovado; `pnpm build` limpo.** **11.1** — template interativo em `renderStudyGuideHtml`: sidebar sticky (desktop) / nav compacta (mobile), quiz pedagógico (`data-answer-index`, feedback pós-clique, pontuação, reiniciar), glossário pesquisável, highlight de seção via `IntersectionObserver`. **11.2** — schema editorial v2 opcional (`comparison_tabs`, `accordions`, `timelines`, `tables`) + `renderV2Blocks`; compatibilidade retroativa. **11.3** — `buildSystemPrompt` como designer instrucional com blocos v2. **11.4** — validação com Zetel `dft` (reprocessado 28→27 páginas): `deepseek/deepseek-v4-flash`, 100% rastreabilidade (35/35 itens, 0 órfãos, 0 flagged), 4 tipos v2 preenchidos, HTML offline (~51 KB). Ressalva não-bloqueante: compat retroativa v1 não testada por ausência de fixture. Ver `spikes/lessons.md` (Módulos 11.1–11.4).
 
-**Módulo 12.1 (E2E Live — Fase 1 + Fase 2) concluído.** Entregou: `ZETEL_HOME` redirecionável por env (`lib/paths.ts`); projeto Playwright `e2e-live` na porta 3001 com `ZETEL_HOME`/`vault` em `tmpdir()`; `pnpm test:e2e:live`; setup programático via API em `e2e/live/helpers/setup-live.ts`; specs live com OpenRouter real; budget guard e coleta de artefatos; `.env.e2e.live.example`; workflow manual `.github/workflows/e2e-live.yml`. Ver `docs/TESTING.md`.
+**Módulo 12.1 (E2E Live — Fase 1 + Fase 2) concluído.** Registro histórico: entregou `ZETEL_HOME` redirecionável por env (`lib/paths.ts`), projeto Playwright `e2e-live` na porta 3001, setup por API, specs live, guarda de orçamento, coleta de artefatos, `.env.e2e.live.example` e workflow manual. Para qualquer execução real atual, E2E live/OpenRouter exige simultaneamente `ZETEL_E2E_LIVE=1`, `OPENROUTER_API_KEY` não vazia, `ZETEL_E2E_MAX_CALLS` definido como orçamento finito e positivo e autorização humana explícita; roda fora dos gates padrão e nunca é executado automaticamente pela CI padrão. Ver `docs/TESTING.md`.
 
-**Módulo 12.0B (Integration tests + E2E legado) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`).** Entregou: harness `tests/helpers/temp-env.ts` (`makeTempEnv`/`cleanupTempEnv`/`seedZetelWithFile` — SQLite `:memory:` + vault em `tmpdir`, injeção direta de `db`/`vaultPath` **sem** `getDb()` singleton); integration tests em `tests/integration/ingestao/process-zetel.test.ts` (ingestão com páginas/anchor/hash), `tests/integration/study-guide/generate-study-guide.test.ts` + `full-flow.test.ts` (geração de guia com OpenRouter mockado via `vi.mock`) e `traceability-pipeline.test.ts` (endurecimento de quiz + rastreabilidade); E2E legado em `e2e/` (porta 3000, vault/chave do dev via `.env.e2e`) — `chat-basic.spec.ts` e `chat-sse-buffer.spec.ts` usam OpenRouter real; specs de nota/memória são LLM-dependentes. **Não há intercept Playwright** no E2E legado. Ver `docs/TESTING.md`.
+**Módulo 12.0B (Integration tests + E2E legado) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage` + `pnpm typecheck`).** Entregou: harness `tests/helpers/temp-env.ts` (`makeTempEnv`/`cleanupTempEnv`/`seedZetelWithFile` — SQLite `:memory:` + vault em `tmpdir`, injeção direta de `db`/`vaultPath` **sem** `getDb()` singleton); integration tests em `tests/integration/ingestao/process-zetel.test.ts` (ingestão com páginas/anchor/hash), `tests/integration/study-guide/generate-study-guide.test.ts` + `full-flow.test.ts` (geração de guia com OpenRouter mockado via `vi.mock`) e `traceability-pipeline.test.ts` (endurecimento de quiz + rastreabilidade). O caminho E2E legado em `e2e/`, com vault/chave do desenvolvedor via `.env.e2e`, é histórico e obsoleto. Para qualquer execução real atual, E2E live/OpenRouter exige simultaneamente `ZETEL_E2E_LIVE=1`, `OPENROUTER_API_KEY` não vazia, `ZETEL_E2E_MAX_CALLS` definido como orçamento finito e positivo e autorização humana explícita; roda fora dos gates padrão e nunca é executado automaticamente pela CI padrão. Ver `docs/TESTING.md`.
 
 **Módulo 12.0A (Fundação de Testes e CI) concluído em 2026-06-01; gate passado (`pnpm build` + `pnpm test:ci` + `pnpm test:coverage`).** Vitest + coverage V8 configurados; 126 testes unitários (chat-prompt, source-index, ingestão, guia de estudo, zetel-service, utils); CI em `.github/workflows/ci.yml`; `docs/TESTING.md` criado; `validateAndNormalize`, `computeTraceability`, `StudyGuide`, `QuizItem`, `Traceability` exportados com `@internal` de `study-guide-service.ts`.
 
@@ -118,7 +125,7 @@ Não escolher alternativas sem aprovação explícita.
 
 ## Estrutura física (caminhos canônicos)
 
-```
+```text
 ~/.zetel/
   zetel.db          # SQLite, permissão 600
   config            # chave OpenRouter, permissão 600
@@ -172,7 +179,7 @@ Para detalhe completo, ver Partes C e D do PRD. Esta tabela usa as versões **co
 | D5 | Modo internet fora do MVP; vira PRD v5. |
 | D6 | Histórico de conversa por Zetel em SQLite (`chat_messages`), não em Markdown. |
 | D7 | Múltiplos arquivos por Zetel suportados desde o Módulo 3; ordem via `order_index`. |
-| D8 | Cliente envia `page_id`; servidor valida contra `zetel_pages` e usa `content_text` armazenado como fonte autoritativa. Divergência registrada em `meta.page_hash_match = false`. |
+| D8 | Cliente envia `pageIndex` no corpo; servidor valida contra `zetel_pages.page_index` e usa `zetel_pages.content_text` armazenado como fonte autoritativa. Divergência registrada em `meta.page_hash_match = false`. |
 | D9 | Lixeira em pasta no vault (`zetels/.lixeira/`) + flag `trashed_at` em SQLite. |
 | D10 | Prompts editáveis em runtime fora do MVP (vira PRD v5); vivem em `config/prompts/` no vault. |
 | D11 | Mini-índice derivado dos headings do Markdown original; persistido em `zetel_pages`. |
@@ -183,7 +190,7 @@ Para detalhe completo, ver Partes C e D do PRD. Esta tabela usa as versões **co
 | D25 | Dois modos de geração de HTML por Zetel: Documento Técnico determinístico, sem LLM, fiel ao Markdown, em `artefatos/leitura-tecnica.html`; Guia de Estudo editorial com LLM, não determinístico, em `artefatos/guia-estudo.html`, `artefatos/guia-estudo.meta.json` e `artefatos/guia-estudo.source.json`. O antigo `leitura.html` deve ser migrado/renomeado para o papel técnico. |
 | D26 | Pipeline editorial do Guia de Estudo: Markdown original → LLM gera JSON estruturado → template determinístico renderiza HTML. A LLM nunca gera HTML final diretamente. O JSON inclui título, subtítulo, resumo, cards, seções, glossário, quiz e perguntas Zettelkasten; cada item inclui rastreabilidade ao Markdown (`source_headings`, `source_file`, `source_block_hashes` ou equivalente). |
 | D27 | Fonte de conhecimento do parceiro permanece o Markdown. O HTML visível informa localização do usuário, não limite do conhecimento do parceiro. O parceiro usa Markdown original ou `zetel_pages.content_text`; em modo Guia de Estudo, usa `guia-estudo.source.json` para mapear `guide_block_id` → origem no Markdown. D8 deve ser estendido, não substituído. |
-| D28 | Configuração de modelos por tarefa (D28). **Entregue:** `study_guide_model`, limites do guia, `chat_model` (wired em `chat/route.ts`), históricos e teste por campo em Configurações. **Pendente:** wiring de `note_model` e `memory_model` (**DT-M12-1**), `study_guide_review_model`. `tech_doc_model` persiste na UI sem uso (Documento Técnico determinístico). TTS/STT → PRD v4. | 10D/M11 (parcial) / M12 |
+| D28 | Configuração de modelos por tarefa (Módulos 10D/M11, parcial, e M12). **Entregue:** `study_guide_model`, limites do guia, `chat_model` (wired em `chat/route.ts`), históricos e teste por campo em Configurações. **Pendente:** wiring de `note_model` e `memory_model` (**DT-M12-1**), `study_guide_review_model`. `tech_doc_model` persiste na UI sem uso (Documento Técnico determinístico). TTS/STT → PRD v4. |
 | DT1 | Slug do Zetel imutável após criação; `display_name` mutável; pasta no disco não é renomeada no MVP. |
 | DT2 | Imagens locais copiadas para `images/` e `src` reescrito. URLs externas bloqueadas no MVP (placeholder visível). |
 | DT3 | Migrations: arquivos SQL numerados em `migrations/`, aplicados via `schema_migrations`. Transação por migration. Sem down automática no MVP. |
@@ -244,7 +251,7 @@ Cada módulo tem gate manual antes do próximo. Ver seção "Gates de validaçã
 | **11** | **Guia de Estudo: experiência interativa** ✅ | Template interativo, schema/prompt v2, validação DFT (gate 11.4) | 10E |
 | **12.0A** | **Fundação de Testes e CI** ✅ | Vitest + coverage V8 + 126 unit tests + CI GitHub Actions | 11 |
 | **12.0B** | **Integration tests + E2E legado** ✅ | Harness tmpdir; integration com `vi.mock`; E2E legado (OpenRouter real no chat) | 12.0A |
-| **12.1** | **E2E Live (opt-in)** ✅ | OpenRouter real isolado; porta 3001; `ZETEL_HOME` em tmpdir; budget guard | 12.0B |
+| **12.1** | **E2E Live (opt-in)** ✅ | Registro histórico: OpenRouter real isolado, porta 3001, `ZETEL_HOME` em tmpdir e guarda de orçamento. Atualmente exige `ZETEL_E2E_LIVE=1`, `OPENROUTER_API_KEY` não vazia, `ZETEL_E2E_MAX_CALLS` como orçamento finito e positivo e autorização humana explícita; roda fora dos gates padrão e nunca pela CI padrão automática. | 12.0B |
 | **12** | **Gestão completa de memória no app** ✅ | PRD v3 — ler/editar/excluir memória sem Obsidian; encerra M8-1 | 12.1 |
 | PRD v4 | Módulo 13 — Modo Conversa por Voz — Gate 12 → PRD v4 aprovado (2026-06-01) | `prd-v4.md` | 12 |
 | **13.1** | **Spike técnico + critérios conversacionais** ✅ | Viabilidade de STT/TTS validada e critérios conversacionais aprovados por Igor | 12 |

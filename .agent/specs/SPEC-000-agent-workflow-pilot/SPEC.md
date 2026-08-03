@@ -102,7 +102,10 @@ passar pelo validador.
   diretamente aplicaveis; FULL exige a suite ampla definida em QUALITY.
 - Gates amplos executam no maximo uma vez no fixed point. Apos correcao
   material, repetem-se testes impactados e apenas gates ainda aplicaveis.
-- E2E live nao pode executar sem variavel, chave e autorizacao adequadas.
+- E2E live/OpenRouter exige simultaneamente `ZETEL_E2E_LIVE=1`,
+  `OPENROUTER_API_KEY` nao vazia, `ZETEL_E2E_MAX_CALLS` definido como orcamento
+  finito e positivo e autorizacao humana explicita; roda fora dos gates padrao
+  e nunca e executado automaticamente pela CI padrao.
 - `DONE` exige evidencias recentes dos gates aplicaveis.
 
 ### R6. Revisao
@@ -215,7 +218,7 @@ erros de contexto, handoff, troca de agente, idempotencia, gates e correcoes.
 - [ ] Pelo menos uma retomada Codex -> Claude e uma Claude -> Codex sao
   exercitadas, quando ambas as CLIs estiverem operacionais.
 - [ ] O segundo agente retoma apenas por Git, handoff e context-pack.
-- [ ] `AGENTS.md`, `CLAUDE.md`, resumo, tarefa e handoff respeitam os budgets.
+- [ ] `AGENTS.md`, `CLAUDE.md`, resumo, tarefa e handoff respeitam os orcamentos.
 - [ ] Contexto inicial e substancialmente menor que o baseline documentado.
 - [ ] Gates do Zetel passam, sem E2E live nao autorizado.
 - [ ] Nenhum comportamento funcional do produto e alterado.
@@ -231,7 +234,7 @@ erros de contexto, handoff, troca de agente, idempotencia, gates e correcoes.
 - Caminhos relativos ao root Git; nenhum caminho com nome de usuario.
 - Nenhum segredo, transcript ou conteudo pessoal em artefatos.
 - Saidas de erro devem indicar guarda violada e proxima acao.
-- Context budgets: resumo <= 800 tokens estimados, tarefa <= 1.500, handoff <=
+- Orcamentos de contexto: resumo <= 800 tokens estimados, tarefa <= 1.500, handoff <=
   800, no maximo 3 skills completas por sessao.
 
 ## Decisoes de produto
@@ -239,8 +242,11 @@ erros de contexto, handoff, troca de agente, idempotencia, gates e correcoes.
 - O Git versionado e a fonte de continuidade entre sessoes.
 - O writer e unico; revisores podem ser no maximo dois.
 - Branch/worktree sao escolhas de risco, nao obrigacoes universais.
-- O perfil de execucao e escolhido pelo menor custo compativel; risco pode
-  eleva-lo, e downgrade exige justificativa ou aprovacao humana.
+- A classificacao inicial comeca pelo menor perfil compativel, e o agente pode
+  elevar o perfil autonomamente. Depois de registrado ou elevado, qualquer
+  reducao e downgrade e exige justificativa registrada, aprovacao humana
+  explicita e identidade em `profile_approved_by`; o mesmo agente nao reverte
+  autonomamente sua propria elevacao.
 - O runtime completo do Spec Kit e pacotes completos de terceiros nao serao
   instalados.
 - Skills externas serao referencias ou adaptacoes com proveniencia, nunca
@@ -287,7 +293,7 @@ Estas propostas foram aprovadas junto com a spec:
 
 ## Estrategia de testes
 
-- Unitarios do parser, transicoes, bloqueadores, budgets e selecao da tarefa.
+- Unitarios do parser, transicoes, bloqueadores, orcamentos e selecao da tarefa.
 - Integracao em repositorio Git temporario para commit/push com remote bare.
 - Testes de processo com executaveis fake para provar ausencia de `resume`.
 - Testes de falha para arvore suja, remote atrasado, gates ausentes e review
@@ -333,10 +339,17 @@ aprovacao humana.
 O solicitante aprovou a tarefa 002C para corrigir o custo excessivo observado
 nas execucoes 002A e 002B. A partir deste addendum:
 
-- toda tarefa registra FAST, STANDARD ou FULL e uma justificativa;
+- a classificacao inicial comeca pelo menor perfil compativel, e o agente pode
+  elevar o perfil autonomamente;
+- depois de registrado ou elevado, qualquer reducao e downgrade e exige
+  justificativa registrada, aprovacao humana explicita e identidade em
+  `profile_approved_by`; o mesmo agente nao reverte sua propria elevacao;
 - gates, reviews, handoff, tempo e contexto sao proporcionais ao risco;
-- state machine, escrita atomica, seguranca e banco permanecem sempre FULL,
-  enquanto documentacao relacionada nao e elevada automaticamente;
+- alterar implementacao, schema, guardas ou contratos de state machine, escrita
+  atomica, seguranca ou banco permanece sempre FULL;
+- usar normalmente `assertTransition`, `validateState`, `writeJsonAtomic` e
+  `expectedRevision` no lifecycle ou registrar transicoes autorizadas em
+  documentacao nao eleva automaticamente uma tarefa para FULL;
 - checks de CodeRabbit, Vercel e GitHub Actions sao assincronos; a sessao faz
   push, registra `pending` quando aplicavel e nao espera bots;
 - R11 e R12 continuam integrais: adapters curtos e context-pack minimo;

@@ -22,13 +22,14 @@ transcripts por padrão. Abra somente o necessário à tarefa ativa.
 
 1. Documento Técnico é determinístico e sem LLM; Guia de Estudo usa LLM apenas
    para JSON estruturado, nunca para o HTML final.
-2. O app não injeta CSS no iframe; os artefatos HTML são autocontidos e o
-   sandbox não recebe `allow-same-origin` por padrão.
-3. Chat usa `zetel_pages.content_text` buscado pelo servidor; nunca confia no
-   `content_text` enviado pelo cliente.
+2. Os artefatos HTML são autocontidos. O app não injeta CSS. O sandbox do iframe
+   não recebe `allow-same-origin` por padrão.
+3. O servidor busca `zetel_pages.content_text`. O `content_text` enviado pelo
+   cliente não é fonte autoritativa.
 4. Slug e pasta física do Zetel são imutáveis; renomear altera `display_name`.
 5. Memória global é lida do vault a cada turno e não fica em cache de processo.
-6. Não logar conteúdo do usuário nem segredos; somente IDs e contagens.
+6. Logs permitem somente IDs e contagens; nunca páginas, chat, notas, memória,
+   conteúdo do usuário, tokens, chaves ou segredos.
 7. `better-sqlite3` usa singleton síncrono, sem pool.
 8. Anchors são únicos por Zetel: `UNIQUE (zetel_id, anchor)`.
 9. Imagens externas ficam bloqueadas; chaves ficam fora de SQLite, vault e Git.
@@ -37,23 +38,28 @@ transcripts por padrão. Abra somente o necessário à tarefa ativa.
 ## Execução adaptativa
 
 - Registre `execution_profile: FAST | STANDARD | FULL` e a justificativa na
-  tarefa. Comece pelo menor perfil compatível; qualquer risco eleva o perfil.
-- Elevação é autônoma. Downgrade exige justificativa ou aprovação humana em
-  `profile_approved_by`.
-- State machine, escrita atômica, segurança e banco são sempre FULL; documentação
-  sobre esses temas não é automaticamente FULL.
+  tarefa. A classificação inicial começa pelo menor perfil compatível; o agente
+  pode elevar o perfil autonomamente.
+- Depois de registrado ou elevado, qualquer redução é downgrade e exige
+  justificativa registrada, aprovação humana explícita e identidade em
+  `profile_approved_by`; o agente não reverte sua própria elevação.
+- Alterar implementação ou contratos de state machine, escrita atômica,
+  segurança ou banco é sempre FULL; uso normal do lifecycle e documentação não
+  são automaticamente FULL.
 - FAST: verificação focada, `git diff --check`, sem review externo obrigatório.
 - STANDARD: focados, typecheck se TS, integrações relacionadas e no máximo uma
   revisão; `test:ci` só se código compartilhado puder ser afetado.
 - FULL: focados, build, test:ci, coverage, typecheck, diff-check e até duas
-  revisões quando os eixos forem materialmente úteis.
+  revisões quando conformidade e qualidade forem materialmente úteis.
 - Gates amplos rodam no máximo uma vez no fixed point. Checks externos são
   assíncronos; nunca manter sessão aberta esperando bots.
 
 ## Limites e segurança operacional
 
-- E2E live/OpenRouter somente com `ZETEL_E2E_LIVE=1`, chave, budget e autorização
-  humana explícita. Nunca por gate padrão.
+- E2E live/OpenRouter exige simultaneamente `ZETEL_E2E_LIVE=1`,
+  `OPENROUTER_API_KEY` não vazia, `ZETEL_E2E_MAX_CALLS` definido como orçamento
+  finito e positivo e autorização humana explícita; roda fora dos gates padrão
+  e nunca é executado automaticamente pela CI padrão.
 - Não alterar `app/`, `components/`, `lib/`, migrations, dados, secrets, CI,
   deploy ou remote fora do escopo aprovado.
 - Não usar `resume`, `continue`, `fork-session` ou transcript para continuidade;

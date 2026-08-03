@@ -6,19 +6,30 @@ justificativa ficam no arquivo da tarefa:
 ```yaml
 execution_profile: FAST | STANDARD | FULL
 profile_justification: <riscos e alcance observados>
-profile_approved_by: <humano, quando houver override>
+profile_approved_by: <identidade humana, quando houver downgrade>
 ```
 
 ## Classificação determinística
 
-1. Comece pelo perfil de menor custo compatível com a mudança real.
-2. Qualquer fator de risco eleva o perfil; um agente pode elevar sem aprovação.
-3. Reduzir o perfil exige justificativa verificável ou aprovação humana.
-4. State machine, escrita atômica, segurança e banco são sempre FULL.
-5. Documentação sobre componentes críticos não é automaticamente FULL.
-6. Quantidade de arquivos, isoladamente, não decide o perfil.
-7. Registre perfil e justificativa antes da implementação; reclassifique se o
-   escopo ou o risco mudar.
+1. A classificação inicial começa pelo menor perfil compatível com a mudança
+   real.
+2. O agente pode elevar o perfil autonomamente quando surgir qualquer fator de
+   risco.
+3. Depois que um perfil foi registrado ou elevado, qualquer redução é um
+   downgrade.
+4. Downgrade exige justificativa registrada, aprovação humana explícita e
+   identidade registrada em `profile_approved_by`.
+5. O mesmo agente não pode reverter autonomamente sua própria elevação.
+6. Alterar a implementação, o schema, as guardas ou os contratos da state
+   machine, da escrita atômica, da segurança ou do banco é sempre FULL.
+7. O uso normal do lifecycle de uma tarefa não eleva automaticamente a tarefa
+   para FULL; isso inclui usar `assertTransition`, `validateState`,
+   `writeJsonAtomic` e `expectedRevision` para registrar seu estado.
+8. Uma alteração documental que apenas registra transições autorizadas pode
+   permanecer FAST ou STANDARD conforme o risco real.
+9. Quantidade de arquivos, isoladamente, não decide o perfil.
+10. Registre perfil e justificativa antes da implementação; reclassifique se o
+    escopo ou o risco mudar.
 
 ## FAST
 

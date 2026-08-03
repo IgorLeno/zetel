@@ -32,8 +32,11 @@ Independe do agente (Codex, Claude Code ou outro) e nao altera codigo de produto
 
 Antes de implementar, registre `execution_profile` e justificativa na tarefa.
 Use `.agent/EXECUTION_PROFILES.md` para classificar e `.agent/QUALITY.md` para
-selecionar gates. Um agente pode elevar o perfil; downgrade exige justificativa
-ou aprovacao humana. Nunca espere bots externos para encerrar uma sessao.
+selecionar gates. A classificacao inicial usa o menor perfil compativel, e o
+agente pode eleva-lo autonomamente. Depois de registrado ou elevado, qualquer
+reducao e downgrade e exige justificativa registrada, aprovacao humana explicita
+e identidade em `profile_approved_by`; o agente nao reverte autonomamente sua
+propria elevacao. Nunca espere bots externos para encerrar uma sessao.
 
 ## CLI
 

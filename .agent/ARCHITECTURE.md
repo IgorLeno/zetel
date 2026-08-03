@@ -34,8 +34,8 @@
 ## Segurança e observabilidade
 
 - Sanitização HTML usa allowlist explícita; imagens externas são bloqueadas.
-- Logs contêm somente IDs, contagens e metadados seguros; nunca páginas, chat,
-  notas, memória, tokens secretos ou chaves.
+- Logs permitem somente IDs e contagens; nunca páginas, chat, notas, memória,
+  conteúdo do usuário, tokens, chaves ou segredos.
 - Rotas com filesystem impedem path traversal e permanecem no runtime Node.
 - Escritas do workflow usam lock, revisão esperada, temp + fsync + rename.
 
