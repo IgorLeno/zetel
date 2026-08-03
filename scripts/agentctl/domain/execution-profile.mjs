@@ -35,7 +35,13 @@ export function profileRank(profile) {
  * @param {string | null | undefined} reviewJustification
  */
 export function assertReviewsAllowed(profile, reviews, reviewJustification) {
-  if (!Number.isInteger(reviews) || reviews < 0) {
+  if (!isExecutionProfile(profile)) {
+    throw new StateMachineError(`Perfil invalido: ${String(profile)}.`, {
+      guard: 'profile',
+      nextAction: 'Use FAST, STANDARD ou FULL.',
+    });
+  }
+  if (!Number.isFinite(reviews) || !Number.isInteger(reviews) || reviews < 0) {
     throw new StateMachineError('reviews deve ser inteiro nao negativo.', {
       guard: 'reviews',
       nextAction: 'Informe --reviews 0, 1 ou 2 conforme o perfil.',
@@ -161,10 +167,20 @@ export function resolveProfileChange(input) {
 }
 
 /**
+ * Identidade humana para downgrade/waiver.
+ * Aceita nomes completos, handles e marcadores versionados `human-*`.
+ * Rejeita apenas marcadores inequivocamente automatizados para evitar falso
+ * positivo em nomes humanos legítimos.
  * @param {string} value
  */
 export function isHumanIdentity(value) {
-  return typeof value === 'string' && value.trim() !== '' && !/^(bot|agent)$/i.test(value.trim());
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (trimmed === '') return false;
+  if (/^(bot|agent)$/i.test(trimmed)) return false;
+  if (/\[bot\]$/i.test(trimmed)) return false;
+  if (/^(ci-bot|dependabot|renovate|github-actions)(\b|[[_\-])/i.test(trimmed)) return false;
+  return true;
 }
 
 /**

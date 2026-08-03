@@ -47,7 +47,7 @@ function runGitDiffExcludingOperational(root, args) {
  * @param {string} root
  */
 export function captureWorkspaceFingerprint(root) {
-  const head = runGit(root, ['rev-parse', 'HEAD']);
+  const head = runGit(root, ['rev-parse', 'HEAD']).trim();
   const trackedDiff = runGitDiffExcludingOperational(root, ['diff', 'HEAD']);
   const stagedDiff = runGitDiffExcludingOperational(root, ['diff', '--cached']);
   const untracked = runGit(root, ['ls-files', '--others', '--exclude-standard'])

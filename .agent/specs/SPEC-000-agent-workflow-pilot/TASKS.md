@@ -1,24 +1,42 @@
 # Tarefas: SPEC-000
 
-Status da decomposicao: `APPROVED` (extensoes `001A`/`001B` e `002C`
-aprovadas pelo humano)
+Status da decomposicao: `APPROVED` (extensoes `001A`/`001B`, `002C` e
+`003A` aprovadas pelo humano)
 
-| ID | Titulo | Bloqueada por | Resultado vertical |
+| ID | Titulo | Bloqueada por | Status |
 | --- | --- | --- | --- |
-| 001 | Fundacao e state machine | — | Estado validavel, status legivel e guardas testadas |
-| 001A | Endurecimento das invariantes e escrita concorrente | 001 | State machine e escrita atomica endurecidas; CodeRabbit resolvido |
-| 001B | Fechamento das invariantes remanescentes | 001A | Saida BLOCKED, DONE/PUSHED, sessao/tarefa e fsync alinhados |
-| 002 | Lifecycle de spec | 001B | Criar, aprovar e consultar spec com rastreabilidade |
-| 002A | Correções pré-merge do lifecycle de spec | 002 | Endurecer parser, reapproval, integrity e readiness antes do merge |
-| 002B | Fechamento documental pré-merge | 002A | Alinhar contratos documentais e encerrar threads válidos antes do merge |
-| 002C | Perfis adaptativos e redução de contexto | 002B | Aplicar FAST/STANDARD/FULL e encurtar adapters |
-| 003 | Lifecycle de tarefa e gates | 002C | Selecionar, iniciar, validar e fechar uma tarefa conforme o perfil |
-| 004 | Revisao independente em dois eixos | 003 | Reviews separados bloqueiam ou liberam fechamento |
-| 005 | Handoff e nova sessao | 004 | Fechar sessao e iniciar processo novo com context-pack |
-| 006 | Skills de intake, spec e planejamento | 005 | Primeira metade das skills funciona nos dois agentes |
-| 007 | Skills de tarefa, revisao e sessao | 006 | Segunda metade das skills funciona nos dois agentes |
-| 008 | Adaptadores curtos e perfil Zetel | 007 | Contexto inicial reduzido sem perder regras uteis |
-| 009 | Convergencia, Harvest e avaliacao | 008 | Spec encerrada com metricas e recomendacao objetiva |
+| 001 | Fundacao e state machine | — | SESSION_CLOSED |
+| 001A | Endurecimento das invariantes e escrita concorrente | 001 | SESSION_CLOSED |
+| 001B | Fechamento das invariantes remanescentes | 001A | SESSION_CLOSED |
+| 002 | Lifecycle de spec | 001B | SESSION_CLOSED |
+| 002A | Correções pré-merge do lifecycle de spec | 002 | SESSION_CLOSED |
+| 002B | Fechamento documental pré-merge | 002A | SESSION_CLOSED |
+| 002C | Perfis adaptativos e redução de contexto | 002B | SESSION_CLOSED |
+| 003 | Lifecycle de tarefa e gates | 002C | SESSION_CLOSED |
+| 003A | Endurecimento pré-merge do lifecycle de tarefa | 003 | READY |
+| 004 | Revisao independente em dois eixos | 003A | DRAFT |
+| 005 | Handoff e nova sessao | 004 | DRAFT |
+| 006 | Skills de intake, spec e planejamento | 005 | DRAFT |
+| 007 | Skills de tarefa, revisao e sessao | 006 | DRAFT |
+| 008 | Adaptadores curtos e perfil Zetel | 007 | DRAFT |
+| 009 | Convergencia, Harvest e avaliacao | 008 | DRAFT |
+
+Resultado vertical (referencia):
+- 001: Estado validavel, status legivel e guardas testadas
+- 001A: State machine e escrita atomica endurecidas; CodeRabbit resolvido
+- 001B: Saida BLOCKED, DONE/PUSHED, sessao/tarefa e fsync alinhados
+- 002: Criar, aprovar e consultar spec com rastreabilidade
+- 002A: Endurecer parser, reapproval, integrity e readiness antes do merge
+- 002B: Alinhar contratos documentais e encerrar threads validos antes do merge
+- 002C: Aplicar FAST/STANDARD/FULL e encurtar adapters
+- 003: Selecionar, iniciar, validar e fechar uma tarefa conforme o perfil
+- 003A: Corrigir atomicidade, shell, timeout, reviews e integridade pre-merge
+- 004: Reviews separados bloqueiam ou liberam fechamento
+- 005: Fechar sessao e iniciar processo novo com context-pack
+- 006: Primeira metade das skills funciona nos dois agentes
+- 007: Segunda metade das skills funciona nos dois agentes
+- 008: Contexto inicial reduzido sem perder regras uteis
+- 009: Spec encerrada com metricas e recomendacao objetiva
 
 ## Checkpoint
 
@@ -128,6 +146,20 @@ session.task_id: "003"
 Comandos entregues: `task next/start/validate/close`. Fechamento
 PUSHED/SESSION_CLOSED e liberacao da 004 usaram bootstrap pos-push
 (`session close` permanece na 005). A 004 nao foi iniciada.
+
+Checkpoint de registro da 003A (bootstrap pre-merge autorizado):
+
+```text
+003   SESSION_CLOSED
+003A  READY, blocked_by: ["003"]
+004   DRAFT, blocked_by: ["003A"]
+active_task: null
+session.status: SESSION_CLOSED
+```
+
+A insercao da 003A e o reencadeamento da 004 sao excecao bootstrap aprovada
+pelo prompt corretivo pre-merge. A 003 permanece SESSION_CLOSED e nao e
+reaberta.
 
 Regras:
 

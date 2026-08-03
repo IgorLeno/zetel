@@ -6,7 +6,14 @@ import {
 } from '../domain/execution-profile.mjs';
 import { assertApprovedIntegrity } from '../domain/spec-approval-guard.mjs';
 import { assertSafeSpecId } from '../domain/spec-id.mjs';
-import { ACTIVE_TASK_STATUSES, assertTransition, findActiveTasks, StateMachineError, validateState } from '../domain/state-machine.mjs';
+import {
+  ACTIVE_TASK_STATUSES,
+  assertTransition,
+  findActiveTasks,
+  isTaskBlockedByDependencies,
+  StateMachineError,
+  validateState,
+} from '../domain/state-machine.mjs';
 import { updateOperationalFrontmatter } from '../domain/task-frontmatter.mjs';
 import { resolveTaskFile } from '../domain/task-selection.mjs';
 import { writeJsonAtomic } from '../infra/atomic-write.mjs';
@@ -29,8 +36,6 @@ export function runTaskStart(args, io = {}) {
         nextAction: 'Corrija o estado antes de iniciar a tarefa.',
       });
     }
-
-    assertApprovedIntegrity(path, state);
 
     const active = findActiveTasks(state);
     if (active.length > 0 || state.active_task != null) {
@@ -63,6 +68,17 @@ export function runTaskStart(args, io = {}) {
       });
     }
     assertBlockersSessionClosed(task, state.tasks);
+
+    // Resolve e valida o arquivo da tarefa antes de integridade/persistencia.
+    const taskFile = resolveTaskFile(dirname(path), parsed.taskId);
+    if (!taskFile) {
+      throw new StateMachineError(`Arquivo da tarefa ${parsed.taskId} nao encontrado.`, {
+        guard: 'task-file',
+        nextAction: 'Crie tasks/<id>-*.md antes de iniciar a tarefa.',
+      });
+    }
+
+    assertApprovedIntegrity(path, state);
 
     if (!isExecutionProfile(parsed.profile)) {
       throw new StateMachineError(`Perfil invalido: ${parsed.profile}.`, {
@@ -139,8 +155,7 @@ export function runTaskStart(args, io = {}) {
     }
 
     const written = writeJsonAtomic(path, next, { expectedRevision: state.revision });
-    const taskFile = resolveTaskFile(dirname(path), parsed.taskId);
-    if (taskFile) {
+    try {
       updateOperationalFrontmatter(taskFile, {
         status: 'IN_PROGRESS',
         execution_profile: profileDecision.profile,
@@ -149,6 +164,14 @@ export function runTaskStart(args, io = {}) {
           ? { profile_approved_by: profileDecision.profileApprovedBy }
           : {}),
       });
+    } catch (error) {
+      throw new StateMachineError(
+        `Estado iniciado, mas frontmatter falhou: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          guard: 'task-file',
+          nextAction: 'Corrija o markdown da tarefa; o estado ja esta IN_PROGRESS e deve ser reconciliado antes de continuar.',
+        },
+      );
     }
 
     stdout.write([
@@ -266,7 +289,7 @@ function parseStartArgs(args) {
   }
   if (!profile) {
     throw new StateMachineError('Perfil obrigatorio.', {
-      guard: 'usage',
+      guard: 'profile',
       nextAction: 'Informe --profile FAST|STANDARD|FULL.',
     });
   }
@@ -307,5 +330,15 @@ function assertBlockersSessionClosed(task, tasks) {
         },
       );
     }
+  }
+  // Helper compartilhado reforça a mesma semantica de bloqueio.
+  if (isTaskBlockedByDependencies(task, tasks)) {
+    throw new StateMachineError(
+      `Tarefa bloqueada por dependencias abertas.`,
+      {
+        guard: 'blocked-by',
+        nextAction: 'Feche a sessao dos blockers antes de iniciar a tarefa.',
+      },
+    );
   }
 }

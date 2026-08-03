@@ -1,10 +1,11 @@
 import { dirname } from 'node:path';
+import { toPosixRelative } from '../domain/evidence.mjs';
+import { assertApprovedIntegrity } from '../domain/spec-approval-guard.mjs';
 import { assertSafeSpecId } from '../domain/spec-id.mjs';
-import { selectNextReadyTask } from '../domain/task-selection.mjs';
 import { StateMachineError } from '../domain/state-machine.mjs';
+import { selectNextReadyTask } from '../domain/task-selection.mjs';
 import { loadSpecState } from '../infra/read-state.mjs';
 import { writeError } from '../infra/write-error.mjs';
-import { toPosixRelative } from '../domain/evidence.mjs';
 
 /**
  * @param {string[]} args
@@ -22,12 +23,8 @@ export function runTaskNext(args, io = {}) {
         nextAction: 'Corrija state.json antes de consultar a proxima tarefa.',
       });
     }
-    if (state.spec.status !== 'APPROVED') {
-      throw new StateMachineError(`spec nao aprovada: ${state.spec.status}.`, {
-        guard: 'spec-status',
-        nextAction: 'Aprove a spec antes de selecionar tarefas.',
-      });
-    }
+    // Mesma guarda de task start: APPROVED + integrity valida (rejeita LEGACY/TAMPERED).
+    assertApprovedIntegrity(path, state);
 
     const selection = selectNextReadyTask(state, { specDir: dirname(path) });
     if (!selection.ok || !selection.task) {

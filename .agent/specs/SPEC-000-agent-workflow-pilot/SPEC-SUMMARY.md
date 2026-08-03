@@ -46,4 +46,6 @@ confirmado no remote e triagem final do PR #6.
 A tarefa `002C` encerrou em `SESSION_CLOSED` com perfis adaptativos. A tarefa
 `003` (`Lifecycle de tarefa e gates`) entregou `task next/start/validate/close`
 com perfil `FULL`, evidencias/fingerprint e reviews proporcionais; encerrou em
-`SESSION_CLOSED`. A tarefa `004` esta `READY` e nao iniciada.
+`SESSION_CLOSED`. A tarefa `003A` (`Endurecimento pré-merge do lifecycle de
+tarefa`) esta `READY` para correcoes pre-merge do PR #8. A tarefa `004` ficou
+`DRAFT` bloqueada por `003A` e nao foi iniciada.

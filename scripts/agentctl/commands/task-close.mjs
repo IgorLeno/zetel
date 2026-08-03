@@ -1,5 +1,5 @@
 import { dirname } from 'node:path';
-import { buildGatePlan, isExecutionProfile } from '../domain/execution-profile.mjs';
+import { assertReviewsAllowed, buildGatePlan, isExecutionProfile } from '../domain/execution-profile.mjs';
 import {
   assertApplicableGatesPassed,
   assertEvidenceFresh,
@@ -85,9 +85,12 @@ export function runTaskClose(args, io = {}) {
       });
     }
 
-    const reviewsRequested = Number(
-      task.reviews_requested ?? state.session.reviews_requested ?? defaultReviews(profile),
+    const reviewsRequested = normalizeReviewsRequested(
+      task.reviews_requested ?? state.session.reviews_requested,
+      profile,
+      task.review_justification ?? state.session.review_justification,
     );
+
     const taskFile = resolveTaskFile(dirname(path), taskId);
     if (!taskFile) {
       throw new StateMachineError(`Arquivo da tarefa ${taskId} nao encontrado.`, {
@@ -114,11 +117,6 @@ export function runTaskClose(args, io = {}) {
         guard: 'gate-failed',
         nextAction: 'Reexecute task validate ate obter PASS.',
       });
-    }
-    const failedCommand = (Array.isArray(evidence.commands) ? evidence.commands : [])
-      .find((item) => item && Number(item.exit_code) !== 0 && String(item.result) !== 'PASS');
-    if (failedCommand) {
-      // Waiver path is handled inside assertApplicableGatesPassed.
     }
 
     const reviewFiles = listReviewFiles(dirname(path), taskId);
@@ -204,6 +202,51 @@ function parseCloseArgs(args) {
   }
   assertSafeSpecId(specId);
   return { specId, taskId };
+}
+
+/**
+ * @param {unknown} raw
+ * @param {'FAST'|'STANDARD'|'FULL'} profile
+ * @param {unknown} reviewJustification
+ */
+function normalizeReviewsRequested(raw, profile, reviewJustification) {
+  if (raw == null) {
+    return defaultReviews(profile);
+  }
+  if (typeof raw !== 'number' && typeof raw !== 'string') {
+    throw new StateMachineError(
+      `reviews_requested invalido: ${typeof raw === 'object' ? JSON.stringify(raw) : String(raw)}.`,
+      {
+        guard: 'reviews',
+        nextAction: 'Corrija reviews_requested para um inteiro nao negativo permitido pelo perfil.',
+      },
+    );
+  }
+  if (typeof raw === 'string' && !/^-?\d+$/.test(raw.trim())) {
+    throw new StateMachineError(
+      `reviews_requested invalido: ${raw}.`,
+      {
+        guard: 'reviews',
+        nextAction: 'Corrija reviews_requested para um inteiro nao negativo permitido pelo perfil.',
+      },
+    );
+  }
+  const converted = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(converted) || !Number.isInteger(converted) || converted < 0) {
+    throw new StateMachineError(
+      `reviews_requested invalido: ${String(raw)}.`,
+      {
+        guard: 'reviews',
+        nextAction: 'Corrija reviews_requested para um inteiro nao negativo permitido pelo perfil.',
+      },
+    );
+  }
+  assertReviewsAllowed(
+    profile,
+    converted,
+    typeof reviewJustification === 'string' ? reviewJustification : null,
+  );
+  return converted;
 }
 
 /** @param {'FAST'|'STANDARD'|'FULL'} profile */

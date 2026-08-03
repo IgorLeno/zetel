@@ -152,19 +152,27 @@ assinatura destacada, attestation de CI ou digest publicado fora do
 
 Comandos estruturados usam arrays JSON de argv e `spawn` com `shell: false`.
 Nao ha parser de shell; pipe, redirect, `&&` e substituicao sao rejeitados.
-E2E live/OpenRouter nunca entra no plano.
+Tambem sao rejeitadas invocacoes indiretas de interpretador (`sh`/`bash`/`dash`/
+`zsh`/`ksh`/`fish -c`, `cmd /c`, `powershell`/`pwsh -Command`), inclusive com
+caminhos absolutos e caixa variada. Argumentos com espacos internos legitimos
+permanecem permitidos. E2E live/OpenRouter nunca entra no plano. Todo gate usa
+timeout padrao de 15 minutos (`DEFAULT_TIMEOUT_MS`); override explicito por
+chamada e permitido. Timeout (exit 124) e ENOENT (exit 127) produzem resultado
+estruturado uniforme com `output` redigido, sem lancar antes da evidencia.
 
 ### `./agentctl task next`
 
-Somente leitura. Exige spec `APPROVED`, valida o state e devolve a primeira
-tarefa `READY` na ordem do array cujo `blocked_by` esteja todo em
-`SESSION_CLOSED`. Ignora DRAFT, ativas, DONE, PUSHED e SESSION_CLOSED. Nao
-altera revision, mtime, lock nem estado. Exit `1` com `guard: no-ready-task`
-quando nao houver candidato.
+Somente leitura. Exige spec `APPROVED` com a mesma guarda de integridade de
+`task start` (`assertApprovedIntegrity`): rejeita `LEGACY_UNVERIFIED` e
+`TAMPERED`. Valida o state e devolve a primeira tarefa `READY` na ordem do
+array cujo `blocked_by` esteja todo em `SESSION_CLOSED`. Ignora DRAFT, ativas,
+DONE, PUSHED e SESSION_CLOSED. Nao altera revision, mtime, lock nem estado.
+Exit `1` com `guard: no-ready-task` quando nao houver candidato.
 
 ### `./agentctl task start`
 
-Exige spec aprovada e integra, tarefa `READY`, blockers `SESSION_CLOSED`,
+Exige spec aprovada e integra, arquivo `tasks/<id>-*.md` existente (antes de
+qualquer persistencia), tarefa `READY`, blockers `SESSION_CLOSED`,
 agente/perfil/justificativa e ausencia de tarefa/sessao ativa. Matriz de
 reviews: FAST=0; STANDARD=0|1; FULL=0|1|2 (FULL com <2 exige
 `--review-justification`). Escalada e permitida; downgrade exige
@@ -176,16 +184,17 @@ reviews: FAST=0; STANDARD=0|1; FULL=0|1|2 (FULL com <2 exige
 
 Opera somente na tarefa ativa. Transiciona `IN_PROGRESS -> VALIDATING`, executa
 o plano de gates do perfil, para na primeira falha e permanece `VALIDATING`.
-Em sucesso, grava evidencia em
-`.agent/specs/<spec-id>/evidence/<task-id>-validation.json` com fingerprint/
-fixed point e transiciona `VALIDATING -> REVIEWING`. Retry em `VALIDATING` e
+Em sucesso, captura fingerprints, escreve a evidencia atomicamente, valida
+freshness e so entao realiza uma unica escrita `VALIDATING -> REVIEWING` com
+`validation`/`fixed_point`/`gates_plan` na mesma transicao. Falha de evidencia
+ou freshness nao deixa PASS/REVIEWING parcial. Retry em `VALIDATING` e
 permitido. `--plan-file` aceita JSON operacional:
 `{ "focused": [["pnpm","exec",...]], "integrations": [], "require_test_ci": false }`.
 
 Gates: FAST = focados + `git diff --check`; STANDARD = focados + integracoes
 declaradas + typecheck se TS afetado + `test:ci` so com `--require-test-ci` +
-diff-check; FULL = focados + build + test:ci + coverage + typecheck +
-diff-check.
+diff-check; FULL = focados + integracoes declaradas (quando houver) + build +
+test:ci + coverage + typecheck + diff-check.
 
 ### Evidencias, freshness, waivers e reviews
 

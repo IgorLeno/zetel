@@ -191,6 +191,8 @@ export function runTaskValidate(args, io = {}) {
         exit_code: result.exitCode,
         result: pass ? 'PASS' : 'FAIL',
         output: result.output,
+        ...(result.signal ? { signal: result.signal } : {}),
+        ...(result.error ? { error: result.error } : {}),
       });
       if (!pass) {
         failed = true;
@@ -209,6 +211,7 @@ export function runTaskValidate(args, io = {}) {
         definition: definitionFail,
         commands: commandEvidence,
       });
+      evidenceFail.validation_result = 'FAIL';
       const evidencePath = writeValidationEvidence(dirname(path), parsed.taskId, evidenceFail);
       const failedState = {
         ...working,
@@ -245,10 +248,30 @@ export function runTaskValidate(args, io = {}) {
       return 1;
     }
 
-    // Sucesso: VALIDATING -> REVIEWING antes de selar o fixed point.
+    // Sucesso: selar evidencia ANTES de qualquer persistencia REVIEWING/PASS.
+    const workspace = captureWorkspaceFingerprint(root);
+    const definition = captureDefinitionFingerprint(taskFile, profile, plan);
+    const evidence = buildValidationEvidence({
+      taskId: parsed.taskId,
+      profile,
+      revision: working.revision,
+      workspace,
+      definition,
+      commands: commandEvidence,
+    });
+    evidence.validation_result = 'PASS';
+    const evidencePath = writeValidationEvidence(dirname(path), parsed.taskId, evidence);
+    try {
+      assertEvidenceFresh(evidence, { root, taskFile, profile, plan });
+    } catch (error) {
+      // Mantem VALIDATING; nao grava PASS/REVIEWING parcial.
+      throw error;
+    }
+
     assertTransition('task', 'VALIDATING', 'REVIEWING');
     assertTransition('session', 'VALIDATING', 'REVIEWING');
     const reviewingAt = new Date().toISOString();
+    const relativeEvidence = toPosixRelative(evidencePath, root);
     const successState = {
       ...working,
       tasks: working.tasks.map((item) =>
@@ -260,6 +283,7 @@ export function runTaskValidate(args, io = {}) {
               profile_justification: justification,
               validation: 'PASS',
               ...(profileApprovedBy ? { profile_approved_by: profileApprovedBy } : {}),
+              ...(elevatedByAgent ? { profile_elevated_by: elevatedByAgent } : {}),
             }
           : item,
       ),
@@ -268,10 +292,13 @@ export function runTaskValidate(args, io = {}) {
         status: 'REVIEWING',
         reviewing_at: reviewingAt,
         validation_result: 'PASS',
+        validation: relativeEvidence,
+        fixed_point: evidence.fixed_point,
+        gates_plan: plan,
         execution_profile: profile,
         profile_justification: justification,
-        gates_plan: plan,
         ...(profileApprovedBy ? { profile_approved_by: profileApprovedBy } : {}),
+        ...(elevatedByAgent ? { profile_elevated_by: elevatedByAgent } : {}),
       },
     };
     const successValidation = validateState(successState);
@@ -282,51 +309,33 @@ export function runTaskValidate(args, io = {}) {
       });
     }
     const written = writeJsonAtomic(path, successState, { expectedRevision: working.revision });
-    updateOperationalFrontmatter(taskFile, {
-      status: 'REVIEWING',
-      validation: 'PASS',
-      validated_at: reviewingAt,
-      execution_profile: profile,
-      profile_justification: justification,
-    });
-
-    const workspace = captureWorkspaceFingerprint(root);
-    const definition = captureDefinitionFingerprint(taskFile, profile, plan);
-    const evidence = buildValidationEvidence({
-      taskId: parsed.taskId,
-      profile,
-      revision: written.revision,
-      workspace,
-      definition,
-      commands: commandEvidence,
-    });
-    const evidencePath = writeValidationEvidence(dirname(path), parsed.taskId, evidence);
-    assertEvidenceFresh(evidence, { root, taskFile, profile, plan });
-
-    const sealed = {
-      ...written,
-      session: {
-        ...written.session,
-        validation: toPosixRelative(evidencePath, root),
-        fixed_point: evidence.fixed_point,
-      },
-    };
-    const sealedValidation = validateState(sealed);
-    if (!sealedValidation.ok) {
-      throw new StateMachineError(sealedValidation.errors.join(' '), {
-        guard: 'state-invalid',
-        nextAction: 'Corrija o estado ao selar a evidencia.',
+    try {
+      updateOperationalFrontmatter(taskFile, {
+        status: 'REVIEWING',
+        validation: 'PASS',
+        validated_at: reviewingAt,
+        execution_profile: profile,
+        profile_justification: justification,
       });
+    } catch (error) {
+      throw new StateMachineError(
+        `Estado REVIEWING persistido, mas frontmatter falhou: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        {
+          guard: 'task-file',
+          nextAction: 'Reconcilie o markdown da tarefa com status REVIEWING e validation PASS; o estado ja foi selado.',
+        },
+      );
     }
-    const finalWritten = writeJsonAtomic(path, sealed, { expectedRevision: written.revision });
 
     stdout.write([
       `task_validated: ${parsed.taskId}`,
       `execution_profile: ${profile}`,
       `result: PASS`,
       `fixed_point: ${evidence.fixed_point}`,
-      `evidence: ${toPosixRelative(evidencePath, root)}`,
-      `revision: ${finalWritten.revision}`,
+      `evidence: ${relativeEvidence}`,
+      `revision: ${written.revision}`,
       'next_action: Produza reviews aplicaveis e execute task close.',
       '',
     ].join('\n'));
@@ -337,26 +346,32 @@ export function runTaskValidate(args, io = {}) {
 }
 
 /** @param {string} root */
-function detectTypescriptAffected(root) {
-  const diff = spawnSync('git', ['diff', '--name-only', 'HEAD'], {
-    cwd: root,
-    encoding: 'utf8',
-    shell: false,
-  });
-  const cached = spawnSync('git', ['diff', '--cached', '--name-only'], {
-    cwd: root,
-    encoding: 'utf8',
-    shell: false,
-  });
-  const untracked = spawnSync('git', ['ls-files', '--others', '--exclude-standard'], {
-    cwd: root,
-    encoding: 'utf8',
-    shell: false,
-  });
-  const names = [
-    ...(diff.stdout ?? '').split('\n'),
-    ...(cached.stdout ?? '').split('\n'),
-    ...(untracked.stdout ?? '').split('\n'),
+export function detectTypescriptAffected(root) {
+  const probes = [
+    ['diff', '--name-only', 'HEAD'],
+    ['diff', '--cached', '--name-only'],
+    ['ls-files', '--others', '--exclude-standard'],
   ];
+  /** @type {string[]} */
+  const names = [];
+  for (const args of probes) {
+    const result = spawnSync('git', args, {
+      cwd: root,
+      encoding: 'utf8',
+      shell: false,
+    });
+    if (result.error || result.status !== 0 || result.signal) {
+      const detail = result.error?.message
+        ?? (result.signal ? `signal ${result.signal}` : `status ${String(result.status)}`);
+      throw new StateMachineError(
+        `Falha ao detectar TypeScript afetado via Git (${args.join(' ')}): ${detail}.`,
+        {
+          guard: 'typescript-detect',
+          nextAction: 'Corrija o repositorio Git e reexecute task validate; typecheck nao pode ser omitido silenciosamente.',
+        },
+      );
+    }
+    names.push(...(result.stdout ?? '').split('\n'));
+  }
   return names.some((name) => /\.(ts|tsx)$/.test(name));
 }

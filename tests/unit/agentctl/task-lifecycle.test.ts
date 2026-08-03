@@ -5,7 +5,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readdirSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -17,10 +16,22 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   assertSafeArgv,
   redactSecrets,
+  runStructuredCommand,
   summarizeOutputSafe,
 } from '../../../scripts/agentctl/infra/process-runner.mjs';
-import { buildGatePlan } from '../../../scripts/agentctl/domain/execution-profile.mjs';
-import { assertValidWaiver, buildFixedPoint } from '../../../scripts/agentctl/domain/evidence.mjs';
+import {
+  assertReviewsAllowed,
+  buildGatePlan,
+} from '../../../scripts/agentctl/domain/execution-profile.mjs';
+import {
+  assertValidWaiver,
+  buildFixedPoint,
+  captureWorkspaceFingerprint,
+} from '../../../scripts/agentctl/domain/evidence.mjs';
+import { assertApplicableReviews } from '../../../scripts/agentctl/domain/review-evidence.mjs';
+import { updateOperationalFrontmatter } from '../../../scripts/agentctl/domain/task-frontmatter.mjs';
+import { detectTypescriptAffected } from '../../../scripts/agentctl/commands/task-validate.mjs';
+import { StateMachineError } from '../../../scripts/agentctl/domain/state-machine.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 const AGENTCTL = join(ROOT, 'agentctl');
@@ -69,10 +80,12 @@ function completeForApproval(dir: string, id: string) {
 function writeFakeBin(dir: string) {
   const bin = join(dir, '.agentctl-fake-bin');
   mkdirSync(bin, { recursive: true });
-  for (const name of ['pnpm', 'git-check-ok', 'fail-cmd']) {
+  for (const name of ['pnpm', 'git-check-ok', 'fail-cmd', 'sleep-cmd']) {
     const path = join(bin, name);
     if (name === 'fail-cmd') {
       writeFileSync(path, '#!/bin/sh\necho fail-stderr >&2\nexit 1\n', 'utf8');
+    } else if (name === 'sleep-cmd') {
+      writeFileSync(path, '#!/bin/sh\nsleep 5\nexit 0\n', 'utf8');
     } else if (name === 'pnpm') {
       writeFileSync(
         path,
@@ -172,13 +185,47 @@ function seedApprovedSpec(dir: string, id: string, tasks: Array<{
 }
 
 describe('process runner safety', () => {
-  it('rejects shell metacharacters and preserves argv arrays', () => {
+  it('rejects shell metacharacters and indirect shell interpreters', () => {
     expect(() => assertSafeArgv(['pnpm', 'test:ci'])).not.toThrow();
-    expect(() => assertSafeArgv(['sh', '-c', 'echo hi'])).not.toThrow();
-    expect(() => assertSafeArgv(['echo', 'a&&b'])).toThrow(/command-argv|shell/i);
-    expect(() => assertSafeArgv(['echo', 'a|b'])).toThrow(/command-argv|shell/i);
-    expect(() => assertSafeArgv(['echo', '$(rm)'])).toThrow(/command-argv|shell/i);
+    expect(() => assertSafeArgv(['sh', '-c', 'echo hi'])).toThrow(/interpretador de shell|command-argv/i);
+    expect(() => assertSafeArgv(['/bin/bash', '-c', 'echo hi'])).toThrow(/interpretador de shell|nextAction/i);
+    expect(() => assertSafeArgv(['BaSh', '-C', 'echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['powershell', '-Command', 'Get-Process'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['pwsh', '-Command', 'Get-Process'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['cmd.exe', '/c', 'dir'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['bash', '-e', '-c', 'echo hi'])).toThrow(/interpretador de shell/i);
+    expect(() => assertSafeArgv(['pwsh', '-NoProfile', '-Command', 'Get-Process'])).toThrow(/interpretador de shell/i);
+    try {
+      assertSafeArgv(['sh', '-c', 'echo hi']);
+    } catch (error) {
+      expect((error as { guard?: string }).guard).toBe('command-argv');
+      expect((error as { nextAction?: string }).nextAction).toMatch(/argv estruturado/i);
+    }
+    expect(() => assertSafeArgv(['echo', 'hello world'])).not.toThrow();
+    expect(() => assertSafeArgv(['echo', 'a&&b'])).toThrow(/command-argv|shell|metacaractere/i);
+    expect(() => assertSafeArgv(['echo', 'a|b'])).toThrow(/command-argv|shell|metacaractere/i);
+    expect(() => assertSafeArgv(['echo', '$(rm)'])).toThrow(/command-argv|shell|metacaractere/i);
     expect(() => assertSafeArgv('pnpm test:ci' as unknown as string[])).toThrow(/argv/i);
+  });
+
+  it('applies timeout and uniform ENOENT results', () => {
+    const dir = repo();
+    const bin = writeFakeBin(dir);
+    const timed = runStructuredCommand([join(bin, 'sleep-cmd')], { cwd: dir, timeoutMs: 200 });
+    expect(timed.exitCode).toBe(124);
+    expect(timed.output.stdout_sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(timed.error).toMatch(/timeout/i);
+    expect(timed.signal).toBeTruthy();
+
+    const missing = runStructuredCommand(['definitely-missing-binary-003a'], {
+      cwd: dir,
+      timeoutMs: 1000,
+    });
+    expect(missing.exitCode).toBe(127);
+    expect(missing.stdout).toBe('');
+    expect(missing.stderr).toBe('');
+    expect(missing.output.stderr_bytes).toBeGreaterThan(0);
+    expect(missing.error).toBeTruthy();
   });
 
   it('redacts secrets and never stores raw stdout/stderr bodies', () => {
@@ -257,6 +304,41 @@ describe('agentctl task next', () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/guard:\s*no-ready-task/i);
     expect(result.stderr).toMatch(/bloqueadas|001/i);
+  });
+
+  it('rejects LEGACY_UNVERIFIED and tampered integrity while staying read-only', () => {
+    const dir = repo();
+    const id = 'SPEC-204-integrity';
+    seedApprovedSpec(dir, id, [{ id: '001', status: 'READY', blocked_by: [] }]);
+    const statePath = join(dir, '.agent/specs', id, 'state.json');
+    const approved = JSON.parse(readFileSync(statePath, 'utf8'));
+
+    const legacy = structuredClone(approved);
+    delete legacy.approval.integrity;
+    writeFileSync(statePath, `${JSON.stringify(legacy, null, 2)}\n`, 'utf8');
+    const beforeLegacy = readFileSync(statePath, 'utf8');
+    const legacyNext = run(dir, 'task', 'next', id);
+    expect(legacyNext.status).toBe(1);
+    expect(legacyNext.stderr).toMatch(/LEGACY|integrity|guard:/i);
+    expect(readFileSync(statePath, 'utf8')).toBe(beforeLegacy);
+
+    writeFileSync(statePath, `${JSON.stringify(approved, null, 2)}\n`, 'utf8');
+    writeFileSync(join(dir, '.agent/specs', id, 'SPEC.md'), '# tampered\n', 'utf8');
+    const beforeTamper = readFileSync(statePath, 'utf8');
+    const tampered = run(dir, 'task', 'next', id);
+    expect(tampered.status).toBe(1);
+    expect(tampered.stderr).toMatch(/TAMPER|integrity|guard:/i);
+    expect(readFileSync(statePath, 'utf8')).toBe(beforeTamper);
+
+    const malformed = structuredClone(approved);
+    malformed.approval.integrity = 'not-an-object';
+    writeFileSync(statePath, `${JSON.stringify(malformed, null, 2)}\n`, 'utf8');
+    const beforeMalformed = readFileSync(statePath, 'utf8');
+    const bad = run(dir, 'task', 'next', id);
+    expect(bad.status).toBe(1);
+    expect(bad.stderr).toMatch(/TAMPER|integrity|guard:/i);
+    expect(readFileSync(statePath, 'utf8')).toBe(beforeMalformed);
+    expect(existsSync(`${statePath}.lock`)).toBe(false);
   });
 });
 
@@ -457,6 +539,170 @@ describe('agentctl task start', () => {
     expect(tampered.status).toBe(1);
     expect(tampered.stderr).toMatch(/guard:\s*spec-tampered/i);
   });
+
+  it('rejects missing task file without persisting state', () => {
+    const dir = repo();
+    const id = 'SPEC-214-task-file';
+    seedApprovedSpec(dir, id, [{ id: '001', status: 'READY', blocked_by: [] }]);
+    rmSync(join(dir, '.agent/specs', id, 'tasks/001-task.md'), { force: true });
+    const statePath = join(dir, '.agent/specs', id, 'state.json');
+    const before = {
+      revision: JSON.parse(readFileSync(statePath, 'utf8')).revision,
+      raw: readFileSync(statePath, 'utf8'),
+    };
+    const missing = run(
+      dir,
+      'task',
+      'start',
+      id,
+      '001',
+      '--agent',
+      'claude',
+      '--profile',
+      'FAST',
+      '--justification',
+      'doc',
+      '--reviews',
+      '0',
+    );
+    expect(missing.status).toBe(1);
+    expect(missing.stderr).toMatch(/guard:\s*task-file/i);
+    expect(readFileSync(statePath, 'utf8')).toBe(before.raw);
+    expect(JSON.parse(readFileSync(statePath, 'utf8')).revision).toBe(before.revision);
+    expect(existsSync(`${statePath}.lock`)).toBe(false);
+  });
+});
+
+describe('frontmatter, reviews and git probes', () => {
+  it('preserves complex frontmatter and unknown keys', () => {
+    const dir = repo();
+    const file = join(dir, 'task.md');
+    writeFileSync(
+      file,
+      [
+        '---',
+        'id: "003A"',
+        'title: "Hardening"',
+        'status: READY',
+        'blocked_by:',
+        '  - "003"',
+        'metadata:',
+        '  owner: claude',
+        '# comentario preservado',
+        'writer: codex',
+        '---',
+        '',
+        'body',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    updateOperationalFrontmatter(file, {
+      status: 'IN_PROGRESS',
+      execution_profile: 'FULL',
+    });
+    const raw = readFileSync(file, 'utf8');
+    expect(raw).toContain('blocked_by:\n  - "003"');
+    expect(raw).toContain('metadata:\n  owner: claude');
+    expect(raw).toContain('# comentario preservado');
+    expect(raw).toMatch(/^status: IN_PROGRESS$/m);
+    expect(raw).toMatch(/^execution_profile: FULL$/m);
+  });
+
+  it('assertReviewsAllowed rejects invalid profile without TypeError', () => {
+    expect(() => assertReviewsAllowed('TURBO' as 'FAST', 1, null)).toThrow(StateMachineError);
+    try {
+      assertReviewsAllowed('TURBO' as 'FAST', 1, null);
+    } catch (error) {
+      expect((error as { guard?: string }).guard).toBe('profile');
+    }
+  });
+
+  it('blocks on extra blocking review and rejects malformed reviews_requested', () => {
+    const dir = repo();
+    const pass = join(dir, '001-pass.md');
+    const blocker = join(dir, '001-extra-block.md');
+    const now = new Date().toISOString();
+    writeFileSync(
+      pass,
+      [
+        '---',
+        'task_id: "001"',
+        'axis: engineering-quality',
+        'reviewer: codex',
+        'fixed_point: abc',
+        'result: PASS',
+        'blocking_findings: 0',
+        `reviewed_at: ${now}`,
+        '---',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    writeFileSync(
+      blocker,
+      [
+        '---',
+        'task_id: "001"',
+        'axis: spec-compliance',
+        'reviewer: codex',
+        'fixed_point: abc',
+        'result: BLOCK',
+        'blocking_findings: 2',
+        `reviewed_at: ${now}`,
+        '---',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    expect(() =>
+      assertApplicableReviews([pass, blocker], {
+        taskId: '001',
+        fixedPoint: 'abc',
+        reviewsRequested: 1,
+      }),
+    ).toThrow(/review-blocking|BLOCK/);
+
+    expect(() =>
+      assertApplicableReviews([pass], {
+        taskId: '001',
+        fixedPoint: 'abc',
+        reviewsRequested: Number.NaN,
+      }),
+    ).toThrow(/guard:\s*reviews|reviews_requested/i);
+  });
+
+  it('fails typescript detection when git probe errors', () => {
+    const dir = repo();
+    const bin = join(dir, 'fake-git-bin');
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(join(bin, 'git'), '#!/bin/sh\necho boom >&2\nexit 2\n', 'utf8');
+    chmodSync(join(bin, 'git'), 0o755);
+    const previous = process.env.PATH;
+    process.env.PATH = `${bin}:${previous ?? ''}`;
+    try {
+      expect(() => detectTypescriptAffected(dir)).toThrow(/TypeScript afetado|typescript-detect/i);
+      try {
+        detectTypescriptAffected(dir);
+      } catch (error) {
+        expect((error as { guard?: string }).guard).toBe('typescript-detect');
+      }
+    } finally {
+      process.env.PATH = previous;
+    }
+  });
+
+  it('stores git_head without trailing newline', () => {
+    const dir = repo();
+    writeFileSync(join(dir, 'README.md'), 'x\n', 'utf8');
+    expect(spawnSync('git', ['add', '.'], { cwd: dir, encoding: 'utf8' }).status).toBe(0);
+    expect(
+      spawnSync('git', ['commit', '-m', 'init'], { cwd: dir, encoding: 'utf8' }).status,
+    ).toBe(0);
+    const fingerprint = captureWorkspaceFingerprint(dir);
+    expect(fingerprint.git_head).toMatch(/^[a-f0-9]{40}$/);
+    expect(fingerprint.git_head).not.toContain('\n');
+  });
 });
 
 describe('agentctl task validate/close', () => {
@@ -507,7 +753,14 @@ describe('agentctl task validate/close', () => {
     let state = JSON.parse(readFileSync(statePath, 'utf8'));
     expect(state.tasks[0].status).toBe('REVIEWING');
     expect(state.session.status).toBe('REVIEWING');
+    expect(state.session.validation).toMatch(/evidence\/001-validation\.json$/);
+    expect(state.session.fixed_point).toMatch(/^[a-f0-9]{64}$/);
     expect(existsSync(join(dir, '.agent/specs', id, 'evidence/001-validation.json'))).toBe(true);
+    const evidence = JSON.parse(
+      readFileSync(join(dir, '.agent/specs', id, 'evidence/001-validation.json'), 'utf8'),
+    );
+    expect(evidence.git_head).not.toContain('\n');
+    expect(evidence.validation_result).toBe('PASS');
 
     // FAST with 0 reviews can close directly.
     const close = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
@@ -659,6 +912,103 @@ describe('agentctl task validate/close', () => {
     const state = JSON.parse(readFileSync(join(dir, '.agent/specs', id, 'state.json'), 'utf8'));
     expect(state.tasks[0].status).toBe('DONE');
     expect(state.active_task).toBeNull();
+  });
+
+  it('rejects malformed reviews_requested and extra blocking review on close', () => {
+    const dir = repo();
+    const bin = writeFakeBin(dir);
+    const id = 'SPEC-223-reviews';
+    seedApprovedSpec(dir, id, [{ id: '001', status: 'READY', blocked_by: [] }]);
+    expect(
+      run(
+        dir,
+        'task',
+        'start',
+        id,
+        '001',
+        '--agent',
+        'claude',
+        '--profile',
+        'STANDARD',
+        '--justification',
+        'cli isolada',
+        '--reviews',
+        '1',
+      ).status,
+    ).toBe(0);
+    const env = { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` };
+    const validate = spawnSync(
+      AGENTCTL,
+      [
+        'task',
+        'validate',
+        id,
+        '001',
+        '--focused-json',
+        JSON.stringify(['pnpm', 'exec', 'vitest', 'run', 'x.test.ts']),
+      ],
+      { cwd: dir, encoding: 'utf8', env },
+    );
+    expect(validate.status, validate.stderr).toBe(0);
+    const fixedPoint = /fixed_point: ([a-f0-9]+)/.exec(validate.stdout)?.[1];
+    expect(fixedPoint).toBeTruthy();
+
+    const statePath = join(dir, '.agent/specs', id, 'state.json');
+    const state = JSON.parse(readFileSync(statePath, 'utf8'));
+    state.tasks[0].reviews_requested = 'two';
+    state.session.reviews_requested = 'two';
+    writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+    writeFileSync(
+      join(dir, '.agent/specs', id, 'reviews/001-spec-compliance.md'),
+      [
+        '---',
+        'task_id: "001"',
+        'axis: spec-compliance',
+        'reviewer: codex',
+        `fixed_point: ${fixedPoint}`,
+        'result: PASS',
+        'blocking_findings: 0',
+        `reviewed_at: ${new Date().toISOString()}`,
+        '---',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    const malformed = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env,
+    });
+    expect(malformed.status).toBe(1);
+    expect(malformed.stderr).toMatch(/guard:\s*reviews/i);
+
+    const restored = JSON.parse(readFileSync(statePath, 'utf8'));
+    restored.tasks[0].reviews_requested = 1;
+    restored.session.reviews_requested = 1;
+    writeFileSync(statePath, `${JSON.stringify(restored, null, 2)}\n`, 'utf8');
+    writeFileSync(
+      join(dir, '.agent/specs', id, 'reviews/001-extra-block.md'),
+      [
+        '---',
+        'task_id: "001"',
+        'axis: engineering-quality',
+        'reviewer: codex',
+        `fixed_point: ${fixedPoint}`,
+        'result: BLOCK',
+        'blocking_findings: 1',
+        `reviewed_at: ${new Date().toISOString()}`,
+        '---',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    const blocked = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env,
+    });
+    expect(blocked.status).toBe(1);
+    expect(blocked.stderr).toMatch(/guard:\s*review-blocking/i);
   });
 
   it('preserves failed gate results under waiver rules', () => {

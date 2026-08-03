@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
+import { basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { StateMachineError } from '../domain/state-machine.mjs';
+
+export const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000;
 
 const SHELL_METACHARS = /[|&;<>`$(){}\n\r]/;
 const SECRETISH = [
@@ -10,6 +13,56 @@ const SECRETISH = [
   /OPENROUTER_API_KEY\s*=\s*\S+/gi,
   /-----BEGIN[ A-Z]*PRIVATE KEY-----[\s\S]*?-----END[ A-Z]*PRIVATE KEY-----/g,
 ];
+
+/**
+ * Detecta invocacao indireta de shell via interpretador + flag de comando.
+ * @param {string[]} argv
+ */
+export function assertNoIndirectShell(argv) {
+  if (!Array.isArray(argv) || argv.length < 2) return;
+  const executable = normalizeExecutableName(argv[0]);
+  const flags = argv.slice(1).map((part) => String(part).toLowerCase());
+
+  const unixShells = new Set(['sh', 'bash', 'dash', 'zsh', 'ksh', 'fish']);
+  if (unixShells.has(executable) && flags.some((flag) => flag === '-c' || flag === '-lc' || flag === '-ic')) {
+    throwIndirectShell(argv[0], '-c');
+  }
+
+  if (
+    (executable === 'cmd' || executable === 'cmd.exe')
+    && flags.some((flag) => flag === '/c' || flag === '/k')
+  ) {
+    throwIndirectShell(argv[0], '/c');
+  }
+
+  if (
+    (executable === 'powershell' || executable === 'powershell.exe'
+      || executable === 'pwsh' || executable === 'pwsh.exe')
+    && flags.some((flag) => flag === '-command' || flag === '-c' || flag === '-encodedcommand')
+  ) {
+    throwIndirectShell(argv[0], '-Command');
+  }
+}
+
+/**
+ * @param {string} command
+ * @param {string} flag
+ */
+function throwIndirectShell(command, flag) {
+  throw new StateMachineError(
+    `argv rejeitado: interpretador de shell indireto (${command} ${flag}).`,
+    {
+      guard: 'command-argv',
+      nextAction: 'Use argv estruturado sem sh/bash/cmd/PowerShell -c; passe o executavel e argumentos separados.',
+    },
+  );
+}
+
+/** @param {string} command */
+function normalizeExecutableName(command) {
+  const base = basename(String(command)).toLowerCase();
+  return base.endsWith('.exe') ? base : base;
+}
 
 /**
  * Valida argv estruturado sem shell.
@@ -55,6 +108,7 @@ export function assertSafeArgv(argv) {
     }
     safe.push(part);
   }
+  assertNoIndirectShell(safe);
   return safe;
 }
 
@@ -65,42 +119,83 @@ export function assertSafeArgv(argv) {
 export function runStructuredCommand(argv, options) {
   const safeArgv = assertSafeArgv(argv);
   const [command, ...args] = safeArgv;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const started = Date.now();
   const result = spawnSync(command, args, {
     cwd: options.cwd,
     env: options.env ?? process.env,
     encoding: 'utf8',
     shell: false,
-    timeout: options.timeoutMs,
+    timeout: timeoutMs,
   });
   const completed = Date.now();
+  const durationMs = completed - started;
 
   if (result.error && /** @type {NodeJS.ErrnoException} */ (result.error).code === 'ENOENT') {
+    const message = redactSecrets(String(result.error.message ?? 'ENOENT'));
     return {
       argv: safeArgv,
       exitCode: 127,
-      durationMs: completed - started,
+      durationMs,
       stdout: '',
-      stderr: result.error.message,
-      signal: null,
-      error: result.error.message,
+      stderr: '',
+      output: summarizeOutputSafe('', message),
+      signal: result.signal ?? null,
+      error: message,
+    };
+  }
+
+  if (result.error && /** @type {NodeJS.ErrnoException} */ (result.error).code === 'ETIMEDOUT') {
+    const message = redactSecrets(
+      `Comando excedeu timeout de ${timeoutMs}ms: ${safeArgv.join(' ')}`,
+    );
+    return {
+      argv: safeArgv,
+      exitCode: 124,
+      durationMs,
+      stdout: '',
+      stderr: '',
+      output: summarizeOutputSafe(result.stdout ?? '', `${result.stderr ?? ''}\n${message}`.trim()),
+      signal: result.signal ?? 'SIGTERM',
+      error: message,
     };
   }
 
   if (result.error) {
-    throw new StateMachineError(
-      `Falha ao executar comando estruturado: ${result.error.message}.`,
-      {
-        guard: 'process-exec',
-        nextAction: 'Verifique se o executavel existe no PATH do root Git.',
-      },
+    const message = redactSecrets(String(result.error.message ?? 'process error'));
+    return {
+      argv: safeArgv,
+      exitCode: result.status ?? 1,
+      durationMs,
+      stdout: '',
+      stderr: '',
+      output: summarizeOutputSafe(result.stdout ?? '', `${result.stderr ?? ''}\n${message}`.trim()),
+      signal: result.signal ?? null,
+      error: message,
+    };
+  }
+
+  // spawnSync marca timedOut sem necessariamente preencher error.code em todas as plataformas.
+  if (result.timedOut) {
+    const message = redactSecrets(
+      `Comando excedeu timeout de ${timeoutMs}ms: ${safeArgv.join(' ')}`,
     );
+    return {
+      argv: safeArgv,
+      exitCode: 124,
+      durationMs,
+      stdout: '',
+      stderr: '',
+      output: summarizeOutputSafe(result.stdout ?? '', `${result.stderr ?? ''}\n${message}`.trim()),
+      signal: result.signal ?? 'SIGTERM',
+      error: message,
+    };
   }
 
   return {
     argv: safeArgv,
     exitCode: result.status ?? 1,
-    durationMs: completed - started,
+    durationMs,
     stdout: '',
     stderr: '',
     output: summarizeOutputSafe(result.stdout ?? '', result.stderr ?? ''),
