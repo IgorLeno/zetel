@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 28,
+  "revision": 30,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -48,14 +48,14 @@
     },
     {
       "id": "002B",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "002A"
       ]
     },
     {
       "id": "003",
-      "status": "DRAFT",
+      "status": "READY",
       "blocked_by": [
         "002B"
       ]
@@ -107,7 +107,7 @@
     "id": "task-002B-premerge-documentation-closure-20260803054719",
     "agent": "codex",
     "task_id": "002B",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-08-03T05:47:19.314Z",
     "bootstrap_exception": "Lifecycle de tarefa pertence a 003; 002B registrada por insercao DRAFT, assertTransition DRAFT -> READY -> IN_PROGRESS, reencadeamento 003 READY -> DRAFT, validateState e writeJsonAtomic com expectedRevision.",
     "validating_at": "2026-08-03T05:51:06.455Z",
@@ -119,7 +119,13 @@
       "spec_compliance": "PASS",
       "engineering_quality": "PASS",
       "fixed_point_sha256": "125ac1519483674d0f5a4625598903dca4d831c2948cd793d537c60618a7d7d7"
-    }
+    },
+    "delivery_commit": "f13adc46d5d90f4953fc66370e3bfe1bdd25a078",
+    "remote": "origin/feat/spec-000-task-002-spec-lifecycle",
+    "pushed_at": "2026-08-03T06:35:03.187Z",
+    "closed_at": "2026-08-03T06:36:39.328Z",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002B-premerge-documentation-closure-f13adc4.md",
+    "next_task": "003"
   },
   "approval": {
     "spec": true,

@@ -1,14 +1,14 @@
 ---
 id: "002B"
 title: "Fechamento documental pré-merge"
-status: DONE
+status: SESSION_CLOSED
 blocked_by: ["002A"]
 writer: codex
 reviewer: claude
-commit: null
-push: null
+commit: "f13adc46d5d90f4953fc66370e3bfe1bdd25a078"
+push: "origin/feat/spec-000-task-002-spec-lifecycle"
 review_result: pass
-handoff: null
+handoff: "../handoffs/002B-premerge-documentation-closure-f13adc4.md"
 ---
 
 ## Objetivo
@@ -33,11 +33,11 @@ lifecycle de spec, sem alterar código funcional do Zetel e sem iniciar a tarefa
       locks/temporários.
 - [x] Congelar o diff e obter reviews read-only de spec compliance e engineering
       quality em dois processos novos.
-- [ ] Criar e enviar o commit de entrega; atualizar o PR #6; responder, confirmar
+- [x] Criar e enviar o commit de entrega; atualizar o PR #6; responder, confirmar
       e resolver os dois threads válidos.
-- [ ] Concluir a última etapa histórica da checklist 002A com observação explícita
+- [x] Concluir a última etapa histórica da checklist 002A com observação explícita
       de que foi fechada pela 002B.
-- [ ] Criar handoff, fechar a 002B em commit separado e liberar somente a 003
+- [x] Criar handoff, fechar a 002B em commit separado e liberar somente a 003
       para `READY`, sem iniciá-la.
 
 ## Testes e gates

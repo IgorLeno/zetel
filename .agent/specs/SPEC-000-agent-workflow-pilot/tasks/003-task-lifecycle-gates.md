@@ -1,7 +1,7 @@
 ---
 id: "003"
 title: Lifecycle de tarefa e gates
-status: DRAFT
+status: READY
 blocked_by: ["002B"]
 writer: claude
 reviewer: codex

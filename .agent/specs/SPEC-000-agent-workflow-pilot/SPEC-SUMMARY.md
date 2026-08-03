@@ -39,6 +39,7 @@ conteudo, frontmatter e coerencia de tarefas. `SPEC-SUMMARY.md` continua
 obrigatorio e contextual fora do digest material; seus marcadores continuam
 bloqueando approval.
 
-A tarefa `002B` chegou a `DONE` após alinhar o fechamento documental pre-merge,
-com gates completos e dois reviews finais `PASS`. A tarefa `003` permanece
-`DRAFT`, com `blocked_by: ["002B"]`, e nao foi iniciada.
+A tarefa `002B` encerrou em `SESSION_CLOSED` após alinhar o fechamento
+documental pre-merge, com gates completos, dois reviews finais `PASS`, delivery
+confirmado no remote e triagem final do PR #6. A tarefa `003` está somente
+`READY`, com `blocked_by: ["002B"]`, e nao foi iniciada.

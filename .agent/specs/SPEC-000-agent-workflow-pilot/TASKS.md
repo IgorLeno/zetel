@@ -61,7 +61,7 @@ session.status: SESSION_CLOSED
 
 A tarefa 003 esta `READY` apos o fechamento da 002A, mas nao foi iniciada.
 
-Checkpoint durante o fechamento documental pre-merge 002B:
+Checkpoint do delivery do fechamento documental pre-merge 002B:
 
 ```text
 002A  SESSION_CLOSED
@@ -71,7 +71,19 @@ active_task: null
 session.status: DONE
 ```
 
-A tarefa 003 nao pode voltar a `READY` ate o fechamento versionado da 002B.
+A tarefa 003 nao podia voltar a `READY` antes do fechamento versionado da 002B.
+
+Checkpoint final apos fechamento da 002B:
+
+```text
+002A  SESSION_CLOSED
+002B  SESSION_CLOSED
+003   READY, blocked_by: ["002B"]
+active_task: null
+session.status: SESSION_CLOSED
+```
+
+A tarefa 003 foi somente liberada para `READY` e nao foi iniciada.
 
 Regras:
 

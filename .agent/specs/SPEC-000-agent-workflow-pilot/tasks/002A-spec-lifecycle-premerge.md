@@ -51,8 +51,11 @@ tecnicamente pronta para merge sem iniciar a tarefa 003.
       o diff material mudar.
 - [x] Entregar e fechar em dois commits, ambos enviados por push normal para a
       branch existente, sem merge e sem iniciar 003.
-- [ ] Atualizar o corpo do PR #6, aguardar a nova análise CodeRabbit e triar
+- [x] Atualizar o corpo do PR #6, aguardar a nova análise CodeRabbit e triar
       todos os threads sem resolução automática injustificada.
+
+Concluído posteriormente pela tarefa 002B, após a triagem final dos threads
+pré-merge.
 
 ## Testes focados
 
