@@ -86,10 +86,11 @@ testes, gates, escopo, riscos e decisoes, continua protegido.
 ### `./agentctl spec status`
 
 Somente leitura: recalcula o manifest e o digest atuais apenas em memoria para
-detectar adulteracao e produzir `current_digest`. Nunca persiste o digest
-recalculado, grava, corrige, remove lock, nem muda revision ou mtime. A saida
-inclui workflow, aprovacao, manifest, digests, artefatos ausentes/alterados,
-tarefas, bloqueadores e proxima acao.
+detectar adulteracao e produzir `current_digest`. A saida publica exibe o digest
+atual e as diferencas de artefatos, alem de workflow, aprovacao, marcadores,
+tarefas, bloqueadores e proxima acao. As entradas completas do manifest nao
+fazem parte da saida publica atual. `status` nao persiste nenhuma informacao,
+grava, corrige, remove lock, nem muda revision ou mtime.
 
 | Status de aprovacao | Exit | Significado |
 | --- | --- | --- |

@@ -134,7 +134,7 @@ function parseApproveArgs(args) {
   return { specId, approvedBy: approvedBy.trim(), reapprove, kind };
 }
 
-/** @param {{ missing: string[], openMarkers: string[] }} artifacts @param {string[]} coherence */
+/** @param {{ missing: string[], openMarkers: string[] }} artifacts @param {string[]} readiness */
 function describeReadiness(artifacts, readiness) {
   const items = [];
   if (artifacts.missing.length) items.push(`crie: ${artifacts.missing.join(', ')}`);

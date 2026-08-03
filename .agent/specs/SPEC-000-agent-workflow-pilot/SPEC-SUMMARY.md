@@ -26,7 +26,8 @@ agentes quando ambos estiverem operacionais, duas revisoes independentes,
 contexto inicial substancialmente menor e retomada apenas por Git, handoff e
 context-pack.
 
-Checkpoint atual: tarefas `001`, `001A`, `001B` e `002` em `SESSION_CLOSED`.
+Checkpoint historico apos a 002A: tarefas `001`, `001A`, `001B` e `002` em
+`SESSION_CLOSED`.
 A tarefa `002A` encerrou as correcoes pre-merge do lifecycle de spec encontradas
 apos o fechamento da 002, com gates completos e dois reviews Claude Code
 `PASS`. A tarefa `003` (`Lifecycle de tarefa e gates`) esta `READY`, com
@@ -37,3 +38,7 @@ reapproval legada explicita, separa integrity ausente de malformada e valida
 conteudo, frontmatter e coerencia de tarefas. `SPEC-SUMMARY.md` continua
 obrigatorio e contextual fora do digest material; seus marcadores continuam
 bloqueando approval.
+
+A tarefa `002B` chegou a `DONE` após alinhar o fechamento documental pre-merge,
+com gates completos e dois reviews finais `PASS`. A tarefa `003` permanece
+`DRAFT`, com `blocked_by: ["002B"]`, e nao foi iniciada.

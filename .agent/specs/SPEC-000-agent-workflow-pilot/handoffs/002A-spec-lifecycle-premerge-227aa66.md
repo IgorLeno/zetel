@@ -49,8 +49,14 @@ conforme registrado em `reviews/002A-findings-resolution.md`.
 
 ```text
 ./agentctl spec create <spec-id> --kind <mini|full> --title <titulo>
-./agentctl spec approve <spec-id> --approved-by <humano>
-./agentctl spec approve <spec-id> --reapprove --approved-by <humano> [--kind <mini|full>]
+./agentctl spec approve <spec-id> \
+  --approved-by <humano> \
+  --confirm-human
+./agentctl spec approve <spec-id> \
+  --approved-by <humano> \
+  --confirm-human \
+  --reapprove \
+  [--kind <mini|full>]
 ./agentctl spec status <spec-id>
 ```
 
@@ -145,3 +151,11 @@ Após o fechamento versionado da 002A, liberar somente a tarefa 003 para
 - O status permanece read-only e expõe `workflow_status` + `approval_status`.
 - Assinatura criptográfica, lifecycle de tarefa, lock global e parser Markdown
   genérico continuam fora da 002A.
+
+## Errata posterior ao fechamento
+
+O snippet original deste handoff omitia `--confirm-human` nos dois exemplos de
+`spec approve`. A omissão era apenas documental: `.agent/COMMANDS.md` e a
+implementação sempre exigiram a confirmação humana explícita. A errata foi
+registrada posteriormente pela tarefa 002B, sem reescrever silenciosamente o
+histórico de fechamento da 002A.
