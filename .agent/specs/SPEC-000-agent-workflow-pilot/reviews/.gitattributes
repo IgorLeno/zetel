@@ -1,0 +1,2 @@
+# Preserve exact external reviewer stdout; keep whitespace checks enabled elsewhere.
+002-spec-compliance.md whitespace=-trailing-space

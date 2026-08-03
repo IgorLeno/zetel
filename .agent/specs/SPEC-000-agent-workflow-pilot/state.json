@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 10,
+  "revision": 30,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -34,16 +34,30 @@
     },
     {
       "id": "002",
-      "status": "READY",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "001B"
       ]
     },
     {
-      "id": "003",
-      "status": "DRAFT",
+      "id": "002A",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "002"
+      ]
+    },
+    {
+      "id": "002B",
+      "status": "SESSION_CLOSED",
+      "blocked_by": [
+        "002A"
+      ]
+    },
+    {
+      "id": "003",
+      "status": "READY",
+      "blocked_by": [
+        "002B"
       ]
     },
     {
@@ -90,18 +104,28 @@
     }
   ],
   "session": {
-    "id": "task-001B-final-invariants-2026-08-01",
-    "agent": "cursor",
-    "task_id": "001B",
+    "id": "task-002B-premerge-documentation-closure-20260803054719",
+    "agent": "codex",
+    "task_id": "002B",
     "status": "SESSION_CLOSED",
-    "started_at": "2026-08-01T21:30:00-03:00",
-    "closed_at": "2026-08-01T21:40:00-03:00",
-    "delivery_commit": "7fb300f724a9f1c277b1c5c7f09e19b69be772c0",
-    "delivery_remote": "origin/chore/spec-session-workflow-pilot",
-    "remote_confirmed_at": "2026-08-01T21:40:00-03:00",
-    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/001B-final-invariants-7fb300f.md",
-    "close_commit": null,
-    "bootstrap_exception": "Lifecycle commands ausentes; mutacoes 001B via writeJsonAtomic aprovadas pelo prompt."
+    "started_at": "2026-08-03T05:47:19.314Z",
+    "bootstrap_exception": "Lifecycle de tarefa pertence a 003; 002B registrada por insercao DRAFT, assertTransition DRAFT -> READY -> IN_PROGRESS, reencadeamento 003 READY -> DRAFT, validateState e writeJsonAtomic com expectedRevision.",
+    "validating_at": "2026-08-03T05:51:06.455Z",
+    "focused_tests": "89/89 PASS fora do sandbox; tentativa confinada falhou com spawnSync git EPERM",
+    "reviewing_at": "2026-08-03T05:55:09.435Z",
+    "gates": ".agent/specs/SPEC-000-agent-workflow-pilot/reviews/002B-gates.md",
+    "done_at": "2026-08-03T06:15:06.714Z",
+    "review_result": {
+      "spec_compliance": "PASS",
+      "engineering_quality": "PASS",
+      "fixed_point_sha256": "125ac1519483674d0f5a4625598903dca4d831c2948cd793d537c60618a7d7d7"
+    },
+    "delivery_commit": "f13adc46d5d90f4953fc66370e3bfe1bdd25a078",
+    "remote": "origin/feat/spec-000-task-002-spec-lifecycle",
+    "pushed_at": "2026-08-03T06:35:03.187Z",
+    "closed_at": "2026-08-03T06:36:39.328Z",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002B-premerge-documentation-closure-f13adc4.md",
+    "next_task": "003"
   },
   "approval": {
     "spec": true,

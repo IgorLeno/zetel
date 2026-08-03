@@ -26,7 +26,20 @@ agentes quando ambos estiverem operacionais, duas revisoes independentes,
 contexto inicial substancialmente menor e retomada apenas por Git, handoff e
 context-pack.
 
-Checkpoint atual: tarefas `001`, `001A` e `001B` em `SESSION_CLOSED` (entrega
-001B em `7fb300f`). `agentctl spec status` implementado; demais comandos
-pendentes. A tarefa `002` (`Lifecycle de spec`) esta `READY` para um processo
-novo.
+Checkpoint historico apos a 002A: tarefas `001`, `001A`, `001B` e `002` em
+`SESSION_CLOSED`.
+A tarefa `002A` encerrou as correcoes pre-merge do lifecycle de spec encontradas
+apos o fechamento da 002, com gates completos e dois reviews Claude Code
+`PASS`. A tarefa `003` (`Lifecycle de tarefa e gates`) esta `READY`, com
+`blocked_by: ["002A"]`, e nao foi iniciada.
+
+O fixed point revisado endurece o parser de `spec create`, adiciona
+reapproval legada explicita, separa integrity ausente de malformada e valida
+conteudo, frontmatter e coerencia de tarefas. `SPEC-SUMMARY.md` continua
+obrigatorio e contextual fora do digest material; seus marcadores continuam
+bloqueando approval.
+
+A tarefa `002B` encerrou em `SESSION_CLOSED` após alinhar o fechamento
+documental pre-merge, com gates completos, dois reviews finais `PASS`, delivery
+confirmado no remote e triagem final do PR #6. A tarefa `003` está somente
+`READY`, com `blocked_by: ["002B"]`, e nao foi iniciada.
