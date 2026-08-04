@@ -3,12 +3,16 @@ import { resolve } from 'node:path';
 import { runSpecStatus } from './commands/spec-status.mjs';
 import { runSpecCreate } from './commands/spec-create.mjs';
 import { runSpecApprove } from './commands/spec-approve.mjs';
+import { runTaskNext } from './commands/task-next.mjs';
+import { runTaskStart } from './commands/task-start.mjs';
+import { runTaskValidate } from './commands/task-validate.mjs';
+import { runTaskClose } from './commands/task-close.mjs';
 
 const EXIT_USAGE = 2;
 
 /**
  * @param {string[]} argv
- * @param {{ cwd?: string, stdout?: NodeJS.WritableStream, stderr?: NodeJS.WritableStream }} [io]
+ * @param {{ cwd?: string, stdout?: NodeJS.WritableStream, stderr?: NodeJS.WritableStream, env?: NodeJS.ProcessEnv }} [io]
  */
 export function runCli(argv, io = {}) {
   const stdout = io.stdout ?? process.stdout;
@@ -31,6 +35,11 @@ export function runCli(argv, io = {}) {
   if (command === 'spec' && subcommand === 'create') return runSpecCreate(rest, io);
   if (command === 'spec' && subcommand === 'approve') return runSpecApprove(rest, io);
 
+  if (command === 'task' && subcommand === 'next') return runTaskNext(rest, io);
+  if (command === 'task' && subcommand === 'start') return runTaskStart(rest, io);
+  if (command === 'task' && subcommand === 'validate') return runTaskValidate(rest, io);
+  if (command === 'task' && subcommand === 'close') return runTaskClose(rest, io);
+
   stderr.write(`Comando desconhecido: ${[command, subcommand].filter(Boolean).join(' ')}\n`);
   stderr.write(usageText());
   return EXIT_USAGE;
@@ -45,6 +54,10 @@ function usageText() {
     '  ./agentctl spec approve <spec-id> --approved-by <identidade> --confirm-human',
     '  ./agentctl spec approve <spec-id> --approved-by <identidade> --confirm-human --reapprove [--kind <mini|full>]',
     '  ./agentctl spec status <spec-id>   Somente leitura; exit 0 apenas para APPROVED; exit 1 para PENDING, LEGACY_UNVERIFIED ou TAMPERED',
+    '  ./agentctl task next <spec-id>',
+    '  ./agentctl task start <spec-id> <task-id> --agent <agent> --profile <FAST|STANDARD|FULL> --justification <texto> [--reviews <0|1|2>] [--review-justification <texto>] [--profile-approved-by <id>]',
+    '  ./agentctl task validate <spec-id> <task-id> [--focused-json <argv-json>]... [--integration-json <argv-json>]... [--plan-file <path>] [--profile <FAST|STANDARD|FULL>] [--justification <texto>] [--profile-approved-by <id>] [--require-test-ci]',
+    '  ./agentctl task close <spec-id> <task-id>',
     '',
     'Root resolvido por: git rev-parse --show-toplevel',
     '',

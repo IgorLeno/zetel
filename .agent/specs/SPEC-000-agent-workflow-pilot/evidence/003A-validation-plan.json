@@ -1,0 +1,15 @@
+{
+  "focused": [
+    [
+      "pnpm",
+      "exec",
+      "vitest",
+      "run",
+      "tests/unit/agentctl/task-lifecycle.test.ts",
+      "tests/unit/agentctl/state-machine.test.ts",
+      "--reporter=verbose"
+    ]
+  ],
+  "integrations": [],
+  "require_test_ci": true
+}

@@ -1,0 +1,7 @@
+{
+  "focused": [
+    ["pnpm", "exec", "vitest", "run", "tests/unit/agentctl/"]
+  ],
+  "integrations": [],
+  "require_test_ci": false
+}

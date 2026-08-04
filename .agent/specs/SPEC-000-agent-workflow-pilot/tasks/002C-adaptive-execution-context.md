@@ -1,6 +1,6 @@
 ---
 id: "002C"
-title: "Perfis adaptativos de execução e redução imediata de contexto"
+title: "Perfis adaptativos e redução de contexto"
 status: SESSION_CLOSED
 blocked_by: ["002B"]
 writer: codex

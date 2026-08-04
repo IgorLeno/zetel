@@ -1,18 +1,20 @@
 {
   "schema_version": 1,
-  "revision": 36,
+  "revision": 56,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
-    "approved_at": "2026-07-30T00:00:00-03:00",
-    "approved_by": "human-request-2026-07-30"
+    "approved_at": "2026-08-03T14:55:16.226Z",
+    "approved_by": "Igor Fernandes",
+    "kind": "full"
   },
   "active_task": null,
   "tasks": [
     {
       "id": "001",
       "status": "SESSION_CLOSED",
-      "blocked_by": []
+      "blocked_by": [],
+      "title": "Fundacao e state machine"
     },
     {
       "id": "001A",
@@ -21,7 +23,8 @@
         "001"
       ],
       "writer": "grok",
-      "reviewer": "agente ou subagente separado"
+      "reviewer": "agente ou subagente separado",
+      "title": "Endurecimento das invariantes e escrita concorrente"
     },
     {
       "id": "001B",
@@ -30,28 +33,32 @@
         "001A"
       ],
       "writer": "grok",
-      "reviewer": "agente ou subagente separado"
+      "reviewer": "agente ou subagente separado",
+      "title": "Fechamento das invariantes remanescentes"
     },
     {
       "id": "002",
       "status": "SESSION_CLOSED",
       "blocked_by": [
         "001B"
-      ]
+      ],
+      "title": "Lifecycle de spec"
     },
     {
       "id": "002A",
       "status": "SESSION_CLOSED",
       "blocked_by": [
         "002"
-      ]
+      ],
+      "title": "Correções pré-merge do lifecycle de spec"
     },
     {
       "id": "002B",
       "status": "SESSION_CLOSED",
       "blocked_by": [
         "002A"
-      ]
+      ],
+      "title": "Fechamento documental pré-merge"
     },
     {
       "id": "002C",
@@ -66,90 +73,272 @@
       "review_result": "PASS",
       "commit": "67db0873e9ee5bff58c86ce2c7987f840fabbd3f",
       "push": "origin/chore/spec-000-task-002c-adaptive-execution",
-      "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002C-adaptive-execution-67db087.md"
+      "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002C-adaptive-execution-67db087.md",
+      "title": "Perfis adaptativos e redução de contexto"
     },
     {
       "id": "003",
-      "status": "READY",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "002C"
-      ]
+      ],
+      "writer": "claude",
+      "reviewer": "codex",
+      "execution_profile": "FULL",
+      "profile_justification": "Implementação de lifecycle, state machine, execução de processos, persistência atômica e validação de evidências.",
+      "validation": "PASS",
+      "review_result": "PASS",
+      "commit": "d14e9149b4802bd0dcd3684e5afbb89a7a1fd8be",
+      "push": "origin/feat/spec-000-task-003-task-lifecycle-gates",
+      "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/003-task-lifecycle-d14e914.md",
+      "title": "Lifecycle de tarefa e gates"
+    },
+    {
+      "id": "003A",
+      "status": "SESSION_CLOSED",
+      "blocked_by": [
+        "003"
+      ],
+      "writer": "codex",
+      "reviewer": "codex-independent-engineering",
+      "execution_profile": "FULL",
+      "profile_justification": "Correções de segurança, execução de processos, atomicidade, evidências e lifecycle.",
+      "title": "Endurecimento pré-merge do lifecycle de tarefa",
+      "reviews_requested": 1,
+      "review_justification": "Correção pré-merge localizada; uma revisão independente de engenharia e segurança é suficiente.",
+      "validation": "PASS",
+      "review_result": "PASS",
+      "commit": "8c215d2f705b099f1f1c65b5f90e3638cf84b279",
+      "push": "origin/feat/spec-000-task-003-task-lifecycle-gates",
+      "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/003A-task-lifecycle-hardening-8c215d2.md"
     },
     {
       "id": "004",
-      "status": "DRAFT",
+      "status": "READY",
       "blocked_by": [
-        "003"
-      ]
+        "003A"
+      ],
+      "title": "Revisao independente em dois eixos"
     },
     {
       "id": "005",
       "status": "DRAFT",
       "blocked_by": [
         "004"
-      ]
+      ],
+      "title": "Handoff e nova sessao"
     },
     {
       "id": "006",
       "status": "DRAFT",
       "blocked_by": [
         "005"
-      ]
+      ],
+      "title": "Skills de intake, spec e planejamento"
     },
     {
       "id": "007",
       "status": "DRAFT",
       "blocked_by": [
         "006"
-      ]
+      ],
+      "title": "Skills de tarefa, revisao e sessao"
     },
     {
       "id": "008",
       "status": "DRAFT",
       "blocked_by": [
         "007"
-      ]
+      ],
+      "title": "Adaptadores curtos e perfil Zetel"
     },
     {
       "id": "009",
       "status": "DRAFT",
       "blocked_by": [
         "008"
-      ]
+      ],
+      "title": "Convergencia, Harvest e avaliacao"
     }
   ],
   "session": {
-    "id": "task-002C-adaptive-execution-20260803",
+    "id": "task-003A-20260803",
     "agent": "codex",
-    "task_id": "002C",
+    "task_id": "003A",
     "status": "SESSION_CLOSED",
-    "started_at": "2026-08-03T08:54:31.401Z",
-    "execution_profile": "STANDARD",
-    "profile_approved_by": "human-request-2026-08-03",
-    "bootstrap_exception": "Lifecycle de tarefa pertence a 003; 002C foi inserida e transitada DRAFT -> READY -> IN_PROGRESS com assertTransition. O reencadeamento aprovado de 003 READY -> DRAFT e a abertura desta nova sessao foram aplicados antes de validateState e writeJsonAtomic com expectedRevision.",
-    "validating_at": "2026-08-03T09:00:32.905Z",
-    "reviewing_at": "2026-08-03T09:02:28.172Z",
-    "focused_tests": "12/12 PASS",
-    "typecheck": "PASS",
-    "diff_check": "PASS",
-    "gates": ".agent/specs/SPEC-000-agent-workflow-pilot/reviews/002C-gates.md",
-    "done_at": "2026-08-03T09:08:01.200Z",
+    "started_at": "2026-08-03T14:34:29.964Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Correções de segurança, execução de processos, atomicidade, evidências e lifecycle.",
+    "reviews_requested": 1,
+    "review_justification": "Correção pré-merge localizada; uma revisão independente de engenharia e segurança é suficiente.",
+    "validating_at": "2026-08-03T14:45:32.249Z",
+    "reviewing_at": "2026-08-03T14:52:20.954Z",
+    "validation_result": "PASS",
+    "validation": ".agent/specs/SPEC-000-agent-workflow-pilot/evidence/003A-validation.json",
+    "fixed_point": "eff56419cc241e6ceb82a39c702e8a0df4bc06373d0a7755e5bf9375e39556fd",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/agentctl/task-lifecycle.test.ts",
+          "tests/unit/agentctl/state-machine.test.ts",
+          "--reporter=verbose"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-08-03T14:52:32.154Z",
+    "active_task_cleared": true,
     "review_result": {
-      "lightweight_independent_review": "PASS",
-      "fixed_point_sha256": "2823344c44f8b9357577cffefb1e903ca97a88465ed4c943f0f19272a6fa9306"
+      "engineering-quality": "PASS"
     },
-    "delivery_commit": "67db0873e9ee5bff58c86ce2c7987f840fabbd3f",
-    "remote": "origin/chore/spec-000-task-002c-adaptive-execution",
-    "pushed_at": "2026-08-03T09:10:58.076Z",
-    "closed_at": "2026-08-03T09:11:28.990Z",
-    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/002C-adaptive-execution-67db087.md",
-    "next_task": "003",
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "delivery_commit": "8c215d2f705b099f1f1c65b5f90e3638cf84b279",
+    "remote": "origin/feat/spec-000-task-003-task-lifecycle-gates",
+    "pushed_at": "2026-08-03T14:53:03.970Z",
+    "bootstrap_exception": "session close pertence a 005; fechamento pos-push da 003A usa assertTransition DONE->PUSHED->SESSION_CLOSED, handoff versionado e liberacao 004 DRAFT->READY sem iniciar 004. | integrity refresh pos-fechamento 003A autorizado pelo prompt (spec approve --reapprove bloqueia envelope existente).",
+    "closed_at": "2026-08-03T14:53:03.992Z",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/003A-task-lifecycle-hardening-8c215d2.md",
+    "next_task": "004"
   },
   "approval": {
     "spec": true,
     "plan": true,
     "tasks": true,
-    "architecture_decisions": true
+    "architecture_decisions": true,
+    "legacy_approval": {
+      "approved_by": "human-request-2026-07-30",
+      "approved_at": "2026-07-30T00:00:00-03:00",
+      "status": "APPROVED",
+      "migrated_at": "2026-08-03T14:34:26.775Z",
+      "reason": "integrity-envelope-migration"
+    },
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "52638efce47e09271372a8a59132166fc3c6bf23ffadaf7c08e4c24d3c9de22d"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "193f44b0856c1df0395ec2d391cce8e1e51fc719e84a467290ef48cee0524188"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "884fea47ffb5639d4274fee256c2ccde41284899e7f3d2a5c74843da2c1ac3ae"
+        },
+        {
+          "path": "tasks/001-foundation-state-machine.md",
+          "sha256": "e09c2f8efe5851acf69a5d3c3970283d7be811c013e59a9c0f3b91e77833cd51"
+        },
+        {
+          "path": "tasks/001A-state-machine-hardening.md",
+          "sha256": "c70f528e0179a2a015d408eee87efe198693a6d505eb911e823cbee45be0b1a0"
+        },
+        {
+          "path": "tasks/001B-final-invariants.md",
+          "sha256": "62687eb6e3a088ebc84c42f28174cbf4850c5db462486f90d5c5e812ff7550b2"
+        },
+        {
+          "path": "tasks/002-spec-lifecycle.md",
+          "sha256": "bfc88d352a0714b36b80d2ced8e0dd04f4af1ebe0761dd34566c6f25fa7ba0fd"
+        },
+        {
+          "path": "tasks/002A-spec-lifecycle-premerge.md",
+          "sha256": "23170cb1aac6b4d17513b10316ef84edb4655893057773dbb210ac5da304d9b8"
+        },
+        {
+          "path": "tasks/002B-premerge-documentation-closure.md",
+          "sha256": "182eab631c44b3420acfb0143ba87d3f115179b3e0340d14f61fbcfb4ede6862"
+        },
+        {
+          "path": "tasks/002C-adaptive-execution-context.md",
+          "sha256": "c0865c804f8eb0781f8228937a3e57de7e8cc6911c3ba3f73d262a2e515d6c6e"
+        },
+        {
+          "path": "tasks/003-task-lifecycle-gates.md",
+          "sha256": "97cee0c41ab513d607c7ef4859104180521a60efc4e726c7286eaf0cac9d22ed"
+        },
+        {
+          "path": "tasks/003A-task-lifecycle-hardening.md",
+          "sha256": "e631192b4cb236217b2153ab4acbb4bc13f47627ac66ba079a5d7b6a6afdf3fc"
+        },
+        {
+          "path": "tasks/004-independent-reviews.md",
+          "sha256": "c9e8dbc1fefa1eb092dc66eb3e186316ddf90e48fa7161c7251ee694dc49c559"
+        },
+        {
+          "path": "tasks/005-session-handoff-launcher.md",
+          "sha256": "ffc5489dfbcaa6093cceaae4b8189666bc883c5bb711e1fb1565324f9d054fb5"
+        },
+        {
+          "path": "tasks/006-spec-skills.md",
+          "sha256": "ea8d9b010f0a70bec6fb3a8bb89286da95fbdaf0a07f448c1df0009c46595e12"
+        },
+        {
+          "path": "tasks/007-task-session-skills.md",
+          "sha256": "3091c9290226b77595d2c37d62e654666f5ef2926bff93aaa37f4c1c3b888540"
+        },
+        {
+          "path": "tasks/008-compact-adapters-zetel-profile.md",
+          "sha256": "5cdb3d18639f1a26634007e28ce4e639062da3d1971ac30c82e55892fb4bc6c0"
+        },
+        {
+          "path": "tasks/009-converge-harvest-evaluation.md",
+          "sha256": "906332a1a89798c09ddc4e6bdc0433f06ca05aae12e8a28bca184e19a9b31e56"
+        }
+      ],
+      "digest": "c6ffc4131e119c587feba946ebc6bdf21fc5d4304f61f75145db8c8820803ff0",
+      "kind": "full",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-08-03T14:55:16.226Z"
+    },
+    "integrity_refresh": {
+      "reason": "bootstrap-refresh-after-authorized-003A-closing-mutations",
+      "previous_digest": "8c30dc17de33716148140be4f4dc1016c5c547abda50b0aa24fa43713f57d16d",
+      "refreshed_at": "2026-08-03T14:55:16.226Z"
+    }
   }
 }
