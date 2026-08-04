@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 56,
+  "revision": 67,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -114,15 +114,23 @@
     },
     {
       "id": "004",
-      "status": "READY",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "003A"
       ],
-      "title": "Revisao independente em dois eixos"
+      "title": "Revisao independente em dois eixos",
+      "execution_profile": "FULL",
+      "profile_justification": "Implementação do protocolo de revisões independentes, pacotes por eixo, agregação, evidências e integração com task close.",
+      "reviews_requested": 2,
+      "validation": "PASS",
+      "review_result": "PASS",
+      "commit": "fb5d4ed897bc62644562f2b9e58e5534d13eb747",
+      "push": "origin/feat/spec-000-task-004-independent-reviews",
+      "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/004-independent-reviews-fb5d4ed.md"
     },
     {
       "id": "005",
-      "status": "DRAFT",
+      "status": "READY",
       "blocked_by": [
         "004"
       ],
@@ -162,20 +170,18 @@
     }
   ],
   "session": {
-    "id": "task-003A-20260803",
+    "id": "task-004-20260804",
     "agent": "codex",
-    "task_id": "003A",
+    "task_id": "004",
     "status": "SESSION_CLOSED",
-    "started_at": "2026-08-03T14:34:29.964Z",
+    "started_at": "2026-08-04T04:46:05.088Z",
     "execution_profile": "FULL",
-    "profile_justification": "Correções de segurança, execução de processos, atomicidade, evidências e lifecycle.",
-    "reviews_requested": 1,
-    "review_justification": "Correção pré-merge localizada; uma revisão independente de engenharia e segurança é suficiente.",
-    "validating_at": "2026-08-03T14:45:32.249Z",
-    "reviewing_at": "2026-08-03T14:52:20.954Z",
+    "profile_justification": "Implementação do protocolo de revisões independentes, pacotes por eixo, agregação, evidências e integração com task close.",
+    "reviews_requested": 2,
+    "validating_at": "2026-08-04T05:38:54.588Z",
+    "validation": ".agent/specs/SPEC-000-agent-workflow-pilot/evidence/004-validation.json",
     "validation_result": "PASS",
-    "validation": ".agent/specs/SPEC-000-agent-workflow-pilot/evidence/003A-validation.json",
-    "fixed_point": "eff56419cc241e6ceb82a39c702e8a0df4bc06373d0a7755e5bf9375e39556fd",
+    "fixed_point": "88bbd7ce42ecc600f60ee35cf5504ca37a0aa72344664f41b2f38962d9798a4a",
     "gates_plan": [
       {
         "category": "focused",
@@ -184,6 +190,7 @@
           "exec",
           "vitest",
           "run",
+          "tests/unit/agentctl/task-review.test.ts",
           "tests/unit/agentctl/task-lifecycle.test.ts",
           "tests/unit/agentctl/state-machine.test.ts",
           "--reporter=verbose"
@@ -226,19 +233,23 @@
         ]
       }
     ],
-    "done_at": "2026-08-03T14:52:32.154Z",
-    "active_task_cleared": true,
+    "reviewing_at": "2026-08-04T05:45:03.712Z",
+    "review_aggregate": ".agent/specs/SPEC-000-agent-workflow-pilot/reviews/004-aggregate.json",
+    "aggregated_at": "2026-08-04T05:51:29.913Z",
     "review_result": {
-      "engineering-quality": "PASS"
+      "engineering-quality": "PASS",
+      "spec-compliance": "PASS"
     },
+    "done_at": "2026-08-04T05:51:30.342Z",
+    "active_task_cleared": true,
     "external_checks": "pending-not-waited",
-    "delivery_commit": "8c215d2f705b099f1f1c65b5f90e3638cf84b279",
-    "remote": "origin/feat/spec-000-task-003-task-lifecycle-gates",
-    "pushed_at": "2026-08-03T14:53:03.970Z",
-    "bootstrap_exception": "session close pertence a 005; fechamento pos-push da 003A usa assertTransition DONE->PUSHED->SESSION_CLOSED, handoff versionado e liberacao 004 DRAFT->READY sem iniciar 004. | integrity refresh pos-fechamento 003A autorizado pelo prompt (spec approve --reapprove bloqueia envelope existente).",
-    "closed_at": "2026-08-03T14:53:03.992Z",
-    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/003A-task-lifecycle-hardening-8c215d2.md",
-    "next_task": "004"
+    "delivery_commit": "fb5d4ed897bc62644562f2b9e58e5534d13eb747",
+    "remote": "origin/feat/spec-000-task-004-independent-reviews",
+    "pushed_at": "2026-08-04T05:52:20.988Z",
+    "closed_at": "2026-08-04T05:52:20.988Z",
+    "bootstrap_exception": "session close pertence a 005; fechamento pos-push da 004 usa assertTransition DONE->PUSHED->SESSION_CLOSED, handoff versionado e liberacao 005 DRAFT->READY sem iniciar 005.",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/004-independent-reviews-fb5d4ed.md",
+    "next_task": "005"
   },
   "approval": {
     "spec": true,

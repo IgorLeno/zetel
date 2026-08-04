@@ -1,5 +1,6 @@
-import { dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import {
   buildGatePlan,
   isExecutionProfile,
@@ -15,7 +16,7 @@ import {
 } from '../domain/evidence.mjs';
 import { assertSafeSpecId } from '../domain/spec-id.mjs';
 import { assertTransition, StateMachineError, validateState } from '../domain/state-machine.mjs';
-import { updateOperationalFrontmatter } from '../domain/task-frontmatter.mjs';
+import { prepareOperationalFrontmatter } from '../domain/task-frontmatter.mjs';
 import { resolveTaskFile } from '../domain/task-selection.mjs';
 import { parseValidateArgs } from '../domain/validation-plan.mjs';
 import { writeJsonAtomic } from '../infra/atomic-write.mjs';
@@ -66,12 +67,17 @@ export function runTaskValidate(args, io = {}) {
         nextAction: 'Informe um task-id existente.',
       });
     }
-    if (task.status !== 'IN_PROGRESS' && task.status !== 'VALIDATING') {
+    if (
+      task.status !== 'IN_PROGRESS'
+      && task.status !== 'VALIDATING'
+      && task.status !== 'REVIEWING'
+    ) {
       throw new StateMachineError(
-        `task validate exige IN_PROGRESS ou VALIDATING (atual: ${task.status}).`,
+        `task validate exige IN_PROGRESS, VALIDATING ou REVIEWING (atual: ${task.status}).`,
         {
           guard: 'task-status',
-          nextAction: 'Inicie a tarefa ou continue a partir de VALIDATING apos falha.',
+          nextAction:
+            'Inicie a tarefa, continue a partir de VALIDATING apos falha, ou revalide a partir de REVIEWING apos correcao material.',
         },
       );
     }
@@ -129,10 +135,11 @@ export function runTaskValidate(args, io = {}) {
     }
 
     // Transicao para VALIDATING (idempotente se ja estiver VALIDATING).
+    // REVIEWING -> VALIDATING cobre revalidacao apos correcao material pos-review.
     let working = state;
-    if (task.status === 'IN_PROGRESS') {
-      assertTransition('task', 'IN_PROGRESS', 'VALIDATING');
-      assertTransition('session', 'IN_PROGRESS', 'VALIDATING');
+    if (task.status === 'IN_PROGRESS' || task.status === 'REVIEWING') {
+      assertTransition('task', task.status, 'VALIDATING');
+      assertTransition('session', String(state.session?.status), 'VALIDATING');
       working = {
         ...state,
         tasks: state.tasks.map((item) =>
@@ -155,6 +162,12 @@ export function runTaskValidate(args, io = {}) {
           profile_justification: justification,
           ...(profileApprovedBy ? { profile_approved_by: profileApprovedBy } : {}),
           ...(elevatedByAgent ? { profile_elevated_by: elevatedByAgent } : {}),
+          // Limpa selo de review anterior; nova evidencia/fixed point sera gerada.
+          validation_result: null,
+          fixed_point: null,
+          review_aggregate: null,
+          aggregated_at: null,
+          review_result: null,
         },
       };
       const midValidation = validateState(working);
@@ -164,12 +177,27 @@ export function runTaskValidate(args, io = {}) {
           nextAction: 'Corrija a transicao para VALIDATING.',
         });
       }
-      working = writeJsonAtomic(path, working, { expectedRevision: state.revision });
-      updateOperationalFrontmatter(taskFile, {
+      // Prepara o markdown antes da escrita atomica para falhar cedo.
+      const preparedValidating = prepareOperationalFrontmatter(taskFile, {
         status: 'VALIDATING',
         execution_profile: profile,
         profile_justification: justification,
       });
+      working = writeJsonAtomic(path, working, { expectedRevision: state.revision });
+      try {
+        writeFileSync(taskFile, preparedValidating, 'utf8');
+      } catch (error) {
+        throw new StateMachineError(
+          `Estado VALIDATING persistido, mas frontmatter falhou: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          {
+            guard: 'task-file',
+            nextAction:
+              'Reconcilie o markdown da tarefa com status VALIDATING; o estado ja avancou e nao deve ser reaplicado as cegas.',
+          },
+        );
+      }
     }
 
     /** @type {Array<Record<string, unknown>>} */
@@ -238,12 +266,27 @@ export function runTaskValidate(args, io = {}) {
           nextAction: 'Corrija o estado apos falha de gate.',
         });
       }
-      writeJsonAtomic(path, failedState, { expectedRevision: working.revision });
-      updateOperationalFrontmatter(taskFile, {
+      const validatedAtFail = new Date().toISOString();
+      const preparedFail = prepareOperationalFrontmatter(taskFile, {
         status: 'VALIDATING',
         validation: 'FAIL',
-        validated_at: new Date().toISOString(),
+        validated_at: validatedAtFail,
       });
+      writeJsonAtomic(path, failedState, { expectedRevision: working.revision });
+      try {
+        writeFileSync(taskFile, preparedFail, 'utf8');
+      } catch (error) {
+        throw new StateMachineError(
+          `Estado VALIDATING (FAIL) persistido, mas frontmatter falhou: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          {
+            guard: 'task-file',
+            nextAction:
+              'Reconcilie o markdown da tarefa com status VALIDATING e validation FAIL; o estado e a evidencia ja foram gravados.',
+          },
+        );
+      }
       stderr.write(
         `Validacao falhou.\nguard: gate-failed\nnextAction: Corrija o gate e reexecute task validate.\nevidence: ${toPosixRelative(evidencePath, root)}\n`,
       );
@@ -309,15 +352,16 @@ export function runTaskValidate(args, io = {}) {
         nextAction: 'Corrija a transicao para REVIEWING.',
       });
     }
+    const preparedReviewing = prepareOperationalFrontmatter(taskFile, {
+      status: 'REVIEWING',
+      validation: 'PASS',
+      validated_at: reviewingAt,
+      execution_profile: profile,
+      profile_justification: justification,
+    });
     const written = writeJsonAtomic(path, successState, { expectedRevision: working.revision });
     try {
-      updateOperationalFrontmatter(taskFile, {
-        status: 'REVIEWING',
-        validation: 'PASS',
-        validated_at: reviewingAt,
-        execution_profile: profile,
-        profile_justification: justification,
-      });
+      writeFileSync(taskFile, preparedReviewing, 'utf8');
     } catch (error) {
       throw new StateMachineError(
         `Estado REVIEWING persistido, mas frontmatter falhou: ${

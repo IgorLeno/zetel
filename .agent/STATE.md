@@ -13,14 +13,17 @@ atomica com `expectedRevision`.
 | `spec` | objeto | `id`, `status`, metadados de aprovacao |
 | `active_task` | string \| null | Id da unica tarefa ativa, ou null |
 | `tasks` | array | Cada item: `id`, `status`, `blocked_by[]`; opcionalmente `execution_profile`, `profile_justification`, `profile_approved_by`, `profile_elevated_by`, `reviews_requested`, `review_justification`, `validation`, `review_result` |
-| `session` | objeto | Metadados da sessao corrente/ultima; em validacao/review pode referenciar `validation`, `fixed_point`, `gates_plan`, `reviews_requested`, `review_justification`, `profile_elevated_by` |
+| `session` | objeto | Metadados da sessao corrente/ultima; em validacao/review pode referenciar `validation`, `fixed_point`, `gates_plan`, `reviews_requested`, `review_justification`, `profile_elevated_by`, `review_aggregate`, `review_result`, `aggregated_at` |
 | `approval` | objeto | Booleans obrigatorios e envelope de integridade opcional |
 
 Evidencias de `task validate` ficam em
 `.agent/specs/<spec-id>/evidence/<task-id>-validation.json` e sao
-referenciadas pela sessao. `task close` exige fixed point fresco, gates
-aplicaveis PASS e reviews proporcionais ao perfil; nao avanca para
-`PUSHED`/`SESSION_CLOSED`.
+referenciadas pela sessao. Aggregates de `task review` ficam em
+`.agent/specs/<spec-id>/reviews/<task-id>-aggregate.json` e, em PASS, sao
+referenciados por `session.review_aggregate` com `review_result` por eixo e
+`aggregated_at`. `task close` exige fixed point fresco, gates aplicaveis PASS,
+reviews proporcionais ao perfil e, quando `reviews_requested > 0`, aggregate
+PASS do fixed point atual; nao avanca para `PUSHED`/`SESSION_CLOSED`.
 
 ### Approval de spec
 

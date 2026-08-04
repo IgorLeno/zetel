@@ -1,14 +1,18 @@
 ---
 id: "004"
 title: Revisao independente em dois eixos
-status: READY
+status: SESSION_CLOSED
 blocked_by: ["003A"]
 writer: codex
 reviewer: claude
-commit: null
-push: null
-review_result: pending
-handoff: null
+commit: fb5d4ed897bc62644562f2b9e58e5534d13eb747
+push: origin/feat/spec-000-task-004-independent-reviews
+review_result: PASS
+handoff: .agent/specs/SPEC-000-agent-workflow-pilot/handoffs/004-independent-reviews-fb5d4ed.md
+execution_profile: FULL
+profile_justification: "Implementação do protocolo de revisões independentes, pacotes por eixo, agregação, evidências e integração com task close."
+validation: PASS
+validated_at: "2026-08-04T05:45:03.712Z"
 ---
 
 ## Objetivo

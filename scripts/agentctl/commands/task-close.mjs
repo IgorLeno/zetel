@@ -1,6 +1,6 @@
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { assertReviewsAllowed, buildGatePlan, isExecutionProfile } from '../domain/execution-profile.mjs';
+import { buildGatePlan, isExecutionProfile } from '../domain/execution-profile.mjs';
 import {
   assertApplicableGatesPassed,
   assertEvidenceFresh,
@@ -8,7 +8,12 @@ import {
   readValidationEvidence,
   toPosixRelative,
 } from '../domain/evidence.mjs';
+import { assertAggregateForClose } from '../domain/review-aggregate.mjs';
+import { normalizeReviewsRequested } from '../domain/review-count.mjs';
 import { assertApplicableReviews } from '../domain/review-evidence.mjs';
+import {
+  assertExistingReviewsStructured,
+} from '../domain/review-report.mjs';
 import { assertSafeSpecId } from '../domain/spec-id.mjs';
 import { assertTransition, StateMachineError, validateState } from '../domain/state-machine.mjs';
 import { prepareOperationalFrontmatter } from '../domain/task-frontmatter.mjs';
@@ -88,11 +93,11 @@ export function runTaskClose(args, io = {}) {
       });
     }
 
-    const reviewsRequested = normalizeReviewsRequested(
-      task.reviews_requested ?? state.session.reviews_requested,
+    const reviewsRequested = normalizeReviewsRequested({
+      raw: task.reviews_requested ?? state.session.reviews_requested,
       profile,
-      task.review_justification ?? state.session.review_justification,
-    );
+      reviewJustification: task.review_justification ?? state.session.review_justification,
+    });
 
     const taskFile = resolveTaskFile(dirname(path), taskId);
     if (!taskFile) {
@@ -130,6 +135,28 @@ export function runTaskClose(args, io = {}) {
       evidenceRecordedAt: String(evidence.recorded_at ?? ''),
       now: new Date(),
     });
+    // Reviews existentes (inclusive opcionais com reviews_requested 0) passam pelo schema v2.
+    assertExistingReviewsStructured(reviewFiles, {
+      taskId,
+      fixedPoint: String(evidence.fixed_point),
+      evidenceRecordedAt: String(evidence.recorded_at ?? ''),
+      now: new Date(),
+    });
+
+    // reviews_requested > 0 exige aggregate PASS do fixed point atual.
+    const writer = resolveCloseWriter(task, state, taskFile);
+    const aggregate = assertAggregateForClose({
+      root,
+      specDir: dirname(path),
+      specId,
+      taskId,
+      fixedPoint: String(evidence.fixed_point),
+      reviewsRequested,
+      writer,
+      session: state.session,
+      evidenceRecordedAt: String(evidence.recorded_at ?? ''),
+      now: new Date(),
+    });
 
     assertTransition('task', 'REVIEWING', 'DONE');
     assertTransition('session', 'REVIEWING', 'DONE');
@@ -144,6 +171,13 @@ export function runTaskClose(args, io = {}) {
     const preparedFrontmatter = prepareOperationalFrontmatter(taskFile, frontmatterFields);
 
     const doneAt = new Date().toISOString();
+    const reviewResultByAxis = aggregate
+      ? Object.fromEntries(
+        (Array.isArray(aggregate.axes) ? aggregate.axes : []).map((axis) => [axis, 'PASS']),
+      )
+      : Object.fromEntries(
+        reviews.map((review) => [review.axis, review.result]),
+      );
     const next = {
       ...state,
       active_task: null,
@@ -164,9 +198,10 @@ export function runTaskClose(args, io = {}) {
         active_task_cleared: true,
         validation: toPosixRelative(evidencePath, root),
         fixed_point: evidence.fixed_point,
-        review_result: Object.fromEntries(
-          reviews.map((review) => [review.axis, review.result]),
-        ),
+        review_result: reviewResultByAxis,
+        review_aggregate: aggregate
+          ? state.session.review_aggregate
+          : null,
         external_checks: state.session.external_checks ?? 'pending-not-waited',
         reviews_requested: reviewsRequested,
       },
@@ -228,55 +263,38 @@ function parseCloseArgs(args) {
 }
 
 /**
- * @param {unknown} raw
- * @param {'FAST'|'STANDARD'|'FULL'} profile
- * @param {unknown} reviewJustification
+ * @param {Record<string, unknown>} task
+ * @param {Record<string, unknown>} state
+ * @param {string} taskFile
  */
-function normalizeReviewsRequested(raw, profile, reviewJustification) {
-  if (raw == null) {
-    return defaultReviews(profile);
+function resolveCloseWriter(task, state, taskFile) {
+  if (typeof task.writer === 'string' && task.writer.trim()) return task.writer.trim();
+  try {
+    const raw = readFileSync(taskFile, 'utf8').replace(/\r\n?/g, '\n');
+    const lines = raw.split('\n');
+    if (lines[0] === '---') {
+      const end = lines.indexOf('---', 1);
+      if (end > 0) {
+        for (const line of lines.slice(1, end)) {
+          const match = /^writer:\s*(.*)$/.exec(line);
+          if (!match) continue;
+          let value = match[1].trim();
+          if (
+            (value.startsWith('"') && value.endsWith('"'))
+            || (value.startsWith("'") && value.endsWith("'"))
+          ) {
+            value = value.slice(1, -1);
+          }
+          if (value && value !== 'null' && value !== '~') return value;
+        }
+      }
+    }
+  } catch {
+    // fall through
   }
-  if (typeof raw !== 'number' && typeof raw !== 'string') {
-    throw new StateMachineError(
-      `reviews_requested invalido: ${typeof raw === 'object' ? JSON.stringify(raw) : String(raw)}.`,
-      {
-        guard: 'reviews',
-        nextAction: 'Corrija reviews_requested para um inteiro nao negativo permitido pelo perfil.',
-      },
-    );
-  }
-  if (typeof raw === 'string' && !/^-?\d+$/.test(raw.trim())) {
-    throw new StateMachineError(
-      `reviews_requested invalido: ${raw}.`,
-      {
-        guard: 'reviews',
-        nextAction: 'Corrija reviews_requested para um inteiro nao negativo permitido pelo perfil.',
-      },
-    );
-  }
-  const converted = typeof raw === 'number' ? raw : Number(raw);
-  if (!Number.isFinite(converted) || !Number.isInteger(converted) || converted < 0) {
-    throw new StateMachineError(
-      `reviews_requested invalido: ${String(raw)}.`,
-      {
-        guard: 'reviews',
-        nextAction: 'Corrija reviews_requested para um inteiro nao negativo permitido pelo perfil.',
-      },
-    );
-  }
-  assertReviewsAllowed(
-    profile,
-    converted,
-    typeof reviewJustification === 'string' ? reviewJustification : null,
-  );
-  return converted;
-}
-
-/** @param {'FAST'|'STANDARD'|'FULL'} profile */
-function defaultReviews(profile) {
-  if (profile === 'FAST') return 0;
-  if (profile === 'STANDARD') return 1;
-  return 2;
+  const session = /** @type {Record<string, unknown>} */ (state.session ?? {});
+  if (typeof session.agent === 'string' && session.agent.trim()) return session.agent.trim();
+  return '';
 }
 
 /**
