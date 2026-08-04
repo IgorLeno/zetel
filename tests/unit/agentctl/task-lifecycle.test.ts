@@ -1652,6 +1652,116 @@ describe('agentctl task validate/close', () => {
     expect(state.active_task).toBeNull();
   });
 
+  it('keeps IN_PROGRESS when validate frontmatter is predictably invalid before state write', () => {
+    const dir = repo();
+    const bin = writeFakeBin(dir);
+    const id = 'SPEC-226-validate-fm-early';
+    seedApprovedSpec(dir, id, [{ id: '001', status: 'READY', blocked_by: [] }]);
+    expect(
+      run(
+        dir,
+        'task',
+        'start',
+        id,
+        '001',
+        '--agent',
+        'claude',
+        '--profile',
+        'FAST',
+        '--justification',
+        'doc',
+        '--reviews',
+        '0',
+      ).status,
+    ).toBe(0);
+
+    const taskFile = join(dir, '.agent/specs', id, 'tasks/001-task.md');
+    writeFileSync(taskFile, 'sem frontmatter operacional\n', 'utf8');
+
+    const validate = spawnSync(
+      AGENTCTL,
+      [
+        'task',
+        'validate',
+        id,
+        '001',
+        '--focused-json',
+        JSON.stringify(['pnpm', 'exec', 'vitest', 'run', 'x.test.ts']),
+      ],
+      {
+        cwd: dir,
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` },
+      },
+    );
+    expect(validate.status).toBe(1);
+    expect(validate.stderr).toMatch(/guard:\s*task-file/i);
+    expect(validate.stderr).toMatch(/Frontmatter/i);
+    const state = JSON.parse(readFileSync(join(dir, '.agent/specs', id, 'state.json'), 'utf8'));
+    expect(state.tasks[0].status).toBe('IN_PROGRESS');
+    expect(state.session.status).toBe('IN_PROGRESS');
+  });
+
+  it('returns actionable task-file error when validate frontmatter write fails after VALIDATING', () => {
+    if (typeof process.getuid === 'function' && process.getuid() === 0) {
+      return;
+    }
+    const dir = repo();
+    const bin = writeFakeBin(dir);
+    const id = 'SPEC-227-validate-fm';
+    seedApprovedSpec(dir, id, [{ id: '001', status: 'READY', blocked_by: [] }]);
+    expect(
+      run(
+        dir,
+        'task',
+        'start',
+        id,
+        '001',
+        '--agent',
+        'claude',
+        '--profile',
+        'FAST',
+        '--justification',
+        'doc',
+        '--reviews',
+        '0',
+      ).status,
+    ).toBe(0);
+
+    const taskFile = join(dir, '.agent/specs', id, 'tasks/001-task.md');
+    const beforeMd = readFileSync(taskFile, 'utf8');
+    expect(beforeMd).toMatch(/status:\s*IN_PROGRESS/);
+    chmodSync(taskFile, 0o444);
+
+    const validate = spawnSync(
+      AGENTCTL,
+      [
+        'task',
+        'validate',
+        id,
+        '001',
+        '--focused-json',
+        JSON.stringify(['pnpm', 'exec', 'vitest', 'run', 'x.test.ts']),
+      ],
+      {
+        cwd: dir,
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` },
+      },
+    );
+    chmodSync(taskFile, 0o644);
+    expect(validate.status).toBe(1);
+    expect(validate.stderr).toMatch(/guard:\s*task-file/i);
+    expect(validate.stderr).toMatch(/VALIDATING/i);
+    expect(validate.stderr).toMatch(/Reconcilie|reconcil/i);
+    const state = JSON.parse(readFileSync(join(dir, '.agent/specs', id, 'state.json'), 'utf8'));
+    expect(state.tasks[0].status).toBe('VALIDATING');
+    expect(state.session.status).toBe('VALIDATING');
+    const afterMd = readFileSync(taskFile, 'utf8');
+    expect(afterMd).toMatch(/status:\s*IN_PROGRESS/);
+    expect(afterMd).not.toMatch(/status:\s*VALIDATING/);
+  });
+
   it('preserves failed gate results under waiver rules', () => {
     expect(() =>
       assertValidWaiver(
