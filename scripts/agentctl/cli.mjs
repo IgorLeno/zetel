@@ -8,6 +8,8 @@ import { runTaskStart } from './commands/task-start.mjs';
 import { runTaskValidate } from './commands/task-validate.mjs';
 import { runTaskClose } from './commands/task-close.mjs';
 import { runTaskReview } from './commands/task-review.mjs';
+import { runSessionHandoff } from './commands/session-handoff.mjs';
+import { runSessionStartNext } from './commands/session-start-next.mjs';
 
 const EXIT_USAGE = 2;
 
@@ -42,6 +44,9 @@ export function runCli(argv, io = {}) {
   if (command === 'task' && subcommand === 'review') return runTaskReview(rest, io);
   if (command === 'task' && subcommand === 'close') return runTaskClose(rest, io);
 
+  if (command === 'session' && subcommand === 'handoff') return runSessionHandoff(rest, io);
+  if (command === 'session' && subcommand === 'start-next') return runSessionStartNext(rest, io);
+
   stderr.write(`Comando desconhecido: ${[command, subcommand].filter(Boolean).join(' ')}\n`);
   stderr.write(usageText());
   return EXIT_USAGE;
@@ -63,6 +68,8 @@ function usageText() {
     '  ./agentctl task review <spec-id> <task-id> record --axis <spec-compliance|engineering-quality> --report-file <path>',
     '  ./agentctl task review <spec-id> <task-id> aggregate',
     '  ./agentctl task close <spec-id> <task-id>',
+    '  ./agentctl session handoff <spec-id> <task-id> [--limit <texto>]...',
+    '  ./agentctl session start-next <spec-id> --agent <codex|claude> [--check]',
     '',
     'Root resolvido por: git rev-parse --show-toplevel',
     '',

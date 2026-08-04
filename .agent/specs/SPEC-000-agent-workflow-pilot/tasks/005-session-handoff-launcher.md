@@ -1,7 +1,7 @@
 ---
 id: "005"
 title: Handoff e nova sessao
-status: READY
+status: REVIEWING
 blocked_by: ["004"]
 writer: claude
 reviewer: codex
@@ -9,6 +9,10 @@ commit: null
 push: null
 review_result: pending
 handoff: null
+execution_profile: FULL
+profile_justification: "Implementação de fechamento remoto verificável, handoff versionado, context-pack mínimo e launcher de processo novo."
+validation: PASS
+validated_at: "2026-08-04T23:35:47.891Z"
 ---
 
 ## Objetivo

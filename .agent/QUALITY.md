@@ -41,3 +41,16 @@ focados durante o ciclo, gates aplicaveis uma vez no fixed point e
   finito e positivo e autorizacao humana explicita; roda fora dos gates padrao
   e nunca e executado automaticamente pela CI padrao.
 - Checks externos pendentes nao mantem a sessao aberta.
+
+## Fechamento da sessao
+
+- `./agentctl session handoff` so fecha com gates aplicaveis PASS, arvore limpa,
+  commit de entrega publicado e branch sincronizada com o upstream.
+- O commit de fechamento usa allowlist explicita; qualquer arquivo alheio
+  bloqueia o fechamento em vez de ser commitado junto.
+- `./agentctl session start-next --check` e a verificacao read-only de que a
+  proxima sessao pode comecar: nao escreve estado, nao escreve runtime e nao
+  inicia processo.
+- Handoff <= 800 tokens estimados; context-pack com resumo <= 800, tarefa
+  <= 1.500, handoff <= 800 e no maximo tres skills completas.
+- Nenhuma sessao nova usa `resume`, `continue`, `fork-session` ou transcript.

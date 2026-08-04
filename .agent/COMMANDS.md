@@ -270,7 +270,149 @@ Transiciona ambos para `DONE`, zera `active_task` e registra `done_at`. Nao faz
 commit, push, PR, handoff, `PUSHED`, `SESSION_CLOSED` nem inicia a proxima
 tarefa (fronteira com 005).
 
+## Fechamento de sessao e nova sessao (tarefa 005)
+
+```text
+./agentctl session handoff <spec-id> <task-id> [--limit "<texto>"]...
+./agentctl session start-next <spec-id> --agent <codex|claude> [--check]
+```
+
+Os dois comandos exigem repositorio com commit inicial, spec `APPROVED` integra
+e `state.json` valido. Erros seguem o contrato comum (`guard:` + `nextAction:`),
+com exit `1` para falha operacional e exit `2` para uso incorreto.
+
+### `./agentctl session handoff`
+
+Unico comando do lifecycle que cria commit e faz push. Nao existe hook oculto:
+todo efeito colateral pertence a esta invocacao explicita.
+
+Pre-condicoes: tarefa `DONE`, sessao `DONE`, `active_task` null, working tree
+limpa, upstream configurado, commit de entrega igual a `HEAD` e ja publicado.
+
+Coerencia com os gates (`guard: evidence-mismatch`, `aggregate-mismatch`,
+`delivery-base-mismatch`, `delivery-extra-commits`): a evidencia da tarefa deve
+estar `PASS` no mesmo fixed point da sessao, o aggregate — quando
+`reviews_requested > 0` — deve pertencer a esse fixed point, o commit de entrega
+deve descender da base validada e existir no maximo um commit desde ela. Isso
+bloqueia fechar uma entrega diferente da que passou pelos gates.
+
+Limite conhecido: o conteudo desse unico commit nao e comparado byte a byte com
+o snapshot validado, porque a evidencia guarda hashes de diff, nao o snapshot.
+
+A sequencia inteira roda sob lock exclusivo em
+`.agent/runtime/locks/<spec-id>/session-handoff-<task-id>.lock`
+(`guard: session-handoff-lock`), nao apenas a escrita de `state.json`: duas
+invocacoes concorrentes nunca materializam handoff, commit ou push em paralelo.
+
+Ordem canonica:
+
+1. guardas de estado, spec e Git;
+2. `git fetch` do upstream antes de qualquer afirmacao de sincronia;
+3. divergencia, atraso local e publicacao do commit de entrega;
+4. render do handoff e validacao de budget;
+5. escrita atomica do handoff;
+6. escrita atomica de `state.json` (`expectedRevision`);
+7. frontmatter operacional da tarefa fechada e da tarefa liberada;
+8. `git add --` somente da allowlist e commit `chore(agent): close task <id> session`;
+9. `git push` sem force;
+10. reconfirmacao de closing HEAD no remote e arvore limpa.
+
+Allowlist do commit de fechamento (nunca `git add .` ou `git add -A`):
+`state.json`, o markdown da tarefa fechada, o markdown da tarefa liberada e o
+handoff versionado. Qualquer arquivo fora dela aborta com
+`guard: unrelated-changes` antes do commit.
+
+O commit de fechamento nao entrega comportamento novo e nao referencia o
+proprio SHA: o SHA de fechamento e derivado do Git depois que o commit existe e
+aparece apenas no stdout e na area runtime ignorada.
+
+Recuperacao (o comando e retomavel e idempotente):
+
+| Falha | Efeito | Retry |
+| --- | --- | --- |
+| Antes do state (handoff, revision, lock) | Handoff parcial removido; state intacto | Repetir do zero |
+| Frontmatter apos o state | State fechado; diagnostico `guard: task-file` | Reconciliar markdown e repetir |
+| Commit criado, push falhou | Commit local preservado | Repete push, nunca cria segundo commit |
+| Push feito, verificacao falhou | Nada duplicado | Rele o remote e confirma |
+| Reexecucao apos sucesso | Nenhuma escrita, `resumed: true` | Handoff, timestamps e revision inalterados |
+
+`--limit "<texto>"` acrescenta limites conhecidos ao handoff; repetivel.
+
+### Handoff versionado
+
+Gerado em `.agent/specs/<spec-id>/handoffs/<task>-<slug>-<delivery-short-sha>.md`
+com `task_id`, `delivery_commit`, `remote`, `closed_at`, writer, reviewers,
+perfil, reviews solicitados, branch, fixed point, gates, reviews, aggregate,
+delivery SHA, remote confirmado, limites conhecidos, proxima tarefa, checks
+externos e instrucao de retomada sem transcript.
+
+Budget: no maximo 800 tokens estimados. A estimativa e deterministica e offline:
+normaliza CRLF/CR para LF, garante uma newline final, conta bytes UTF-8 e divide
+por 4 arredondando para cima (`scripts/agentctl/domain/token-budget.mjs`).
+
+### `./agentctl session start-next`
+
+Fronteira entre processos, nunca um loop. Nao altera `state.json`, nao cria
+sessao e nao marca a proxima tarefa como iniciada: quem faz isso e o processo
+novo, ao executar `task start`.
+
+Guardas: sessao anterior `SESSION_CLOSED`; handoff no diretorio canonico
+`.agent/specs/<spec-id>/handoffs/` (`guard: handoff-path`), lido apenas apos a
+validacao de contencao, com `task_id`, `delivery_commit` e `remote` conferidos
+por frontmatter estrito — nunca por substring (`guard: handoff-incoherent`);
+`HEAD` contendo o handoff; `HEAD` publicado no upstream; sem divergencia/atraso;
+arvore limpa; primeira tarefa `READY` desbloqueada; `--agent` igual ao `writer`
+do frontmatter dessa tarefa; context-pack dentro dos budgets.
+
+O launch real roda sob lock exclusivo em
+`.agent/runtime/locks/<spec-id>/session-start-next-<agente>.lock`
+(`guard: session-start-next-lock`), cobrindo autorizacao e spawn.
+
+| Modo | Escreve runtime | Inicia processo | Exit 0 |
+| --- | --- | --- | --- |
+| `--check` | Nao | Nao | Somente se o launch real estaria autorizado |
+| Launch real | Sim | Sim | Exit code do processo lancado |
+
+Launch: `codex -C <root> <prompt>` ou `claude <prompt>`, sempre com argv
+estruturado, `shell: false`, `cwd` no root Git e ambiente herdado com uma
+variavel adicional. `resume`, `continue`, `fork-session` e `transcript` sao
+rejeitados em qualquer posicao do argv (`guard: forbidden-argv`).
+
+### Context-pack (runtime ignorado)
+
+`.agent/runtime/context-packs/<spec-id>/<task-id>/<closing-head>/` contem
+`INSTRUCTIONS.md`, `PROJECT_CONTEXT.md`, `SPEC-SUMMARY.md`, `TASK.md`,
+`QUALITY.md`, `HANDOFF.md`, `GIT.md`, `PROMPT.txt` e `MANIFEST.json`. ADRs
+entram apenas quando o arquivo da tarefa os referencia. Transcript, conversa
+anterior, tarefas concluidas, todos os handoffs e diff historico nunca entram.
+
+O pack e materializado em diretorio temporario irmao e publicado por `rename`:
+o destino final contem exatamente a allowlist do manifest, nenhum arquivo antigo
+sobrevive ao lado do pack novo e uma falha no meio nao deixa pack parcial. Todo
+componente do caminho de destino e rejeitado se for symlink.
+
+Budgets: resumo <= 800, tarefa <= 1.500, handoff <= 800 tokens estimados e no
+maximo tres skills completas. Caminho absoluto, `..`, symlink em qualquer
+componente, arquivo fora do root e arquivo nao regular sao rejeitados
+(`guard: context-pack-path`). O manifest declara arquivos, motivo de inclusao,
+bytes, tokens estimados, `SHA-256`, tarefa selecionada, writer esperado, estado
+Git e handoff utilizado. O conteudo e reproduzivel para o mesmo HEAD.
+
+### Session ID
+
+O launcher apaga o arquivo indicado por `AGENTCTL_SESSION_ID_FILE` antes do
+spawn e so o le depois, de modo que um ID de tentativa anterior nunca seja
+atribuido a um processo novo. O valor e validado, associado a tarefa, agente,
+PID, horario, HEAD, exit code e sinal, e gravado somente em
+`.agent/runtime/sessions/<spec-id>/<task-id>/<head>-<tentativa>.json` — um
+registro por tentativa, sem sobrescrever tentativas anteriores. Nenhuma CLI
+suportada documenta hoje esse identificador: a ausencia e registrada como
+`session_id: null` e nunca e apresentada como falha do launch. O ID jamais e
+usado para retomar sessao.
+
+Termino por sinal nao e sucesso: `spawnSync` devolve `status` null nesse caso, e
+o comando reporta exit code diferente de zero, registrando o sinal.
+
 ## Reservado para tarefas seguintes
 
-- `session close` / `session start-next` (005)
 - `spec converge` / harvest
