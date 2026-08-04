@@ -12,7 +12,12 @@ import { tmpdir } from 'node:os';
 import { dirname, join, win32 } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { AGGREGATE_SCHEMA_VERSION } from '../../../scripts/agentctl/domain/review-aggregate.mjs';
+import {
+  AGGREGATE_SCHEMA_VERSION,
+  aggregatePath,
+  buildReviewAggregate,
+  publishReviewAggregateAndState,
+} from '../../../scripts/agentctl/domain/review-aggregate.mjs';
 import { normalizeReviewsRequested } from '../../../scripts/agentctl/domain/review-count.mjs';
 import {
   assertReviewPackageIntegrity,
@@ -324,7 +329,7 @@ describe('agentctl task review hardening', () => {
     ).toBe(false);
   }, timeout);
 
-  it('rolls back orphan aggregate when state revision conflicts', async () => {
+  it('rolls back orphan aggregate when state revision conflicts', () => {
     const dir = repo();
     const id = 'SPEC-410-orphan';
     seedApprovedSpec(dir, id);
@@ -370,11 +375,6 @@ describe('agentctl task review hardening', () => {
       ).toBe(0);
     }
 
-    const {
-      buildReviewAggregate,
-      publishReviewAggregateAndState,
-      aggregatePath,
-    } = await import('../../../scripts/agentctl/domain/review-aggregate.mjs');
     const statePath = join(dir, '.agent/specs', id, 'state.json');
     const state = JSON.parse(readFileSync(statePath, 'utf8'));
     const evidence = JSON.parse(
@@ -422,7 +422,7 @@ describe('agentctl task review hardening', () => {
     expect(closeOrphan.stderr).toMatch(/guard:\s*review-aggregate/i);
   }, timeout);
 
-  it('rejects package manifest path traversal and mismatched included_files', async () => {
+  it('rejects package manifest path traversal and mismatched included_files', () => {
     const dir = repo();
     const id = 'SPEC-411-pkg-path';
     seedApprovedSpec(dir, id);
@@ -441,12 +441,6 @@ describe('agentctl task review hardening', () => {
       '001',
       fixedPoint,
       'spec-compliance',
-    );
-    const { assertReviewPackageIntegrity } = await import(
-      '../../../scripts/agentctl/domain/review-package.mjs'
-    );
-    const { StateMachineError } = await import(
-      '../../../scripts/agentctl/domain/state-machine.mjs'
     );
     const manifest = JSON.parse(readFileSync(join(packageDir, 'manifest.json'), 'utf8'));
     const escaped = {
@@ -717,6 +711,10 @@ describe('agentctl task review hardening', () => {
     expect(closed.status, closed.stderr).toBe(0);
     const done = JSON.parse(readFileSync(join(dir, `.agent/specs/${id}/state.json`), 'utf8'));
     expect(done.session.review_aggregate).toBe(`.agent/specs/${id}/reviews/001-aggregate.json`);
+    expect(done.session.review_result).toEqual({
+      'spec-compliance': 'PASS',
+      'engineering-quality': 'PASS',
+    });
   }, timeout);
 
   it('blocks aggregate when optional second review is BLOCK', () => {
@@ -987,5 +985,117 @@ describe('agentctl task review hardening', () => {
     expect(
       interpretGitSpawnResult({ error: null, status: 0, signal: null, stdout: 'ok\n' }, ['rev-parse']),
     ).toBe('ok\n');
+  }, timeout);
+
+  it('rejects escaped other-axis contamination in location.file', () => {
+    const dir = repo();
+    const evidenceAt = '2026-08-04T12:00:00.000Z';
+    const now = new Date('2026-08-04T12:05:00.000Z');
+    const reportPath = join(dir, 'contam-location-file.md');
+    // Mantém \u002d no arquivo bruto; JSON.parse decodifica para engineering-quality.
+    writeFileSync(
+      reportPath,
+      [
+        '---',
+        'schema_version: 2',
+        'task_id: "001"',
+        'axis: spec-compliance',
+        'reviewer: claude',
+        'review_run_id: "run-loc-file"',
+        'package_id: "pkg-loc-file"',
+        'fixed_point: "fp-loc"',
+        'result: PASS',
+        'blocking_findings: 0',
+        'reviewed_at: "2026-08-04T12:02:00.000Z"',
+        '---',
+        '',
+        '```json',
+        '{',
+        '  "summary": "Summary limpo sem literais proibidos.",',
+        '  "findings": [',
+        '    {',
+        '      "id": "F001",',
+        '      "severity": "MINOR",',
+        '      "status": "OPEN",',
+        '      "title": "Finding limpo",',
+        '      "evidence": "Evidencia concreta no pacote.",',
+        '      "recommendation": "Manter isolamento.",',
+        '      "location": {',
+        '        "file": "engineering\\u002dquality",',
+        '        "line": 1,',
+        '        "not_applicable_reason": null',
+        '      }',
+        '    }',
+        '  ]',
+        '}',
+        '```',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    expect(readFileSync(reportPath, 'utf8')).toContain('engineering\\u002dquality');
+    const parsed = parseStructuredReviewReport(reportPath);
+    expect(parsed.findings[0].location.file).toBe('engineering-quality');
+    expect(() =>
+      assertStructuredReviewReport(parsed, {
+        taskId: '001',
+        axis: 'spec-compliance',
+        packageId: 'pkg-loc-file',
+        fixedPoint: 'fp-loc',
+        evidenceRecordedAt: evidenceAt,
+        now,
+      }),
+    ).toThrow(/contaminacao|outro eixo/i);
+  }, timeout);
+
+  it('rejects contaminated optional review on close when reviews_requested is 0', () => {
+    const dir = repo();
+    const id = 'SPEC-418-optional-contam';
+    seedApprovedSpec(dir, id);
+    const { env, fixedPoint } = startAndValidate(dir, id, {
+      profile: 'FULL',
+      reviews: '0',
+      agent: 'codex',
+    });
+    const reportRel = `.agent/specs/${id}/reviews/001-spec-compliance.md`;
+    writeFileSync(
+      join(dir, reportRel),
+      structuredReport({
+        taskId: '001',
+        axis: 'spec-compliance',
+        reviewer: 'claude',
+        reviewRunId: 'run-opt-contam',
+        packageId: 'pkg-opt-contam',
+        fixedPoint,
+      }),
+      'utf8',
+    );
+    // Adultera o JSON canônico com contaminação escapada em location.file.
+    const raw = readFileSync(join(dir, reportRel), 'utf8');
+    const poisoned = raw.replace(
+      '"findings": []',
+      `"findings": [{
+        "id": "F001",
+        "severity": "MINOR",
+        "status": "OPEN",
+        "title": "Finding limpo",
+        "evidence": "Evidencia concreta no pacote.",
+        "recommendation": "Manter isolamento.",
+        "location": {
+          "file": "engineering\\u002dquality",
+          "line": 1,
+          "not_applicable_reason": null
+        }
+      }]`,
+    );
+    writeFileSync(join(dir, reportRel), poisoned, 'utf8');
+    const closed = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env,
+    });
+    expect(closed.status).toBe(1);
+    expect(closed.stderr).toMatch(/contaminacao|outro eixo/i);
+    expect(closed.stderr).toMatch(/guard:\s*review-report/i);
   }, timeout);
 });

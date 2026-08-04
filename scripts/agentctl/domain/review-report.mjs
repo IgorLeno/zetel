@@ -319,8 +319,13 @@ function collectInspectionStrings(report) {
       if (typeof finding[key] === 'string') parts.push(finding[key]);
     }
     const location = finding.location;
-    if (location && typeof location === 'object' && typeof location.not_applicable_reason === 'string') {
-      parts.push(location.not_applicable_reason);
+    if (location && typeof location === 'object') {
+      if (typeof location.file === 'string') {
+        parts.push(location.file);
+      }
+      if (typeof location.not_applicable_reason === 'string') {
+        parts.push(location.not_applicable_reason);
+      }
     }
   }
   return parts;
@@ -508,6 +513,31 @@ function stripQuotes(value) {
     return value.slice(1, -1);
   }
   return value;
+}
+
+/**
+ * Relê todos os reviews existentes com o schema estruturado v2 (contaminação,
+ * package_id, fence, etc.), inclusive quando reviews_requested é 0.
+ * @param {string[]} reviewPaths
+ * @param {{
+ *   taskId: string,
+ *   fixedPoint: string,
+ *   evidenceRecordedAt: string,
+ *   now?: Date | string | number,
+ * }} expected
+ */
+export function assertExistingReviewsStructured(reviewPaths, expected) {
+  for (const path of reviewPaths) {
+    const parsed = parseStructuredReviewReport(path);
+    assertStructuredReviewReport(parsed, {
+      taskId: expected.taskId,
+      axis: String(parsed.axis),
+      packageId: String(parsed.package_id),
+      fixedPoint: expected.fixedPoint,
+      evidenceRecordedAt: expected.evidenceRecordedAt,
+      now: expected.now,
+    });
+  }
 }
 
 /**

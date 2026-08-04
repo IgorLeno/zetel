@@ -11,6 +11,9 @@ import {
 import { assertAggregateForClose } from '../domain/review-aggregate.mjs';
 import { normalizeReviewsRequested } from '../domain/review-count.mjs';
 import { assertApplicableReviews } from '../domain/review-evidence.mjs';
+import {
+  assertExistingReviewsStructured,
+} from '../domain/review-report.mjs';
 import { assertSafeSpecId } from '../domain/spec-id.mjs';
 import { assertTransition, StateMachineError, validateState } from '../domain/state-machine.mjs';
 import { prepareOperationalFrontmatter } from '../domain/task-frontmatter.mjs';
@@ -132,6 +135,13 @@ export function runTaskClose(args, io = {}) {
       evidenceRecordedAt: String(evidence.recorded_at ?? ''),
       now: new Date(),
     });
+    // Reviews existentes (inclusive opcionais com reviews_requested 0) passam pelo schema v2.
+    assertExistingReviewsStructured(reviewFiles, {
+      taskId,
+      fixedPoint: String(evidence.fixed_point),
+      evidenceRecordedAt: String(evidence.recorded_at ?? ''),
+      now: new Date(),
+    });
 
     // reviews_requested > 0 exige aggregate PASS do fixed point atual.
     const writer = resolveCloseWriter(task, state, taskFile);
@@ -161,9 +171,13 @@ export function runTaskClose(args, io = {}) {
     const preparedFrontmatter = prepareOperationalFrontmatter(taskFile, frontmatterFields);
 
     const doneAt = new Date().toISOString();
-    const reviewResultByAxis = Object.fromEntries(
-      reviews.map((review) => [review.axis, review.result]),
-    );
+    const reviewResultByAxis = aggregate
+      ? Object.fromEntries(
+        (Array.isArray(aggregate.axes) ? aggregate.axes : []).map((axis) => [axis, 'PASS']),
+      )
+      : Object.fromEntries(
+        reviews.map((review) => [review.axis, review.result]),
+      );
     const next = {
       ...state,
       active_task: null,
