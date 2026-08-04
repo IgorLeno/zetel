@@ -9,7 +9,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { writeTextAtomic } from '../infra/atomic-file.mjs';
 import { isWorkflowOperationalPath } from './evidence.mjs';
@@ -230,6 +230,8 @@ export function readReviewPackageManifest(packageDir) {
  *   taskId: string,
  *   axis: string,
  *   fixedPoint: string,
+ *   specId?: string,
+ *   gitHead?: string,
  * }} expected
  */
 export function assertReviewPackageIntegrity(packageDir, manifest, expected) {
@@ -237,6 +239,12 @@ export function assertReviewPackageIntegrity(packageDir, manifest, expected) {
     throw new StateMachineError('Pacote com schema_version invalido.', {
       guard: 'review-package',
       nextAction: 'Regenere o pacote com a versao atual do agentctl.',
+    });
+  }
+  if (expected.specId && manifest.spec_id !== expected.specId) {
+    throw new StateMachineError('Pacote com spec_id divergente.', {
+      guard: 'review-package',
+      nextAction: 'Prepare o pacote para a spec ativa.',
     });
   }
   if (manifest.task_id !== expected.taskId) {
@@ -257,6 +265,14 @@ export function assertReviewPackageIntegrity(packageDir, manifest, expected) {
       nextAction: 'Reexecute task validate e prepare novos pacotes.',
     });
   }
+  if (expected.gitHead) {
+    if (manifest.git_head !== expected.gitHead || manifest.base_commit !== expected.gitHead) {
+      throw new StateMachineError('Pacote com git_head/base_commit divergente da evidencia.', {
+        guard: 'review-stale',
+        nextAction: 'Regenere o pacote no HEAD da evidencia atual.',
+      });
+    }
+  }
   if (typeof manifest.package_id !== 'string' || !manifest.package_id) {
     throw new StateMachineError('Pacote sem package_id.', {
       guard: 'review-package',
@@ -265,17 +281,35 @@ export function assertReviewPackageIntegrity(packageDir, manifest, expected) {
   }
 
   const artifactHashes = manifest.artifact_sha256;
-  if (!artifactHashes || typeof artifactHashes !== 'object') {
+  if (!artifactHashes || typeof artifactHashes !== 'object' || Array.isArray(artifactHashes)) {
     throw new StateMachineError('manifest sem artifact_sha256.', {
       guard: 'review-package',
       nextAction: 'Regenere o pacote.',
+    });
+  }
+  const includedFiles = Array.isArray(manifest.included_files) ? manifest.included_files : null;
+  if (!includedFiles || includedFiles.length === 0) {
+    throw new StateMachineError('manifest sem included_files.', {
+      guard: 'review-package',
+      nextAction: 'Regenere o pacote.',
+    });
+  }
+  const hashKeys = Object.keys(artifactHashes).sort();
+  const includedSorted = [...includedFiles].map(String).sort();
+  if (
+    hashKeys.length !== includedSorted.length
+    || hashKeys.some((key, index) => key !== includedSorted[index])
+  ) {
+    throw new StateMachineError('included_files diverge de artifact_sha256.', {
+      guard: 'review-package',
+      nextAction: 'Regenere o pacote; listas devem coincidir exatamente.',
     });
   }
 
   /** @type {Array<{ path: string, sha256: string }>} */
   const included = [];
   for (const [rel, expectedHash] of Object.entries(artifactHashes)) {
-    const abs = join(packageDir, rel);
+    const abs = assertSafePackageRelative(rel, packageDir);
     if (!existsSync(abs)) {
       throw new StateMachineError(`Artefato ausente no pacote: ${rel}.`, {
         guard: 'review-package',
@@ -319,6 +353,34 @@ export function assertReviewPackageIntegrity(packageDir, manifest, expected) {
       });
     }
   }
+}
+
+/**
+ * @param {string} rel
+ * @param {string} packageDir
+ */
+function assertSafePackageRelative(rel, packageDir) {
+  if (
+    typeof rel !== 'string'
+    || !rel
+    || isAbsolute(rel)
+    || rel.includes('\\')
+    || rel.split('/').includes('..')
+  ) {
+    throw new StateMachineError(`Caminho de artefato invalido no pacote: ${String(rel)}.`, {
+      guard: 'review-package',
+      nextAction: 'Regenere o pacote; use apenas caminhos relativos POSIX sem ..',
+    });
+  }
+  const resolved = resolve(packageDir, rel);
+  const relToPackage = relative(packageDir, resolved);
+  if (!relToPackage || relToPackage.startsWith('..') || isAbsolute(relToPackage)) {
+    throw new StateMachineError(`Artefato fora do pacote: ${rel}.`, {
+      guard: 'review-package',
+      nextAction: 'Regenere o pacote; caminhos devem permanecer dentro da pasta do eixo.',
+    });
+  }
+  return resolved;
 }
 
 /**

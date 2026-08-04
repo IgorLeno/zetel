@@ -137,10 +137,14 @@ export function runTaskClose(args, io = {}) {
     const aggregate = assertAggregateForClose({
       root,
       specDir: dirname(path),
+      specId,
       taskId,
       fixedPoint: String(evidence.fixed_point),
       reviewsRequested,
       writer,
+      session: state.session,
+      evidenceRecordedAt: String(evidence.recorded_at ?? ''),
+      now: new Date(),
     });
 
     assertTransition('task', 'REVIEWING', 'DONE');

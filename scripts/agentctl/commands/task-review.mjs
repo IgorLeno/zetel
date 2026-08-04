@@ -2,7 +2,7 @@ import { dirname, join } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import {
   buildReviewAggregate,
-  writeReviewAggregate,
+  publishReviewAggregateAndState,
 } from '../domain/review-aggregate.mjs';
 import {
   assertApplicableGatesPassed,
@@ -24,10 +24,10 @@ import {
   formatCanonicalReviewMarkdown,
   parseStructuredReviewReport,
 } from '../domain/review-report.mjs';
+import { assertApprovedIntegrity } from '../domain/spec-approval-guard.mjs';
 import { assertSafeSpecId } from '../domain/spec-id.mjs';
-import { StateMachineError, validateState } from '../domain/state-machine.mjs';
+import { StateMachineError } from '../domain/state-machine.mjs';
 import { resolveTaskFile } from '../domain/task-selection.mjs';
-import { writeJsonAtomic } from '../infra/atomic-write.mjs';
 import { assertInitialCommit } from '../infra/git-baseline.mjs';
 import { loadSpecState } from '../infra/read-state.mjs';
 import { writeError } from '../infra/write-error.mjs';
@@ -107,6 +107,8 @@ function runRecord(parsed, io) {
     taskId: parsed.taskId,
     axis,
     fixedPoint: ctx.fixedPoint,
+    specId: parsed.specId,
+    gitHead: String(ctx.evidence.git_head),
   });
 
   const reportFile = /** @type {string} */ (parsed.reportFile);
@@ -174,32 +176,14 @@ function runAggregate(parsed, io) {
     now: new Date(),
   });
 
-  const path = writeReviewAggregate(ctx.specDir, parsed.taskId, aggregate);
-
-  // Em PASS, atualiza campos operacionais da sessao sem mudar status DONE.
-  const next = {
-    ...ctx.state,
-    session: {
-      ...ctx.state.session,
-      review_aggregate: toPosixRelative(path, ctx.root),
-      review_result: Object.fromEntries(
-        (aggregate.axes ?? []).map((axis) => [axis, 'PASS']),
-      ),
-      aggregated_at: aggregate.generated_at,
-      reviews_requested: ctx.reviewsRequested,
-    },
-  };
-
-  const nextValidation = validateState(next);
-  if (!nextValidation.ok) {
-    throw new StateMachineError(nextValidation.errors.join(' '), {
-      guard: 'state-invalid',
-      nextAction: 'Corrija o estado antes de persistir o aggregate.',
-    });
-  }
-
-  const written = writeJsonAtomic(ctx.statePath, next, {
-    expectedRevision: ctx.state.revision,
+  // Aggregate + state sao publicados de forma coerente (rollback do arquivo se state falhar).
+  const { written, aggregateRel } = publishReviewAggregateAndState({
+    root: ctx.root,
+    specDir: ctx.specDir,
+    statePath: ctx.statePath,
+    state: ctx.state,
+    aggregate,
+    taskId: parsed.taskId,
   });
 
   io.stdout.write([
@@ -207,7 +191,7 @@ function runAggregate(parsed, io) {
     `result: ${aggregate.result}`,
     `fixed_point: ${aggregate.fixed_point}`,
     `axes: ${(aggregate.axes ?? []).join(',')}`,
-    `aggregate: ${toPosixRelative(path, ctx.root)}`,
+    `aggregate: ${aggregateRel}`,
     `blocking_findings: ${aggregate.blocking_findings}`,
     `revision: ${written.revision}`,
     'next_action: Com aggregate PASS, execute task close.',
@@ -230,6 +214,7 @@ function loadReviewContext(specId, taskId, options = {}) {
       nextAction: 'Corrija o estado antes de task review.',
     });
   }
+  assertApprovedIntegrity(statePath, state);
   assertInitialCommit(root);
 
   if (state.active_task !== taskId) {

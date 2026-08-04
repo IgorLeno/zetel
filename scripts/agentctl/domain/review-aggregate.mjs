@@ -1,14 +1,15 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { writeTextAtomic } from '../infra/atomic-file.mjs';
-import { listReviewFiles } from './evidence.mjs';
+import { writeJsonAtomic } from '../infra/atomic-write.mjs';
+import { listReviewFiles, toPosixRelative } from './evidence.mjs';
 import {
   assertStructuredReviewReport,
   parseStructuredReviewReport,
   REVIEW_AXES,
 } from './review-report.mjs';
 import { sha256File } from './review-package.mjs';
-import { StateMachineError } from './state-machine.mjs';
+import { StateMachineError, validateState } from './state-machine.mjs';
 
 export const AGGREGATE_SCHEMA_VERSION = 1;
 
@@ -162,14 +163,86 @@ export function writeReviewAggregate(specDir, taskId, aggregate) {
 }
 
 /**
- * Exigido por task close quando reviews_requested > 0.
+ * Publica aggregate e atualiza state.json de forma coerente.
+ * Se a escrita do estado falhar, restaura o aggregate anterior (ou remove o novo).
  * @param {{
  *   root: string,
  *   specDir: string,
+ *   statePath: string,
+ *   state: Record<string, unknown>,
+ *   aggregate: Record<string, unknown>,
+ *   taskId: string,
+ * }} input
+ */
+export function publishReviewAggregateAndState(input) {
+  const targetPath = aggregatePath(input.specDir, input.taskId);
+  const aggregateRel = toPosixRelative(targetPath, input.root);
+  const next = {
+    ...input.state,
+    session: {
+      .../** @type {Record<string, unknown>} */ (input.state.session ?? {}),
+      review_aggregate: aggregateRel,
+      review_result: Object.fromEntries(
+        (Array.isArray(input.aggregate.axes) ? input.aggregate.axes : []).map((axis) => [
+          axis,
+          'PASS',
+        ]),
+      ),
+      aggregated_at: input.aggregate.generated_at,
+      reviews_requested: input.aggregate.reviews_requested,
+    },
+  };
+
+  const nextValidation = validateState(next);
+  if (!nextValidation.ok) {
+    throw new StateMachineError(nextValidation.errors.join(' '), {
+      guard: 'state-invalid',
+      nextAction: 'Corrija o estado antes de persistir o aggregate.',
+    });
+  }
+
+  /** @type {string | null} */
+  let previous = null;
+  if (existsSync(targetPath)) {
+    previous = readFileSync(targetPath, 'utf8');
+  }
+
+  try {
+    writeTextAtomic(targetPath, `${JSON.stringify(input.aggregate, null, 2)}\n`);
+    const written = writeJsonAtomic(input.statePath, next, {
+      expectedRevision: /** @type {number} */ (input.state.revision),
+    });
+    return { path: targetPath, written, aggregateRel };
+  } catch (error) {
+    try {
+      if (previous == null) {
+        if (existsSync(targetPath)) unlinkSync(targetPath);
+      } else {
+        const restoreTmp = `${targetPath}.restore.${process.pid}.tmp`;
+        writeFileSync(restoreTmp, previous, 'utf8');
+        renameSync(restoreTmp, targetPath);
+      }
+    } catch {
+      // best-effort restore; erro original prevalece
+    }
+    throw error;
+  }
+}
+
+/**
+ * Exigido por task close quando reviews_requested > 0.
+ * Trata o aggregate como manifest estrito e relê os relatórios schema v2.
+ * @param {{
+ *   root: string,
+ *   specDir: string,
+ *   specId: string,
  *   taskId: string,
  *   fixedPoint: string,
  *   reviewsRequested: number,
  *   writer?: string,
+ *   session?: Record<string, unknown> | null,
+ *   evidenceRecordedAt: string,
+ *   now?: Date | string | number,
  * }} input
  */
 export function assertAggregateForClose(input) {
@@ -199,6 +272,12 @@ export function assertAggregateForClose(input) {
       nextAction: 'Regenere o aggregate com a versao atual.',
     });
   }
+  if (aggregate.spec_id !== input.specId) {
+    throw new StateMachineError('Aggregate aponta spec_id incorreto.', {
+      guard: 'review-aggregate',
+      nextAction: 'Regenere o aggregate da spec ativa.',
+    });
+  }
   if (aggregate.task_id !== input.taskId) {
     throw new StateMachineError('Aggregate aponta task_id incorreto.', {
       guard: 'review-aggregate',
@@ -224,33 +303,91 @@ export function assertAggregateForClose(input) {
     });
   }
 
+  const expectedAggregateRel = toPosixRelative(path, input.root);
+  const session = input.session ?? {};
+  if (session.review_aggregate !== expectedAggregateRel) {
+    throw new StateMachineError(
+      'session.review_aggregate ausente ou diverge do aggregate no disco.',
+      {
+        guard: 'review-aggregate',
+        nextAction: 'Execute task review aggregate ate persistir o estado da sessao.',
+      },
+    );
+  }
+  if (session.aggregated_at !== aggregate.generated_at) {
+    throw new StateMachineError(
+      'session.aggregated_at diverge de aggregate.generated_at.',
+      {
+        guard: 'review-aggregate',
+        nextAction: 'Regenere o aggregate; nao reutilize arquivo orfao.',
+      },
+    );
+  }
+
+  const axes = requireStringArray(aggregate.axes, 'axes');
+  const reportPaths = requireStringArray(aggregate.report_paths, 'report_paths');
+  const reviewers = requireStringArray(aggregate.reviewers, 'reviewers');
+  const reviewRunIds = requireStringArray(aggregate.review_run_ids, 'review_run_ids');
+  const packageIds = requireStringArray(aggregate.package_ids, 'package_ids');
   const hashes = aggregate.report_hashes;
-  if (!hashes || typeof hashes !== 'object') {
+  if (!hashes || typeof hashes !== 'object' || Array.isArray(hashes)) {
     throw new StateMachineError('Aggregate sem report_hashes.', {
       guard: 'review-aggregate',
       nextAction: 'Regenere o aggregate.',
     });
   }
-
-  for (const [rel, expectedHash] of Object.entries(hashes)) {
-    const abs = join(input.root, rel);
-    if (!existsSync(abs)) {
-      throw new StateMachineError(`Relatorio do aggregate ausente: ${rel}.`, {
+  const hashKeys = Object.keys(hashes);
+  if (hashKeys.length === 0) {
+    throw new StateMachineError('Aggregate com report_hashes vazio.', {
+      guard: 'review-aggregate',
+      nextAction: 'Regenere o aggregate com hashes dos relatorios.',
+    });
+  }
+  if (reportPaths.length !== hashKeys.length) {
+    throw new StateMachineError('report_paths e report_hashes com tamanhos divergentes.', {
+      guard: 'review-aggregate',
+      nextAction: 'Regenere o aggregate sem edicao manual.',
+    });
+  }
+  for (const rel of reportPaths) {
+    if (!(rel in hashes)) {
+      throw new StateMachineError(`report_path sem hash: ${rel}.`, {
         guard: 'review-aggregate',
-        nextAction: 'Restaure os relatorios canonicos antes de close.',
+        nextAction: 'Regenere o aggregate.',
       });
     }
-    const actual = sha256File(abs);
-    if (actual !== expectedHash) {
-      throw new StateMachineError(`Hash do relatorio diverge do aggregate: ${rel}.`, {
+  }
+  for (const rel of hashKeys) {
+    if (!reportPaths.includes(rel)) {
+      throw new StateMachineError(`report_hash sem path correspondente: ${rel}.`, {
         guard: 'review-aggregate',
-        nextAction: 'Nao edite reviews apos o aggregate; regenere se necessario.',
+        nextAction: 'Regenere o aggregate.',
       });
     }
   }
 
+  if (reportPaths.length < input.reviewsRequested) {
+    throw new StateMachineError(
+      `Aggregate com reports insuficientes: ${reportPaths.length} de ${input.reviewsRequested}.`,
+      {
+        guard: 'review-aggregate',
+        nextAction: 'Registre e agregue a quantidade minima de reviews.',
+      },
+    );
+  }
+  if (
+    axes.length !== reportPaths.length
+    || reviewers.length !== reportPaths.length
+    || reviewRunIds.length !== reportPaths.length
+    || packageIds.length !== reportPaths.length
+  ) {
+    throw new StateMachineError('Listas do aggregate com tamanhos incoerentes.', {
+      guard: 'review-aggregate',
+      nextAction: 'Regenere o aggregate; axes/paths/reviewers/run_ids/package_ids devem alinhar.',
+    });
+  }
+
   if (input.reviewsRequested >= 2) {
-    const axes = Array.isArray(aggregate.axes) ? aggregate.axes : [];
     for (const required of REVIEW_AXES) {
       if (!axes.includes(required)) {
         throw new StateMachineError(`Aggregate sem eixo obrigatorio ${required}.`, {
@@ -260,11 +397,119 @@ export function assertAggregateForClose(input) {
       }
     }
   }
+  if (new Set(axes).size !== axes.length) {
+    throw new StateMachineError('Aggregate com eixos duplicados.', {
+      guard: 'review-aggregate',
+      nextAction: 'Use um relatorio por eixo.',
+    });
+  }
+  if (new Set(reviewRunIds).size !== reviewRunIds.length) {
+    throw new StateMachineError('Aggregate com review_run_ids duplicados.', {
+      guard: 'review-aggregate',
+      nextAction: 'Use sessoes de revisao independentes.',
+    });
+  }
+  if (new Set(packageIds).size !== packageIds.length) {
+    throw new StateMachineError('Aggregate com package_ids duplicados.', {
+      guard: 'review-aggregate',
+      nextAction: 'Prepare pacotes distintos por eixo.',
+    });
+  }
 
-  // Fecha lacuna do caminho legado: close tambem rejeita self-review.
+  const sessionReviewResult = session.review_result;
+  if (!sessionReviewResult || typeof sessionReviewResult !== 'object') {
+    throw new StateMachineError('session.review_result ausente apos aggregate.', {
+      guard: 'review-aggregate',
+      nextAction: 'Execute task review aggregate ate registrar review_result na sessao.',
+    });
+  }
+  for (const axis of axes) {
+    if (/** @type {Record<string, unknown>} */ (sessionReviewResult)[axis] !== 'PASS') {
+      throw new StateMachineError(`session.review_result incoerente para ${axis}.`, {
+        guard: 'review-aggregate',
+        nextAction: 'Regenere o aggregate e confirme review_result PASS por eixo.',
+      });
+    }
+  }
+
+  const diskReviews = listReviewFiles(input.specDir, input.taskId)
+    .map((item) => toPosixRelative(item, input.root))
+    .sort();
+  const expectedSorted = [...reportPaths].sort();
+  if (diskReviews.length !== expectedSorted.length
+    || diskReviews.some((item, index) => item !== expectedSorted[index])) {
+    throw new StateMachineError(
+      'Conjunto de reviews no disco diverge do aggregate.',
+      {
+        guard: 'review-aggregate',
+        nextAction: 'Nao adicione/remova reviews apos o aggregate; regenere se necessario.',
+      },
+    );
+  }
+
+  /** @type {Array<ReturnType<typeof parseStructuredReviewReport>>} */
+  const parsedReports = [];
+  for (let index = 0; index < reportPaths.length; index += 1) {
+    const rel = reportPaths[index];
+    assertSafeRepoRelative(rel, input.root);
+    const abs = resolve(input.root, rel);
+    if (!existsSync(abs)) {
+      throw new StateMachineError(`Relatorio do aggregate ausente: ${rel}.`, {
+        guard: 'review-aggregate',
+        nextAction: 'Restaure os relatorios canonicos antes de close.',
+      });
+    }
+    const actualHash = sha256File(abs);
+    if (actualHash !== hashes[rel]) {
+      throw new StateMachineError(`Hash do relatorio diverge do aggregate: ${rel}.`, {
+        guard: 'review-aggregate',
+        nextAction: 'Nao edite reviews apos o aggregate; regenere se necessario.',
+      });
+    }
+    const parsed = parseStructuredReviewReport(abs);
+    assertStructuredReviewReport(parsed, {
+      taskId: input.taskId,
+      axis: String(parsed.axis),
+      packageId: String(parsed.package_id),
+      fixedPoint: input.fixedPoint,
+      evidenceRecordedAt: input.evidenceRecordedAt,
+      now: input.now,
+    });
+    if (parsed.axis !== axes[index]) {
+      throw new StateMachineError(`Eixo do relatorio diverge do aggregate em ${rel}.`, {
+        guard: 'review-aggregate',
+        nextAction: 'Regenere o aggregate sem reordenar/editar relatorios.',
+      });
+    }
+    if (parsed.reviewer !== reviewers[index]) {
+      throw new StateMachineError(`Reviewer diverge do aggregate em ${rel}.`, {
+        guard: 'review-aggregate',
+        nextAction: 'Regenere o aggregate apos registrar os reviews.',
+      });
+    }
+    if (parsed.review_run_id !== reviewRunIds[index]) {
+      throw new StateMachineError(`review_run_id diverge do aggregate em ${rel}.`, {
+        guard: 'review-aggregate',
+        nextAction: 'Regenere o aggregate apos registrar os reviews.',
+      });
+    }
+    if (parsed.package_id !== packageIds[index]) {
+      throw new StateMachineError(`package_id diverge do aggregate em ${rel}.`, {
+        guard: 'review-aggregate',
+        nextAction: 'Regenere o aggregate apos registrar os reviews.',
+      });
+    }
+    if (parsed.result !== 'PASS' || parsed.blocking_findings > 0) {
+      throw new StateMachineError(`Review ${rel} nao esta PASS limpo.`, {
+        guard: 'review-blocking',
+        nextAction: 'Corrija findings e refaca aggregate.',
+      });
+    }
+    parsedReports.push(parsed);
+  }
+
   if (typeof input.writer === 'string' && input.writer.trim()) {
     const writerNorm = normalizeIdentity(input.writer);
-    const reviewers = Array.isArray(aggregate.reviewers) ? aggregate.reviewers : [];
     for (const reviewer of reviewers) {
       if (normalizeIdentity(reviewer) === writerNorm) {
         throw new StateMachineError(
@@ -279,6 +524,54 @@ export function assertAggregateForClose(input) {
   }
 
   return aggregate;
+}
+
+/**
+ * @param {unknown} value
+ * @param {string} field
+ * @returns {string[]}
+ */
+function requireStringArray(value, field) {
+  if (!Array.isArray(value) || value.length === 0 || value.some((item) => typeof item !== 'string' || !item)) {
+    throw new StateMachineError(`Aggregate com ${field} invalido ou vazio.`, {
+      guard: 'review-aggregate',
+      nextAction: `Regenere o aggregate com ${field} completo.`,
+    });
+  }
+  return /** @type {string[]} */ (value);
+}
+
+/**
+ * @param {string} rel
+ * @param {string} root
+ */
+function assertSafeRepoRelative(rel, root) {
+  if (
+    typeof rel !== 'string'
+    || !rel
+    || isAbsolute(rel)
+    || rel.includes('\\')
+    || rel.split('/').includes('..')
+  ) {
+    throw new StateMachineError(`Caminho de relatorio invalido no aggregate: ${String(rel)}.`, {
+      guard: 'review-aggregate',
+      nextAction: 'Use caminhos relativos POSIX dentro do repositorio.',
+    });
+  }
+  const resolved = resolve(root, rel);
+  const relToRoot = relative(root, resolved);
+  if (!relToRoot || relToRoot.startsWith('..') || isAbsolute(relToRoot)) {
+    throw new StateMachineError(`Caminho de relatorio fora do repositorio: ${rel}.`, {
+      guard: 'review-aggregate',
+      nextAction: 'Mantenha reviews sob .agent/specs/<spec-id>/reviews/.',
+    });
+  }
+  if (!relToRoot.split(sep).join('/').startsWith('.agent/specs/')) {
+    throw new StateMachineError(`Relatorio fora de .agent/specs: ${rel}.`, {
+      guard: 'review-aggregate',
+      nextAction: 'Mantenha reviews versionados sob a pasta da SPEC.',
+    });
+  }
 }
 
 /**
@@ -447,9 +740,4 @@ function contaminationHints(axis) {
 function normalizeIdentity(value) {
   if (typeof value !== 'string') return '';
   return value.trim().toLowerCase();
-}
-
-/** @param {string} path @param {string} root */
-function toPosixRelative(path, root) {
-  return relative(root, path).split('\\').join('/');
 }

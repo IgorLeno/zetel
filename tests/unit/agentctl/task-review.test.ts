@@ -994,4 +994,298 @@ describe('agentctl task review', () => {
     expect(stale.status).toBe(1);
     expect(stale.stderr).toMatch(/guard:\s*evidence-stale/i);
   }, timeout);
+
+  it('rejects prepare when approved SPEC integrity is missing', () => {
+    const dir = repo();
+    const id = 'SPEC-408-integrity';
+    seedApprovedSpec(dir, id);
+    const { env } = startAndValidate(dir, id);
+    const statePath = join(dir, '.agent/specs', id, 'state.json');
+
+    const legacy = JSON.parse(readFileSync(statePath, 'utf8'));
+    delete legacy.approval.integrity;
+    writeFileSync(statePath, `${JSON.stringify(legacy, null, 2)}\n`, 'utf8');
+    const missing = spawnSync(
+      AGENTCTL,
+      ['task', 'review', id, '001', 'prepare', '--axis', 'spec-compliance'],
+      { cwd: dir, encoding: 'utf8', env },
+    );
+    expect(missing.status).toBe(1);
+    expect(missing.stderr).toMatch(/guard:\s*spec-integrity/i);
+    expect(existsSync(join(dir, '.agent/runtime/reviews', id))).toBe(false);
+  }, timeout);
+
+  it('rejects prepare on tampered SPEC.md and creates no package', () => {
+    const dir = repo();
+    const id = 'SPEC-409-tamper';
+    seedApprovedSpec(dir, id);
+    const { env } = startAndValidate(dir, id);
+    writeFileSync(
+      join(dir, '.agent/specs', id, 'SPEC.md'),
+      `${readFileSync(join(dir, '.agent/specs', id, 'SPEC.md'), 'utf8')}\n<!-- tampered -->\n`,
+      'utf8',
+    );
+    const tampered = spawnSync(
+      AGENTCTL,
+      ['task', 'review', id, '001', 'prepare', '--axis', 'spec-compliance'],
+      { cwd: dir, encoding: 'utf8', env },
+    );
+    expect(tampered.status).toBe(1);
+    expect(tampered.stderr).toMatch(/guard:\s*spec-tampered/i);
+    expect(
+      existsSync(join(dir, '.agent/runtime/reviews', id, '001')),
+    ).toBe(false);
+  }, timeout);
+
+  it('rolls back orphan aggregate when state revision conflicts', async () => {
+    const dir = repo();
+    const id = 'SPEC-410-orphan';
+    seedApprovedSpec(dir, id);
+    const { env, fixedPoint } = startAndValidate(dir, id);
+    for (const axis of ['spec-compliance', 'engineering-quality'] as const) {
+      expect(
+        spawnSync(
+          AGENTCTL,
+          ['task', 'review', id, '001', 'prepare', '--axis', axis],
+          { cwd: dir, encoding: 'utf8', env },
+        ).status,
+      ).toBe(0);
+      const manifest = readManifest(dir, id, fixedPoint, axis);
+      const reportPath = join(dir, `.agent/runtime/reviews/tmp-${axis}.md`);
+      writeFileSync(
+        reportPath,
+        structuredReport({
+          taskId: '001',
+          axis,
+          reviewer: 'claude',
+          reviewRunId: `run-${axis}`,
+          packageId: manifest.package_id,
+          fixedPoint,
+        }),
+        'utf8',
+      );
+      expect(
+        spawnSync(
+          AGENTCTL,
+          [
+            'task',
+            'review',
+            id,
+            '001',
+            'record',
+            '--axis',
+            axis,
+            '--report-file',
+            reportPath,
+          ],
+          { cwd: dir, encoding: 'utf8', env },
+        ).status,
+      ).toBe(0);
+    }
+
+    const {
+      buildReviewAggregate,
+      publishReviewAggregateAndState,
+      aggregatePath,
+    } = await import('../../../scripts/agentctl/domain/review-aggregate.mjs');
+    const statePath = join(dir, '.agent/specs', id, 'state.json');
+    const state = JSON.parse(readFileSync(statePath, 'utf8'));
+    const evidence = JSON.parse(
+      readFileSync(join(dir, '.agent/specs', id, 'evidence/001-validation.json'), 'utf8'),
+    );
+    const aggregate = buildReviewAggregate({
+      root: dir,
+      specDir: join(dir, '.agent/specs', id),
+      specId: id,
+      taskId: '001',
+      fixedPoint,
+      reviewsRequested: 2,
+      writer: 'codex',
+      evidenceRecordedAt: String(evidence.recorded_at),
+      now: new Date(),
+    });
+
+    // Forca conflito de revisao: bump no disco, publish com state stale.
+    writeFileSync(
+      statePath,
+      `${JSON.stringify({ ...state, revision: state.revision + 1 }, null, 2)}\n`,
+      'utf8',
+    );
+    const target = aggregatePath(join(dir, '.agent/specs', id), '001');
+    expect(() =>
+      publishReviewAggregateAndState({
+        root: dir,
+        specDir: join(dir, '.agent/specs', id),
+        statePath,
+        state,
+        aggregate,
+        taskId: '001',
+      }),
+    ).toThrow(/revision esperada|escrita concorrente/i);
+    expect(existsSync(target)).toBe(false);
+
+    // Aggregate orfao manual sem session binding nao fecha.
+    writeFileSync(target, `${JSON.stringify(aggregate, null, 2)}\n`, 'utf8');
+    const closeOrphan = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env,
+    });
+    expect(closeOrphan.status).toBe(1);
+    expect(closeOrphan.stderr).toMatch(/guard:\s*review-aggregate/i);
+  }, timeout);
+
+  it('rejects package manifest path traversal and mismatched included_files', async () => {
+    const dir = repo();
+    const id = 'SPEC-411-pkg-path';
+    seedApprovedSpec(dir, id);
+    const { env, fixedPoint } = startAndValidate(dir, id);
+    expect(
+      spawnSync(
+        AGENTCTL,
+        ['task', 'review', id, '001', 'prepare', '--axis', 'spec-compliance'],
+        { cwd: dir, encoding: 'utf8', env },
+      ).status,
+    ).toBe(0);
+    const packageDir = join(
+      dir,
+      '.agent/runtime/reviews',
+      id,
+      '001',
+      fixedPoint,
+      'spec-compliance',
+    );
+    const { assertReviewPackageIntegrity } = await import(
+      '../../../scripts/agentctl/domain/review-package.mjs'
+    );
+    const { StateMachineError } = await import(
+      '../../../scripts/agentctl/domain/state-machine.mjs'
+    );
+    const manifest = JSON.parse(readFileSync(join(packageDir, 'manifest.json'), 'utf8'));
+    const escaped = {
+      ...manifest,
+      artifact_sha256: {
+        ...manifest.artifact_sha256,
+        '../escape.txt': 'deadbeef',
+      },
+      included_files: [...manifest.included_files, '../escape.txt'],
+    };
+    expect(() =>
+      assertReviewPackageIntegrity(packageDir, escaped, {
+        taskId: '001',
+        axis: 'spec-compliance',
+        fixedPoint,
+        specId: id,
+        gitHead: String(manifest.git_head),
+      }),
+    ).toThrow(StateMachineError);
+
+    const mismatched = {
+      ...manifest,
+      included_files: manifest.included_files.slice(0, -1),
+    };
+    expect(() =>
+      assertReviewPackageIntegrity(packageDir, mismatched, {
+        taskId: '001',
+        axis: 'spec-compliance',
+        fixedPoint,
+        specId: id,
+        gitHead: String(manifest.git_head),
+      }),
+    ).toThrow(/included_files diverge/i);
+  }, timeout);
+
+  it('rejects close when aggregate report_hashes is empty', () => {
+    const dir = repo();
+    const id = 'SPEC-412-empty-hash';
+    seedApprovedSpec(dir, id);
+    const { env, fixedPoint } = startAndValidate(dir, id, {
+      profile: 'STANDARD',
+      reviews: '1',
+      agent: 'codex',
+    });
+    expect(
+      spawnSync(
+        AGENTCTL,
+        ['task', 'review', id, '001', 'prepare', '--axis', 'spec-compliance'],
+        { cwd: dir, encoding: 'utf8', env },
+      ).status,
+    ).toBe(0);
+    const manifest = readManifest(dir, id, fixedPoint, 'spec-compliance');
+    const reportPath = join(dir, '.agent/runtime/reviews/tmp-empty-hash.md');
+    writeFileSync(
+      reportPath,
+      structuredReport({
+        taskId: '001',
+        axis: 'spec-compliance',
+        reviewer: 'claude',
+        reviewRunId: 'run-empty-hash',
+        packageId: manifest.package_id,
+        fixedPoint,
+      }),
+      'utf8',
+    );
+    expect(
+      spawnSync(
+        AGENTCTL,
+        [
+          'task',
+          'review',
+          id,
+          '001',
+          'record',
+          '--axis',
+          'spec-compliance',
+          '--report-file',
+          reportPath,
+        ],
+        { cwd: dir, encoding: 'utf8', env },
+      ).status,
+    ).toBe(0);
+
+    const reportRel = `.agent/specs/${id}/reviews/001-spec-compliance.md`;
+    const generatedAt = new Date().toISOString();
+    const aggregateRel = `.agent/specs/${id}/reviews/001-aggregate.json`;
+    writeFileSync(
+      join(dir, aggregateRel),
+      `${JSON.stringify(
+        {
+          schema_version: 1,
+          spec_id: id,
+          task_id: '001',
+          fixed_point: fixedPoint,
+          generated_at: generatedAt,
+          reviews_requested: 1,
+          axes: ['spec-compliance'],
+          report_paths: [reportRel],
+          report_hashes: {},
+          reviewers: ['claude'],
+          review_run_ids: ['run-empty-hash'],
+          package_ids: [manifest.package_id],
+          findings_by_severity: { BLOCKING: 0, MAJOR: 0, MINOR: 0, NIT: 0 },
+          findings_by_status: { OPEN: 0, RESOLVED: 0, NOT_APPLICABLE: 0 },
+          findings: [],
+          blocking_findings: 0,
+          result: 'PASS',
+        },
+        null,
+        2,
+      )}\n`,
+      'utf8',
+    );
+    const statePath = join(dir, '.agent/specs', id, 'state.json');
+    const state = JSON.parse(readFileSync(statePath, 'utf8'));
+    state.session.review_aggregate = aggregateRel;
+    state.session.aggregated_at = generatedAt;
+    state.session.review_result = { 'spec-compliance': 'PASS' };
+    writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+
+    const closed = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env,
+    });
+    expect(closed.status).toBe(1);
+    expect(closed.stderr).toMatch(/report_hashes vazio|guard:\s*review-aggregate/i);
+  }, timeout);
 });
