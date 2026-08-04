@@ -1,7 +1,7 @@
 ---
 id: "005"
 title: Handoff e nova sessao
-status: DRAFT
+status: READY
 blocked_by: ["004"]
 writer: claude
 reviewer: codex

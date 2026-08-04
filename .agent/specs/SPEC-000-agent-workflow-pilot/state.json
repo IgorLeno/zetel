@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 66,
+  "revision": 67,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -114,7 +114,7 @@
     },
     {
       "id": "004",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "003A"
       ],
@@ -123,11 +123,14 @@
       "profile_justification": "Implementação do protocolo de revisões independentes, pacotes por eixo, agregação, evidências e integração com task close.",
       "reviews_requested": 2,
       "validation": "PASS",
-      "review_result": "PASS"
+      "review_result": "PASS",
+      "commit": "fb5d4ed897bc62644562f2b9e58e5534d13eb747",
+      "push": "origin/feat/spec-000-task-004-independent-reviews",
+      "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/004-independent-reviews-fb5d4ed.md"
     },
     {
       "id": "005",
-      "status": "DRAFT",
+      "status": "READY",
       "blocked_by": [
         "004"
       ],
@@ -170,7 +173,7 @@
     "id": "task-004-20260804",
     "agent": "codex",
     "task_id": "004",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-08-04T04:46:05.088Z",
     "execution_profile": "FULL",
     "profile_justification": "Implementação do protocolo de revisões independentes, pacotes por eixo, agregação, evidências e integração com task close.",
@@ -239,7 +242,14 @@
     },
     "done_at": "2026-08-04T05:51:30.342Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "delivery_commit": "fb5d4ed897bc62644562f2b9e58e5534d13eb747",
+    "remote": "origin/feat/spec-000-task-004-independent-reviews",
+    "pushed_at": "2026-08-04T05:52:20.988Z",
+    "closed_at": "2026-08-04T05:52:20.988Z",
+    "bootstrap_exception": "session close pertence a 005; fechamento pos-push da 004 usa assertTransition DONE->PUSHED->SESSION_CLOSED, handoff versionado e liberacao 005 DRAFT->READY sem iniciar 005.",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/004-independent-reviews-fb5d4ed.md",
+    "next_task": "005"
   },
   "approval": {
     "spec": true,
