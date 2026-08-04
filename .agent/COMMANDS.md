@@ -228,15 +228,43 @@ impedem o close. FAST exige 0 obrigatorios; STANDARD/FULL seguem
 `reviews_requested` do start. Checks externos pending nao sao reviews e nao
 bloqueiam.
 
+### `./agentctl task review`
+
+Prepara, registra e agrega revisoes independentes sem chamar LLM.
+
+```bash
+./agentctl task review <spec-id> <task-id> prepare \
+  --axis <spec-compliance|engineering-quality>
+./agentctl task review <spec-id> <task-id> record \
+  --axis <spec-compliance|engineering-quality> \
+  --report-file <path>
+./agentctl task review <spec-id> <task-id> aggregate
+```
+
+Exige tarefa/sessao `REVIEWING`, evidencia PASS fresca e fixed point atual.
+`prepare` gera pacote efemero em
+`.agent/runtime/reviews/<spec>/<task>/<fixed-point>/<axis>/` com manifest,
+diff completo (inclui untracked), evidencia e docs autorizados do eixo.
+Pacotes do mesmo fixed point sao isolados: nenhum eixo recebe o relatorio do
+outro. `record` valida schema estruturado (frontmatter + JSON de findings) e
+grava `reviews/<task>-<axis>.md` atomicamente sem alterar `state.json`.
+`aggregate` exige quantidade/eixos aplicaveis, package_ids e review_run_ids
+distintos, mesmo fixed point, independencia do writer em qualquer review
+obrigatorio (`reviews_requested >= 1`), e falha com finding `BLOCKING`+`OPEN`.
+Em PASS grava `reviews/<task>-aggregate.json` e registra `review_aggregate` /
+`review_result` / `aggregated_at` na sessao, sem mudar a tarefa para `DONE`.
+
 ### `./agentctl task close`
 
 Exige tarefa/sessao `REVIEWING`, evidencias atuais PASS e reviews aplicaveis.
+Quando `reviews_requested > 0`, exige tambem aggregate PASS do task-id e fixed
+point atuais, com hashes dos relatorios intactos. Com `reviews_requested: 0`,
+aggregate nao e obrigatorio; reviews opcionais existentes continuam validados.
 Transiciona ambos para `DONE`, zera `active_task` e registra `done_at`. Nao faz
 commit, push, PR, handoff, `PUSHED`, `SESSION_CLOSED` nem inicia a proxima
-tarefa (fronteira com 004/005).
+tarefa (fronteira com 005).
 
 ## Reservado para tarefas seguintes
 
-- `task review` (004)
 - `session close` / `session start-next` (005)
 - `spec converge` / harvest

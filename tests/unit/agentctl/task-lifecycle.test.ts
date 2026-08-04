@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   chmodSync,
   existsSync,
@@ -61,6 +62,55 @@ function writeReview(path: string, fields: Record<string, string | number>) {
       '---',
       '',
     ].join('\n'),
+    'utf8',
+  );
+}
+
+/** Aggregate minimo aceito por task close quando reviews_requested > 0. */
+function writeCloseAggregate(
+  dir: string,
+  id: string,
+  taskId: string,
+  fixedPoint: string,
+  reportRelPaths: string[],
+  reviewsRequested = reportRelPaths.length,
+) {
+  const hashes = Object.fromEntries(
+    reportRelPaths.map((rel) => [
+      rel,
+      createHash('sha256').update(readFileSync(join(dir, rel))).digest('hex'),
+    ]),
+  );
+  const axes = reportRelPaths.map((rel) => {
+    if (rel.includes('engineering-quality')) return 'engineering-quality';
+    return 'spec-compliance';
+  });
+  mkdirSync(join(dir, '.agent/specs', id, 'reviews'), { recursive: true });
+  writeFileSync(
+    join(dir, '.agent/specs', id, 'reviews', `${taskId}-aggregate.json`),
+    `${JSON.stringify(
+      {
+        schema_version: 1,
+        spec_id: id,
+        task_id: taskId,
+        fixed_point: fixedPoint,
+        generated_at: new Date().toISOString(),
+        reviews_requested: reviewsRequested,
+        axes,
+        report_paths: reportRelPaths,
+        report_hashes: hashes,
+        reviewers: reportRelPaths.map(() => 'codex'),
+        review_run_ids: reportRelPaths.map((_, index) => `run-${index}`),
+        package_ids: reportRelPaths.map((_, index) => `pkg-${index}`),
+        findings_by_severity: { BLOCKING: 0, MAJOR: 0, MINOR: 0, NIT: 0 },
+        findings_by_status: { OPEN: 0, RESOLVED: 0, NOT_APPLICABLE: 0 },
+        findings: [],
+        blocking_findings: 0,
+        result: 'PASS',
+      },
+      null,
+      2,
+    )}\n`,
     'utf8',
   );
 }
@@ -1124,6 +1174,22 @@ describe('agentctl task validate/close', () => {
         '',
       ].join('\n'),
       'utf8',
+    );
+    const missingAgg = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env,
+    });
+    expect(missingAgg.status).toBe(1);
+    expect(missingAgg.stderr).toMatch(/guard:\s*review-aggregate/i);
+
+    writeCloseAggregate(
+      dir,
+      id,
+      '001',
+      fixedPoint as string,
+      [`.agent/specs/${id}/reviews/001-spec-compliance.md`],
+      1,
     );
     const closed = spawnSync(AGENTCTL, ['task', 'close', id, '001'], {
       cwd: dir,

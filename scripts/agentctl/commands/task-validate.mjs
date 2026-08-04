@@ -66,12 +66,17 @@ export function runTaskValidate(args, io = {}) {
         nextAction: 'Informe um task-id existente.',
       });
     }
-    if (task.status !== 'IN_PROGRESS' && task.status !== 'VALIDATING') {
+    if (
+      task.status !== 'IN_PROGRESS'
+      && task.status !== 'VALIDATING'
+      && task.status !== 'REVIEWING'
+    ) {
       throw new StateMachineError(
-        `task validate exige IN_PROGRESS ou VALIDATING (atual: ${task.status}).`,
+        `task validate exige IN_PROGRESS, VALIDATING ou REVIEWING (atual: ${task.status}).`,
         {
           guard: 'task-status',
-          nextAction: 'Inicie a tarefa ou continue a partir de VALIDATING apos falha.',
+          nextAction:
+            'Inicie a tarefa, continue a partir de VALIDATING apos falha, ou revalide a partir de REVIEWING apos correcao material.',
         },
       );
     }
@@ -129,10 +134,11 @@ export function runTaskValidate(args, io = {}) {
     }
 
     // Transicao para VALIDATING (idempotente se ja estiver VALIDATING).
+    // REVIEWING -> VALIDATING cobre revalidacao apos correcao material pos-review.
     let working = state;
-    if (task.status === 'IN_PROGRESS') {
-      assertTransition('task', 'IN_PROGRESS', 'VALIDATING');
-      assertTransition('session', 'IN_PROGRESS', 'VALIDATING');
+    if (task.status === 'IN_PROGRESS' || task.status === 'REVIEWING') {
+      assertTransition('task', task.status, 'VALIDATING');
+      assertTransition('session', String(state.session?.status), 'VALIDATING');
       working = {
         ...state,
         tasks: state.tasks.map((item) =>
@@ -155,6 +161,11 @@ export function runTaskValidate(args, io = {}) {
           profile_justification: justification,
           ...(profileApprovedBy ? { profile_approved_by: profileApprovedBy } : {}),
           ...(elevatedByAgent ? { profile_elevated_by: elevatedByAgent } : {}),
+          // Limpa selo de review anterior; nova evidencia/fixed point sera gerada.
+          validation_result: null,
+          fixed_point: null,
+          review_aggregate: null,
+          aggregated_at: null,
         },
       };
       const midValidation = validateState(working);

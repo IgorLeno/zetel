@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "task_id": "004",
+  "execution_profile": "FULL",
+  "state_revision": 63,
+  "git_head": "f1658d9f9ca20ba326065e3d5cf6d063848e2990",
+  "tree_fingerprint": "72a26aa7714bf3e39c0026deb96047f3b90ab3c1c3e1047a0885d70168a3fa22",
+  "tracked_diff_sha256": "0db82641d4bab95a2aa5cd33c5732650687042c555e4299c7030a925fa24b784",
+  "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked_sha256": "313a71a9b38f89736cb5608f71bb53c96e0118a7aaff8a96c1be58c2d51cce76",
+  "task_fingerprint": "c9e8dbc1fefa1eb092dc66eb3e186316ddf90e48fa7161c7251ee694dc49c559",
+  "plan_fingerprint": "346ab02f5addb604839d42c72ccbc004b434d624708018d3deba118157d2a816",
+  "fixed_point": "88bbd7ce42ecc600f60ee35cf5504ca37a0aa72344664f41b2f38962d9798a4a",
+  "commands": [
+    {
+      "category": "focused",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/unit/agentctl/task-review.test.ts",
+        "tests/unit/agentctl/task-lifecycle.test.ts",
+        "tests/unit/agentctl/state-machine.test.ts",
+        "--reporter=verbose"
+      ],
+      "started_at": "2026-08-04T05:38:54.611Z",
+      "completed_at": "2026-08-04T05:39:35.507Z",
+      "duration_ms": 40891,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "d0e36dad47bb2c53339313250119cc2fd5c25275741b2c9dd9a049e7d6fbece8",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 8983,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  37.91s (transform 856ms, setup 0ms, collect 1.41s, tests 69.99s, environment 2ms, prepare 825ms)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "build",
+      "argv": [
+        "pnpm",
+        "build"
+      ],
+      "started_at": "2026-08-04T05:39:35.507Z",
+      "completed_at": "2026-08-04T05:42:47.472Z",
+      "duration_ms": 191963,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "459d146d4a23d53ff3627002834b25ea4009c70acf451d7b0834624d9e07f8e4",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 3224,
+        "stderr_bytes": 0,
+        "stdout_preview": "ƒ  (Dynamic)  server-rendered on demand",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "test-ci",
+      "argv": [
+        "pnpm",
+        "test:ci"
+      ],
+      "started_at": "2026-08-04T05:42:47.473Z",
+      "completed_at": "2026-08-04T05:43:54.348Z",
+      "duration_ms": 66875,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "658865fbc0776d8b8814763be45ebee1f963bef4dea7c56ffa192a2e4c0f20ac",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 48112,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  3.04s (transform 783ms, setup 0ms, collect 3.71s, tests 870ms, environment 3ms, prepare 1.21s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "coverage",
+      "argv": [
+        "pnpm",
+        "test:coverage"
+      ],
+      "started_at": "2026-08-04T05:43:54.348Z",
+      "completed_at": "2026-08-04T05:44:56.169Z",
+      "duration_ms": 61820,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "cb0771433700da01bfaae13c56cc49746302f8b46ccd34cada1b5503d4a10691",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 10889,
+        "stderr_bytes": 0,
+        "stdout_preview": "-------------------|---------|----------|---------|---------|-------------------",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "typecheck",
+      "argv": [
+        "pnpm",
+        "typecheck"
+      ],
+      "started_at": "2026-08-04T05:44:56.169Z",
+      "completed_at": "2026-08-04T05:45:03.592Z",
+      "duration_ms": 7421,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e87f658d79ce7cab0c3553cf450dd8c27dcdc625c97bd411e30fd4140a9e951f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 74,
+        "stderr_bytes": 0,
+        "stdout_preview": "> tsc --noEmit",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "diff-check",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-08-04T05:45:03.592Z",
+      "completed_at": "2026-08-04T05:45:03.606Z",
+      "duration_ms": 13,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stderr_bytes": 0,
+        "stdout_preview": "",
+        "stderr_preview": ""
+      }
+    }
+  ],
+  "waivers": [],
+  "recorded_at": "2026-08-04T05:45:03.652Z",
+  "validation_result": "PASS"
+}

@@ -1,5 +1,5 @@
-import { writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { assertReviewsAllowed, buildGatePlan, isExecutionProfile } from '../domain/execution-profile.mjs';
 import {
   assertApplicableGatesPassed,
@@ -8,6 +8,7 @@ import {
   readValidationEvidence,
   toPosixRelative,
 } from '../domain/evidence.mjs';
+import { assertAggregateForClose } from '../domain/review-aggregate.mjs';
 import { assertApplicableReviews } from '../domain/review-evidence.mjs';
 import { assertSafeSpecId } from '../domain/spec-id.mjs';
 import { assertTransition, StateMachineError, validateState } from '../domain/state-machine.mjs';
@@ -131,6 +132,17 @@ export function runTaskClose(args, io = {}) {
       now: new Date(),
     });
 
+    // reviews_requested > 0 exige aggregate PASS do fixed point atual.
+    const writer = resolveCloseWriter(task, state, taskFile);
+    const aggregate = assertAggregateForClose({
+      root,
+      specDir: dirname(path),
+      taskId,
+      fixedPoint: String(evidence.fixed_point),
+      reviewsRequested,
+      writer,
+    });
+
     assertTransition('task', 'REVIEWING', 'DONE');
     assertTransition('session', 'REVIEWING', 'DONE');
 
@@ -144,6 +156,9 @@ export function runTaskClose(args, io = {}) {
     const preparedFrontmatter = prepareOperationalFrontmatter(taskFile, frontmatterFields);
 
     const doneAt = new Date().toISOString();
+    const reviewResultByAxis = Object.fromEntries(
+      reviews.map((review) => [review.axis, review.result]),
+    );
     const next = {
       ...state,
       active_task: null,
@@ -164,9 +179,13 @@ export function runTaskClose(args, io = {}) {
         active_task_cleared: true,
         validation: toPosixRelative(evidencePath, root),
         fixed_point: evidence.fixed_point,
-        review_result: Object.fromEntries(
-          reviews.map((review) => [review.axis, review.result]),
-        ),
+        review_result: reviewResultByAxis,
+        review_aggregate: aggregate
+          ? toPosixRelative(
+            join(dirname(path), 'reviews', `${taskId}-aggregate.json`),
+            root,
+          )
+          : state.session.review_aggregate ?? null,
         external_checks: state.session.external_checks ?? 'pending-not-waited',
         reviews_requested: reviewsRequested,
       },
@@ -225,6 +244,41 @@ function parseCloseArgs(args) {
   }
   assertSafeSpecId(specId);
   return { specId, taskId };
+}
+
+/**
+ * @param {Record<string, unknown>} task
+ * @param {Record<string, unknown>} state
+ * @param {string} taskFile
+ */
+function resolveCloseWriter(task, state, taskFile) {
+  if (typeof task.writer === 'string' && task.writer.trim()) return task.writer.trim();
+  try {
+    const raw = readFileSync(taskFile, 'utf8').replace(/\r\n?/g, '\n');
+    const lines = raw.split('\n');
+    if (lines[0] === '---') {
+      const end = lines.indexOf('---', 1);
+      if (end > 0) {
+        for (const line of lines.slice(1, end)) {
+          const match = /^writer:\s*(.*)$/.exec(line);
+          if (!match) continue;
+          let value = match[1].trim();
+          if (
+            (value.startsWith('"') && value.endsWith('"'))
+            || (value.startsWith("'") && value.endsWith("'"))
+          ) {
+            value = value.slice(1, -1);
+          }
+          if (value && value !== 'null' && value !== '~') return value;
+        }
+      }
+    }
+  } catch {
+    // fall through
+  }
+  const session = /** @type {Record<string, unknown>} */ (state.session ?? {});
+  if (typeof session.agent === 'string' && session.agent.trim()) return session.agent.trim();
+  return '';
 }
 
 /**

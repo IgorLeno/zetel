@@ -14,7 +14,7 @@ export const EVIDENCE_SCHEMA_VERSION = 1;
  * state.json muda a cada transicao operacional e tambem fica de fora do tree hash.
  * @param {string} relativePath
  */
-function isWorkflowOperationalPath(relativePath) {
+export function isWorkflowOperationalPath(relativePath) {
   const path = relativePath.split('\\').join('/');
   return (
     /(^|\/)evidence\//.test(path)
