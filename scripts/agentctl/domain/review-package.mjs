@@ -2,7 +2,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import {
   copyFileSync,
   existsSync,
+  lstatSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   renameSync,
@@ -18,6 +20,8 @@ import { REVIEW_AXIS_SET } from './review-report.mjs';
 import { StateMachineError } from './state-machine.mjs';
 
 export const PACKAGE_SCHEMA_VERSION = 1;
+/** Buffer maximo para diffs de review (32 MiB). */
+export const REVIEW_GIT_MAX_BUFFER = 32 * 1024 * 1024;
 /** Alinhado ao limiar de untracked em evidence.mjs (1 MiB). */
 const MAX_COPY_BYTES = 1_000_000;
 
@@ -306,6 +310,21 @@ export function assertReviewPackageIntegrity(packageDir, manifest, expected) {
     });
   }
 
+  const realFiles = listPackageRegularFiles(packageDir);
+  if (
+    realFiles.length !== includedSorted.length
+    || realFiles.some((key, index) => key !== includedSorted[index])
+  ) {
+    throw new StateMachineError(
+      'Conteudo real do pacote diverge de included_files/artifact_sha256.',
+      {
+        guard: 'review-package',
+        nextAction:
+          'Remova arquivos extras (incl. symlinks/relatorios) ou regenere o pacote sem adulteracao.',
+      },
+    );
+  }
+
   /** @type {Array<{ path: string, sha256: string }>} */
   const included = [];
   for (const [rel, expectedHash] of Object.entries(artifactHashes)) {
@@ -314,6 +333,13 @@ export function assertReviewPackageIntegrity(packageDir, manifest, expected) {
       throw new StateMachineError(`Artefato ausente no pacote: ${rel}.`, {
         guard: 'review-package',
         nextAction: 'Regenere o pacote; nao edite arquivos manuais.',
+      });
+    }
+    const st = lstatSync(abs);
+    if (st.isSymbolicLink() || !st.isFile()) {
+      throw new StateMachineError(`Artefato do pacote nao e arquivo regular: ${rel}.`, {
+        guard: 'review-package',
+        nextAction: 'Regenere o pacote sem symlinks ou tipos especiais.',
       });
     }
     const actual = sha256(readFileSync(abs, 'utf8'));
@@ -772,6 +798,86 @@ function computePackageFingerprint(input) {
 }
 
 /**
+ * Lista arquivos regulares do pacote (POSIX relativos), excluindo manifest.json.
+ * Rejeita symlinks e tipos especiais.
+ * @param {string} packageDir
+ * @returns {string[]}
+ */
+export function listPackageRegularFiles(packageDir) {
+  /** @type {string[]} */
+  const files = [];
+
+  /** @param {string} absDir @param {string} relBase */
+  const walk = (absDir, relBase) => {
+    for (const name of readdirSync(absDir)) {
+      const rel = relBase ? `${relBase}/${name}` : name;
+      const abs = join(absDir, name);
+      const st = lstatSync(abs);
+      if (st.isSymbolicLink()) {
+        throw new StateMachineError(`Pacote contem symlink: ${rel}.`, {
+          guard: 'review-package',
+          nextAction: 'Regenere o pacote sem links simbolicos.',
+        });
+      }
+      if (st.isDirectory()) {
+        walk(abs, rel);
+        continue;
+      }
+      if (!st.isFile()) {
+        throw new StateMachineError(`Pacote contem tipo especial: ${rel}.`, {
+          guard: 'review-package',
+          nextAction: 'Regenere o pacote apenas com arquivos regulares.',
+        });
+      }
+      if (rel === 'manifest.json') continue;
+      files.push(toPosix(rel));
+    }
+  };
+
+  walk(packageDir, '');
+  return files.sort();
+}
+
+/**
+ * Interpreta resultado de spawnSync do Git para pacotes de review.
+ * @param {{
+ *   error?: Error | null,
+ *   signal?: NodeJS.Signals | null,
+ *   status?: number | null,
+ *   stdout?: string | null,
+ * }} result
+ * @param {string[]} args
+ */
+export function interpretGitSpawnResult(result, args) {
+  if (result.error) {
+    throw new StateMachineError(
+      `Falha ao executar Git no pacote de review (${args.join(' ')}): ${result.error.message}`,
+      {
+        guard: 'git-exec',
+        nextAction:
+          'Verifique o binario Git, o repositorio e se o diff cabe no maxBuffer de review.',
+      },
+    );
+  }
+  if (result.signal) {
+    throw new StateMachineError(
+      `Git interrompido por signal ${result.signal} (${args.join(' ')}).`,
+      {
+        guard: 'git-exec',
+        nextAction: 'Reexecute a preparacao do pacote sem interromper o processo Git.',
+      },
+    );
+  }
+  if (result.status !== 0) {
+    throw new StateMachineError(`Falha Git no pacote de review (${args.join(' ')}).`, {
+      guard: 'git-exec',
+      nextAction: 'Verifique o repositorio Git antes de preparar o review.',
+    });
+  }
+  return result.stdout ?? '';
+}
+
+/**
  * @param {string} root
  * @param {string[]} args
  */
@@ -780,14 +886,9 @@ function runGit(root, args) {
     cwd: root,
     encoding: 'utf8',
     shell: false,
+    maxBuffer: REVIEW_GIT_MAX_BUFFER,
   });
-  if (result.status !== 0) {
-    throw new StateMachineError(`Falha Git no pacote de review (${args.join(' ')}).`, {
-      guard: 'git-exec',
-      nextAction: 'Verifique o repositorio Git antes de preparar o review.',
-    });
-  }
-  return result.stdout ?? '';
+  return interpretGitSpawnResult(result, args);
 }
 
 /** @param {string} value */

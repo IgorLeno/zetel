@@ -64,7 +64,6 @@ export function buildReviewAggregate(input) {
       fixedPoint: input.fixedPoint,
       evidenceRecordedAt: input.evidenceRecordedAt,
       now: input.now,
-      forbiddenAxisHints: contaminationHints(String(parsed.axis)),
     });
     if (parsed.fixed_point !== input.fixedPoint) {
       throw new StateMachineError(`Review ${parsed.file} com fixed_point divergente no aggregate.`, {
@@ -88,9 +87,10 @@ export function buildReviewAggregate(input) {
     }
   }
 
-  const selected = selectRequiredAxes(reports, input.reviewsRequested);
-  if (selected.length > 0) {
-    assertIndependence(selected, input.writer);
+  // reviews_requested e minimo; o aggregate inclui todos os relatorios validos do disco.
+  assertMinimumAxesCovered(reports, input.reviewsRequested);
+  if (reports.length > 0) {
+    assertIndependence(reports, input.writer);
   }
 
   /** @type {Record<string, number>} */
@@ -133,14 +133,14 @@ export function buildReviewAggregate(input) {
     fixed_point: input.fixedPoint,
     generated_at: generatedAt,
     reviews_requested: input.reviewsRequested,
-    axes: selected.map((item) => item.axis),
-    report_paths: selected.map((item) => toPosixRelative(item.path, input.root)),
+    axes: reports.map((item) => item.axis),
+    report_paths: reports.map((item) => toPosixRelative(item.path, input.root)),
     report_hashes: Object.fromEntries(
-      selected.map((item) => [toPosixRelative(item.path, input.root), item.hash]),
+      reports.map((item) => [toPosixRelative(item.path, input.root), item.hash]),
     ),
-    reviewers: selected.map((item) => item.reviewer),
-    review_run_ids: selected.map((item) => item.review_run_id),
-    package_ids: selected.map((item) => item.package_id),
+    reviewers: reports.map((item) => item.reviewer),
+    review_run_ids: reports.map((item) => item.review_run_id),
+    package_ids: reports.map((item) => item.package_id),
     findings_by_severity: bySeverity,
     findings_by_status: byStatus,
     findings: allFindings,
@@ -575,41 +575,42 @@ function assertSafeRepoRelative(rel, root) {
 }
 
 /**
+ * Confirma eixos mínimos exigidos por reviews_requested sem truncar o aggregate.
  * @param {Array<ReturnType<typeof parseStructuredReviewReport> & { hash: string }>} reports
  * @param {number} reviewsRequested
  */
-function selectRequiredAxes(reports, reviewsRequested) {
-  if (reviewsRequested === 0) return [];
-
+function assertMinimumAxesCovered(reports, reviewsRequested) {
   for (const report of reports) {
     assertFilenameMatchesAxis(report);
+    if (!report.axis || !REVIEW_AXES.includes(/** @type {'spec-compliance'|'engineering-quality'} */ (report.axis))) {
+      throw new StateMachineError(`Review ${report.file} com axis invalido no aggregate.`, {
+        guard: 'review-aggregate',
+        nextAction: 'Use axis spec-compliance ou engineering-quality.',
+      });
+    }
   }
 
+  if (reviewsRequested <= 0) return;
+
   if (reviewsRequested >= 2) {
-    /** @type {typeof reports} */
-    const selected = [];
     for (const axis of REVIEW_AXES) {
-      const match = reports.find((item) => item.axis === axis);
-      if (!match) {
+      if (!reports.some((item) => item.axis === axis)) {
         throw new StateMachineError(`Eixo ausente no aggregate: ${axis}.`, {
           guard: 'review-aggregate',
           nextAction: `Registre o review ${axis} antes de agregar.`,
         });
       }
-      selected.push(match);
     }
-    return selected;
+    return;
   }
 
-  // reviews_requested === 1: primeiro eixo valido distinto.
-  const first = reports.find((item) => REVIEW_AXES.includes(/** @type {'spec-compliance'|'engineering-quality'} */ (item.axis)));
-  if (!first) {
+  // reviews_requested === 1: ao menos um eixo aplicavel.
+  if (!reports.some((item) => REVIEW_AXES.includes(/** @type {'spec-compliance'|'engineering-quality'} */ (item.axis)))) {
     throw new StateMachineError('Nenhum review com eixo aplicavel para aggregate.', {
       guard: 'review-aggregate',
       nextAction: 'Registre ao menos um review com axis valido.',
     });
   }
-  return [first];
 }
 
 /**
@@ -716,24 +717,6 @@ function assertIndependence(selected, writer) {
       nextAction: 'Separe spec-compliance e engineering-quality.',
     });
   }
-}
-
-/** @param {string} axis */
-function contaminationHints(axis) {
-  if (axis === 'spec-compliance') {
-    return [
-      'engineering-quality review result',
-      'eixo engineering-quality concluiu',
-      'aggregate result',
-      '"axis": "engineering-quality"',
-    ];
-  }
-  return [
-    'spec-compliance review result',
-    'eixo spec-compliance concluiu',
-    'aggregate result',
-    '"axis": "spec-compliance"',
-  ];
 }
 
 /** @param {unknown} value */

@@ -5,14 +5,14 @@ remote: origin/feat/spec-000-task-004-independent-reviews
 closed_at: 2026-08-04T05:52:20.988Z
 ---
 
-# Handoff 004 — Revisao independente em dois eixos
+# Handoff 004 — Revisão independente em dois eixos
 
 ## Tarefa
 
 - ID: 004
-- Titulo: Revisao independente em dois eixos
+- Título: Revisão independente em dois eixos
 - Writer: codex
-- Reviewers: claude (duas sessoes independentes)
+- Reviewers: claude (duas sessões independentes)
 
 ## Perfil
 
@@ -48,12 +48,14 @@ closed_at: 2026-08-04T05:52:20.988Z
 ## Limites conhecidos
 
 - `session close` / `start-next` ainda pertencem a 005.
-- Checks externos assincronos (pending-not-waited).
-- Contaminacao cruzada no record usa hints textuais simples; relatos que mencionam o outro eixo/aggregate precisam evitar literais proibidos.
+- Checks externos assíncronos (pending-not-waited).
+- Isolamento estrutural por pacote é obrigatório; a validação textual normalizada
+  de contaminação cruzada é best-effort e não garante detectar paráfrases
+  semânticas. Cada revisor deve abrir somente o próprio pacote.
 
-## Proxima tarefa
+## Próxima tarefa
 
-- 005 READY, `blocked_by: ["004"]`, nao iniciada.
+- 005 READY, `blocked_by: ["004"]`, não iniciada.
 
 ## Checks externos
 

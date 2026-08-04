@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "test:unit": "vitest run tests/unit --reporter=verbose",
     "test:integration": "vitest run tests/integration --reporter=verbose",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage tests/unit tests/integration --exclude tests/unit/agentctl",
     "test:ci": "pnpm test:unit && pnpm test:integration",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",

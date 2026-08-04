@@ -246,13 +246,19 @@ Exige tarefa/sessao `REVIEWING`, evidencia PASS fresca e fixed point atual.
 `.agent/runtime/reviews/<spec>/<task>/<fixed-point>/<axis>/` com manifest,
 diff completo (inclui untracked), evidencia e docs autorizados do eixo.
 Pacotes do mesmo fixed point sao isolados: nenhum eixo recebe o relatorio do
-outro. `record` valida schema estruturado (frontmatter + JSON de findings) e
+outro. Isolamento estrutural por pacote e obrigatorio; a deteccao textual
+normalizada de contaminacao cruzada e best-effort e nao prova ausencia de
+parafrases semanticas — cada revisor deve abrir somente o proprio pacote.
+`record` valida schema estruturado (frontmatter + JSON de findings) e
 grava `reviews/<task>-<axis>.md` atomicamente sem alterar `state.json`.
-`aggregate` exige quantidade/eixos aplicaveis, package_ids e review_run_ids
-distintos, mesmo fixed point, independencia do writer em qualquer review
-obrigatorio (`reviews_requested >= 1`), e falha com finding `BLOCKING`+`OPEN`.
+`aggregate` exige a quantidade minima (`reviews_requested`) e inclui todos os
+relatorios canonicos validos presentes no disco (reviews opcionais nao sao
+ignorados), com package_ids e review_run_ids distintos, mesmo fixed point,
+independencia do writer, e falha com finding `BLOCKING`+`OPEN`.
 Em PASS grava `reviews/<task>-aggregate.json` e registra `review_aggregate` /
 `review_result` / `aggregated_at` na sessao, sem mudar a tarefa para `DONE`.
+Revalidacao a partir de `REVIEWING` limpa fixed point e resultados de review
+anteriores.
 
 ### `./agentctl task close`
 

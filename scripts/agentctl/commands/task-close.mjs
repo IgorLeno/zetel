@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { assertReviewsAllowed, buildGatePlan, isExecutionProfile } from '../domain/execution-profile.mjs';
+import { dirname } from 'node:path';
+import { buildGatePlan, isExecutionProfile } from '../domain/execution-profile.mjs';
 import {
   assertApplicableGatesPassed,
   assertEvidenceFresh,
@@ -9,6 +9,7 @@ import {
   toPosixRelative,
 } from '../domain/evidence.mjs';
 import { assertAggregateForClose } from '../domain/review-aggregate.mjs';
+import { normalizeReviewsRequested } from '../domain/review-count.mjs';
 import { assertApplicableReviews } from '../domain/review-evidence.mjs';
 import { assertSafeSpecId } from '../domain/spec-id.mjs';
 import { assertTransition, StateMachineError, validateState } from '../domain/state-machine.mjs';
@@ -89,11 +90,11 @@ export function runTaskClose(args, io = {}) {
       });
     }
 
-    const reviewsRequested = normalizeReviewsRequested(
-      task.reviews_requested ?? state.session.reviews_requested,
+    const reviewsRequested = normalizeReviewsRequested({
+      raw: task.reviews_requested ?? state.session.reviews_requested,
       profile,
-      task.review_justification ?? state.session.review_justification,
-    );
+      reviewJustification: task.review_justification ?? state.session.review_justification,
+    });
 
     const taskFile = resolveTaskFile(dirname(path), taskId);
     if (!taskFile) {
@@ -185,11 +186,8 @@ export function runTaskClose(args, io = {}) {
         fixed_point: evidence.fixed_point,
         review_result: reviewResultByAxis,
         review_aggregate: aggregate
-          ? toPosixRelative(
-            join(dirname(path), 'reviews', `${taskId}-aggregate.json`),
-            root,
-          )
-          : state.session.review_aggregate ?? null,
+          ? state.session.review_aggregate
+          : null,
         external_checks: state.session.external_checks ?? 'pending-not-waited',
         reviews_requested: reviewsRequested,
       },
@@ -283,58 +281,6 @@ function resolveCloseWriter(task, state, taskFile) {
   const session = /** @type {Record<string, unknown>} */ (state.session ?? {});
   if (typeof session.agent === 'string' && session.agent.trim()) return session.agent.trim();
   return '';
-}
-
-/**
- * @param {unknown} raw
- * @param {'FAST'|'STANDARD'|'FULL'} profile
- * @param {unknown} reviewJustification
- */
-function normalizeReviewsRequested(raw, profile, reviewJustification) {
-  if (raw == null) {
-    return defaultReviews(profile);
-  }
-  if (typeof raw !== 'number' && typeof raw !== 'string') {
-    throw new StateMachineError(
-      `reviews_requested invalido: ${typeof raw === 'object' ? JSON.stringify(raw) : String(raw)}.`,
-      {
-        guard: 'reviews',
-        nextAction: 'Corrija reviews_requested para um inteiro nao negativo permitido pelo perfil.',
-      },
-    );
-  }
-  if (typeof raw === 'string' && !/^-?\d+$/.test(raw.trim())) {
-    throw new StateMachineError(
-      `reviews_requested invalido: ${raw}.`,
-      {
-        guard: 'reviews',
-        nextAction: 'Corrija reviews_requested para um inteiro nao negativo permitido pelo perfil.',
-      },
-    );
-  }
-  const converted = typeof raw === 'number' ? raw : Number(raw);
-  if (!Number.isFinite(converted) || !Number.isInteger(converted) || converted < 0) {
-    throw new StateMachineError(
-      `reviews_requested invalido: ${String(raw)}.`,
-      {
-        guard: 'reviews',
-        nextAction: 'Corrija reviews_requested para um inteiro nao negativo permitido pelo perfil.',
-      },
-    );
-  }
-  assertReviewsAllowed(
-    profile,
-    converted,
-    typeof reviewJustification === 'string' ? reviewJustification : null,
-  );
-  return converted;
-}
-
-/** @param {'FAST'|'STANDARD'|'FULL'} profile */
-function defaultReviews(profile) {
-  if (profile === 'FAST') return 0;
-  if (profile === 'STANDARD') return 1;
-  return 2;
 }
 
 /**

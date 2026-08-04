@@ -166,6 +166,7 @@ export function runTaskValidate(args, io = {}) {
           fixed_point: null,
           review_aggregate: null,
           aggregated_at: null,
+          review_result: null,
         },
       };
       const midValidation = validateState(working);

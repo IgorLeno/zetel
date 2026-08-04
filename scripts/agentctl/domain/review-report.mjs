@@ -77,7 +77,6 @@ export function parseStructuredReviewReport(path) {
  *   fixedPoint: string,
  *   evidenceRecordedAt: string,
  *   now?: Date | string | number,
- *   forbiddenAxisHints?: string[],
  * }} expected
  */
 export function assertStructuredReviewReport(report, expected) {
@@ -139,7 +138,7 @@ export function assertStructuredReviewReport(report, expected) {
 
   assertFindings(report);
   assertResultConsistency(report);
-  assertNoCrossAxisContamination(report, expected.forbiddenAxisHints ?? []);
+  assertNoCrossAxisContamination(report, expected.axis);
 }
 
 /**
@@ -293,22 +292,129 @@ function assertResultConsistency(report) {
 }
 
 /**
- * @param {ReturnType<typeof parseStructuredReviewReport>} report
- * @param {string[]} forbiddenHints
+ * Normaliza texto para detecção best-effort de contaminação entre eixos.
+ * @param {unknown} value
  */
-function assertNoCrossAxisContamination(report, forbiddenHints) {
-  const haystack = report.raw.toLowerCase();
-  for (const hint of forbiddenHints) {
-    if (hint && haystack.includes(hint.toLowerCase())) {
+export function normalizeReviewInspectionText(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[_/\-.,:;!?()[\]{}"'`]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Coleta strings estruturadas do relatório para inspeção.
+ * @param {ReturnType<typeof parseStructuredReviewReport>} report
+ */
+function collectInspectionStrings(report) {
+  /** @type {string[]} */
+  const parts = [String(report.raw ?? ''), String(report.summary ?? '')];
+  for (const finding of report.findings ?? []) {
+    if (!finding || typeof finding !== 'object') continue;
+    for (const key of ['title', 'evidence', 'recommendation']) {
+      if (typeof finding[key] === 'string') parts.push(finding[key]);
+    }
+    const location = finding.location;
+    if (location && typeof location === 'object' && typeof location.not_applicable_reason === 'string') {
+      parts.push(location.not_applicable_reason);
+    }
+  }
+  return parts;
+}
+
+/**
+ * Proteção determinística best-effort contra referências textuais ao outro eixo
+ * ou ao resultado do aggregate. Não detecta paráfrases semânticas arbitrárias.
+ * @param {ReturnType<typeof parseStructuredReviewReport>} report
+ * @param {string} axis
+ */
+function assertNoCrossAxisContamination(report, axis) {
+  const otherAxis = axis === 'spec-compliance' ? 'engineering-quality' : 'spec-compliance';
+  let haystack = normalizeReviewInspectionText(collectInspectionStrings(report).join('\n'));
+  // Permite mencoes legítimas a arquivos de codigo (ex.: review-aggregate.mjs).
+  haystack = haystack
+    .replace(/\bscripts agentctl domain review aggregate\.mjs\b/g, ' ')
+    .replace(/\breview aggregate\.mjs\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  /** @type {string[]} */
+  const forbidden = [
+    otherAxis,
+    otherAxis.replace(/-/g, ' '),
+    otherAxis.replace(/-/g, '_'),
+    `${otherAxis} md`,
+    `eixo ${otherAxis.replace(/-/g, ' ')}`,
+    `axis ${otherAxis.replace(/-/g, ' ')}`,
+    'resultado do outro eixo',
+    `resultado do eixo ${otherAxis.replace(/-/g, ' ')}`,
+    'conclusao do outro eixo',
+    'relatorio do outro eixo',
+    'aggregate result',
+    'resultado do aggregate',
+    'resultado da agregacao',
+    'conclusao do aggregate',
+    'conclusao da agregacao',
+    'aggregate passou',
+    'aggregate pass',
+  ];
+
+  for (const hint of forbidden) {
+    const normalizedHint = normalizeReviewInspectionText(hint);
+    if (normalizedHint && haystack.includes(normalizedHint)) {
       throw new StateMachineError(
         `Review ${report.file} contem resultado/contaminacao do outro eixo.`,
         {
           guard: 'review-report',
-          nextAction: 'Remova referencias ao outro eixo, aggregate ou conclusao alheia.',
+          nextAction:
+            'Remova referencias ao outro eixo, resultado/conclusao do aggregate ou relatorio alheio. Isolamento semantico e best-effort.',
         },
       );
     }
   }
+}
+
+/**
+ * Rejeita sequências de fence Markdown em strings antes da serialização canônica.
+ * @param {ReturnType<typeof parseStructuredReviewReport>} report
+ */
+export function assertNoMarkdownFenceInjection(report) {
+  const fence = '```';
+  /** @param {string} label @param {unknown} value */
+  const check = (label, value) => {
+    if (typeof value === 'string' && value.includes(fence)) {
+      throw new StateMachineError(
+        `Review ${report.file} contem fence Markdown em ${label}.`,
+        {
+          guard: 'review-report',
+          nextAction:
+            'Remova sequencias de fence Markdown do summary/findings e registre novamente.',
+        },
+      );
+    }
+  };
+  check('summary', report.summary);
+  /** @param {unknown} value @param {string} path */
+  const walk = (value, path) => {
+    if (typeof value === 'string') {
+      check(path, value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => walk(item, `${path}[${index}]`));
+      return;
+    }
+    if (value && typeof value === 'object') {
+      for (const [key, child] of Object.entries(value)) {
+        walk(child, `${path}.${key}`);
+      }
+    }
+  };
+  walk(report.findings, 'findings');
 }
 
 /**
@@ -409,6 +515,7 @@ function stripQuotes(value) {
  * @param {ReturnType<typeof parseStructuredReviewReport>} report
  */
 export function formatCanonicalReviewMarkdown(report) {
+  assertNoMarkdownFenceInjection(report);
   const findingsJson = JSON.stringify(
     {
       summary: report.summary,

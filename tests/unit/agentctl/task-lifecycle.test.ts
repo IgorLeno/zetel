@@ -35,6 +35,7 @@ import {
   captureWorkspaceFingerprint,
   writeValidationEvidence,
 } from '../../../scripts/agentctl/domain/evidence.mjs';
+import { AGGREGATE_SCHEMA_VERSION } from '../../../scripts/agentctl/domain/review-aggregate.mjs';
 import { assertApplicableReviews } from '../../../scripts/agentctl/domain/review-evidence.mjs';
 import { updateOperationalFrontmatter } from '../../../scripts/agentctl/domain/task-frontmatter.mjs';
 import { detectTypescriptAffected } from '../../../scripts/agentctl/commands/task-validate.mjs';
@@ -94,7 +95,7 @@ function writeCloseAggregate(
   });
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   const reviewers = options.reviewers
-    ?? reportRelPaths.map(() => 'codex');
+    ?? reportRelPaths.map(() => 'independent-reviewer');
   const reviewRunIds = options.reviewRunIds
     ?? reportRelPaths.map((_, index) => `run-${index}`);
   const packageIds = options.packageIds
@@ -105,7 +106,7 @@ function writeCloseAggregate(
     join(dir, aggregateRel),
     `${JSON.stringify(
       {
-        schema_version: 1,
+        schema_version: AGGREGATE_SCHEMA_VERSION,
         spec_id: id,
         task_id: taskId,
         fixed_point: fixedPoint,
@@ -166,7 +167,7 @@ function writeStructuredCloseReview(
       'schema_version: 2',
       `task_id: "${fields.taskId}"`,
       `axis: ${fields.axis}`,
-      `reviewer: ${fields.reviewer ?? 'codex'}`,
+      `reviewer: ${fields.reviewer ?? 'independent-reviewer'}`,
       `review_run_id: "${fields.reviewRunId ?? 'run-close-1'}"`,
       `package_id: "${fields.packageId ?? 'pkg-close-1'}"`,
       `fixed_point: "${fields.fixedPoint}"`,
@@ -1257,7 +1258,7 @@ describe('agentctl task validate/close', () => {
       [`.agent/specs/${id}/reviews/001-spec-compliance.md`],
       1,
       {
-        reviewers: ['codex'],
+        reviewers: ['independent-reviewer'],
         reviewRunIds: ['run-close-ok'],
         packageIds: ['pkg-close-ok'],
       },
@@ -1437,7 +1438,8 @@ describe('agentctl task validate/close', () => {
       env,
     });
     expect(closed.status).toBe(1);
-    expect(closed.stderr).toMatch(/guard:\s*review-aggregate|self-review/i);
+    expect(closed.stderr).toMatch(/self-review|autoaprovar|Writer\/agent/i);
+    expect(closed.stderr).toMatch(/guard:\s*review-aggregate/i);
   });
 
   it('allows REVIEWING to re-enter VALIDATING via task validate', () => {
@@ -1455,11 +1457,11 @@ describe('agentctl task validate/close', () => {
         '--agent',
         'claude',
         '--profile',
-        'FAST',
+        'STANDARD',
         '--justification',
-        'doc',
+        'cli isolada',
         '--reviews',
-        '0',
+        '1',
       ).status,
     ).toBe(0);
     const env = { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` };
@@ -1476,9 +1478,41 @@ describe('agentctl task validate/close', () => {
       { cwd: dir, encoding: 'utf8', env },
     );
     expect(first.status, first.stderr).toBe(0);
+    const fixedPointA = /fixed_point: ([a-f0-9]+)/.exec(first.stdout)?.[1];
+    expect(fixedPointA).toBeTruthy();
+
+    const reportRel = `.agent/specs/${id}/reviews/001-spec-compliance.md`;
+    writeStructuredCloseReview(join(dir, reportRel), {
+      taskId: '001',
+      axis: 'spec-compliance',
+      fixedPoint: fixedPointA as string,
+      reviewer: 'independent-reviewer',
+      reviewRunId: 'run-reval-1',
+      packageId: 'pkg-reval-1',
+    });
+    const published = writeCloseAggregate(
+      dir,
+      id,
+      '001',
+      fixedPointA as string,
+      [reportRel],
+      1,
+      {
+        reviewers: ['independent-reviewer'],
+        reviewRunIds: ['run-reval-1'],
+        packageIds: ['pkg-reval-1'],
+      },
+    );
+    bindSessionToAggregate(
+      join(dir, '.agent/specs', id, 'state.json'),
+      published.aggregateRel,
+      published.generatedAt,
+      published.axes,
+    );
     let state = JSON.parse(readFileSync(join(dir, '.agent/specs', id, 'state.json'), 'utf8'));
-    expect(state.tasks[0].status).toBe('REVIEWING');
-    expect(state.session.status).toBe('REVIEWING');
+    expect(state.session.review_aggregate).toBe(published.aggregateRel);
+    expect(state.session.aggregated_at).toBe(published.generatedAt);
+    expect(state.session.review_result['spec-compliance']).toBe('PASS');
 
     writeFileSync(join(dir, 'post-review-fix.txt'), 'material fix\n', 'utf8');
     const second = spawnSync(
@@ -1494,10 +1528,16 @@ describe('agentctl task validate/close', () => {
       { cwd: dir, encoding: 'utf8', env },
     );
     expect(second.status, second.stderr).toBe(0);
+    const fixedPointB = /fixed_point: ([a-f0-9]+)/.exec(second.stdout)?.[1];
+    expect(fixedPointB).toBeTruthy();
+    expect(fixedPointB).not.toBe(fixedPointA);
     state = JSON.parse(readFileSync(join(dir, '.agent/specs', id, 'state.json'), 'utf8'));
     expect(state.tasks[0].status).toBe('REVIEWING');
     expect(state.session.status).toBe('REVIEWING');
-    expect(second.stdout).toMatch(/fixed_point:/);
+    expect(state.session.review_aggregate).toBeNull();
+    expect(state.session.aggregated_at).toBeNull();
+    expect(state.session.review_result).toBeNull();
+    expect(state.session.fixed_point).toBe(fixedPointB);
   });
 
   it('keeps TASKS.md byte-identical across start/validate/close', () => {

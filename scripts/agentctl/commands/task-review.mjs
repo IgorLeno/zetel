@@ -1,4 +1,4 @@
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join, resolve, win32 } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import {
   buildReviewAggregate,
@@ -10,7 +10,8 @@ import {
   readValidationEvidence,
   toPosixRelative,
 } from '../domain/evidence.mjs';
-import { assertReviewsAllowed, buildGatePlan, isExecutionProfile } from '../domain/execution-profile.mjs';
+import { buildGatePlan, isExecutionProfile } from '../domain/execution-profile.mjs';
+import { normalizeReviewsRequested } from '../domain/review-count.mjs';
 import {
   assertReviewAxis,
   assertReviewPackageIntegrity,
@@ -112,9 +113,8 @@ function runRecord(parsed, io) {
   });
 
   const reportFile = /** @type {string} */ (parsed.reportFile);
-  const absReport = reportFile.startsWith('/')
-    ? reportFile
-    : join(ctx.root, reportFile);
+  const absolute = isAbsolute(reportFile) || win32.isAbsolute(reportFile);
+  const absReport = absolute ? reportFile : resolve(ctx.root, reportFile);
   if (!existsSync(absReport)) {
     throw new StateMachineError(`Arquivo de relatorio ausente: ${reportFile}.`, {
       guard: 'review-report',
@@ -122,7 +122,6 @@ function runRecord(parsed, io) {
     });
   }
 
-  const otherAxis = axis === 'spec-compliance' ? 'engineering-quality' : 'spec-compliance';
   const parsedReport = parseStructuredReviewReport(absReport);
   assertStructuredReviewReport(parsedReport, {
     taskId: parsed.taskId,
@@ -131,13 +130,6 @@ function runRecord(parsed, io) {
     fixedPoint: ctx.fixedPoint,
     evidenceRecordedAt: String(ctx.evidence.recorded_at ?? ''),
     now: new Date(),
-    forbiddenAxisHints: [
-      `${otherAxis}.md`,
-      `${parsed.taskId}-aggregate`,
-      `axis: ${otherAxis}`,
-      `"axis": "${otherAxis}"`,
-      'aggregate result',
-    ],
   });
 
   const canonical = formatCanonicalReviewMarkdown(parsedReport);
@@ -269,11 +261,11 @@ function loadReviewContext(specId, taskId, options = {}) {
     });
   }
 
-  const reviewsRequested = normalizeReviewsRequested(
-    task.reviews_requested ?? state.session.reviews_requested,
+  const reviewsRequested = normalizeReviewsRequested({
+    raw: task.reviews_requested ?? state.session.reviews_requested,
     profile,
-    task.review_justification ?? state.session.review_justification,
-  );
+    reviewJustification: task.review_justification ?? state.session.review_justification,
+  });
 
   const specDir = dirname(statePath);
   const taskFile = resolveTaskFile(specDir, taskId);
@@ -437,44 +429,6 @@ function readFrontmatterField(taskFile, field) {
     return '';
   }
   return '';
-}
-
-/**
- * @param {unknown} raw
- * @param {'FAST'|'STANDARD'|'FULL'} profile
- * @param {unknown} reviewJustification
- */
-function normalizeReviewsRequested(raw, profile, reviewJustification) {
-  if (raw == null) {
-    if (profile === 'FAST') return 0;
-    if (profile === 'STANDARD') return 1;
-    return 2;
-  }
-  if (typeof raw !== 'number' && typeof raw !== 'string') {
-    throw new StateMachineError('reviews_requested invalido.', {
-      guard: 'reviews',
-      nextAction: 'Corrija reviews_requested para inteiro nao negativo.',
-    });
-  }
-  if (typeof raw === 'string' && !/^-?\d+$/.test(raw.trim())) {
-    throw new StateMachineError(`reviews_requested invalido: ${raw}.`, {
-      guard: 'reviews',
-      nextAction: 'Corrija reviews_requested para inteiro nao negativo.',
-    });
-  }
-  const converted = typeof raw === 'number' ? raw : Number(raw);
-  if (!Number.isFinite(converted) || !Number.isInteger(converted) || converted < 0) {
-    throw new StateMachineError(`reviews_requested invalido: ${String(raw)}.`, {
-      guard: 'reviews',
-      nextAction: 'Corrija reviews_requested para inteiro nao negativo.',
-    });
-  }
-  assertReviewsAllowed(
-    profile,
-    converted,
-    typeof reviewJustification === 'string' ? reviewJustification : null,
-  );
-  return converted;
 }
 
 /**
