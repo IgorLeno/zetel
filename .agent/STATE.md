@@ -91,25 +91,6 @@ Sessoes historicas `DONE`, `PUSHED` ou `SESSION_CLOSED` nao contam como tarefa a
 - `READY -> IN_PROGRESS` exige `context.task` e `context.tasks`.
 - Edicao manual do JSON nao conta como transicao valida sem o validador.
 
-## Fechamento de sessao (`session handoff`)
-
-`DONE -> PUSHED -> SESSION_CLOSED` acontece em uma unica escrita atomica, para
-tarefa e sessao, e so depois das guardas Git terem confirmado que o commit de
-entrega esta publicado, que a branch nao esta divergente nem atrasada e que a
-arvore esta limpa.
-
-A sessao fechada registra `delivery_commit`, `remote`, `pushed_at`, `closed_at`,
-`handoff` e `next_task`. A tarefa fechada registra `commit` (commit de entrega),
-`push` (upstream confirmado) e `handoff`. O SHA do commit de fechamento nao e
-gravado em artefato versionado: ele so existe depois do commit e seria
-autorreferente. A confirmacao vem do Git — `HEAD` publicado no upstream e
-contendo o handoff — e o SHA aparece no stdout e na area runtime ignorada.
-
-Somente a proxima tarefa diretamente desbloqueada vai de `DRAFT` para `READY`, e
-apenas quando todos os seus `blocked_by` estiverem `SESSION_CLOSED`. Nenhuma
-tarefa entra em `IN_PROGRESS` no fechamento nem em `session start-next`:
-isso pertence ao `task start` do processo novo. `TASKS.md` nunca e alterado.
-
 ## Escrita atomica
 
 1. Adquirir lock exclusivo irmao (`state.json.lock` via `openSync(..., 'wx')`).

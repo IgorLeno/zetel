@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 75,
+  "revision": 67,
   "spec": {
     "id": "SPEC-000-agent-workflow-pilot",
     "status": "APPROVED",
@@ -8,7 +8,7 @@
     "approved_by": "Igor Fernandes",
     "kind": "full"
   },
-  "active_task": "005",
+  "active_task": null,
   "tasks": [
     {
       "id": "001",
@@ -130,15 +130,11 @@
     },
     {
       "id": "005",
-      "status": "REVIEWING",
+      "status": "READY",
       "blocked_by": [
         "004"
       ],
-      "title": "Handoff e nova sessao",
-      "execution_profile": "FULL",
-      "profile_justification": "Implementação de fechamento remoto verificável, handoff versionado, context-pack mínimo e launcher de processo novo.",
-      "reviews_requested": 2,
-      "validation": "PASS"
+      "title": "Handoff e nova sessao"
     },
     {
       "id": "006",
@@ -174,22 +170,18 @@
     }
   ],
   "session": {
-    "id": "task-005-20260804",
-    "agent": "claude",
-    "task_id": "005",
-    "status": "REVIEWING",
-    "started_at": "2026-08-04T21:23:26.052Z",
+    "id": "task-004-20260804",
+    "agent": "codex",
+    "task_id": "004",
+    "status": "SESSION_CLOSED",
+    "started_at": "2026-08-04T04:46:05.088Z",
     "execution_profile": "FULL",
-    "profile_justification": "Implementação de fechamento remoto verificável, handoff versionado, context-pack mínimo e launcher de processo novo.",
+    "profile_justification": "Implementação do protocolo de revisões independentes, pacotes por eixo, agregação, evidências e integração com task close.",
     "reviews_requested": 2,
-    "validating_at": "2026-08-04T23:30:12.921Z",
+    "validating_at": "2026-08-04T05:38:54.588Z",
+    "validation": ".agent/specs/SPEC-000-agent-workflow-pilot/evidence/004-validation.json",
     "validation_result": "PASS",
-    "fixed_point": "d3498fbdd0bf7da3944d5dc14107f77d7d901174bd00e226f326bd055433a89d",
-    "review_aggregate": null,
-    "aggregated_at": null,
-    "review_result": null,
-    "reviewing_at": "2026-08-04T23:35:47.891Z",
-    "validation": ".agent/specs/SPEC-000-agent-workflow-pilot/evidence/005-validation.json",
+    "fixed_point": "88bbd7ce42ecc600f60ee35cf5504ca37a0aa72344664f41b2f38962d9798a4a",
     "gates_plan": [
       {
         "category": "focused",
@@ -198,8 +190,7 @@
           "exec",
           "vitest",
           "run",
-          "tests/unit/agentctl/session-handoff.test.ts",
-          "tests/unit/agentctl/session-start-next.test.ts",
+          "tests/unit/agentctl/task-review.test.ts",
           "tests/unit/agentctl/task-lifecycle.test.ts",
           "tests/unit/agentctl/state-machine.test.ts",
           "--reporter=verbose"
@@ -241,7 +232,24 @@
           "--check"
         ]
       }
-    ]
+    ],
+    "reviewing_at": "2026-08-04T05:45:03.712Z",
+    "review_aggregate": ".agent/specs/SPEC-000-agent-workflow-pilot/reviews/004-aggregate.json",
+    "aggregated_at": "2026-08-04T05:51:29.913Z",
+    "review_result": {
+      "engineering-quality": "PASS",
+      "spec-compliance": "PASS"
+    },
+    "done_at": "2026-08-04T05:51:30.342Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited",
+    "delivery_commit": "fb5d4ed897bc62644562f2b9e58e5534d13eb747",
+    "remote": "origin/feat/spec-000-task-004-independent-reviews",
+    "pushed_at": "2026-08-04T05:52:20.988Z",
+    "closed_at": "2026-08-04T05:52:20.988Z",
+    "bootstrap_exception": "session close pertence a 005; fechamento pos-push da 004 usa assertTransition DONE->PUSHED->SESSION_CLOSED, handoff versionado e liberacao 005 DRAFT->READY sem iniciar 005.",
+    "handoff": ".agent/specs/SPEC-000-agent-workflow-pilot/handoffs/004-independent-reviews-fb5d4ed.md",
+    "next_task": "005"
   },
   "approval": {
     "spec": true,
