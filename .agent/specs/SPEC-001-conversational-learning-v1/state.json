@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 16,
+  "revision": 18,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -27,7 +27,7 @@
     {
       "id": "002",
       "title": "Ingestão de PDF preservando páginas",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "001"
       ],
@@ -35,7 +35,10 @@
       "profile_justification": "Migration 006 nova (pdf_pages/pdf_sections + colunas em zetel_files), dependencia nova pdfjs-dist, parsing de entrada nao confiavel (PDF) e persistencia de derivados: FULL por regra.",
       "reviews_requested": 2,
       "validation": "PASS",
-      "review_result": "PASS"
+      "review_result": "PASS",
+      "commit": "4e3d1c454c54d6b3ec7945ac0470bc7817bf6f57",
+      "push": "origin/feat/spec-001-task-002-pdf-ingest",
+      "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/002-pdf-ingest-4e3d1c4.md"
     },
     {
       "id": "003",
@@ -138,7 +141,7 @@
     "id": "task-002-20260926",
     "agent": "claude",
     "task_id": "002",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-09-26T13:30:57.340Z",
     "execution_profile": "FULL",
     "profile_justification": "Migration 006 nova (pdf_pages/pdf_sections + colunas em zetel_files), dependencia nova pdfjs-dist, parsing de entrada nao confiavel (PDF) e persistencia de derivados: FULL por regra.",
@@ -208,7 +211,11 @@
     ],
     "done_at": "2026-09-26T13:58:17.744Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "delivery_commit": "4e3d1c454c54d6b3ec7945ac0470bc7817bf6f57",
+    "push": "origin/feat/spec-001-task-002-pdf-ingest",
+    "closed_at": "2026-09-26T16:13:51.950Z",
+    "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/002-pdf-ingest-4e3d1c4.md"
   },
   "approval": {
     "spec": true,
