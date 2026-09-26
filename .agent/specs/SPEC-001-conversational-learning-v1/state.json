@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 7,
+  "revision": 9,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -13,13 +13,16 @@
     {
       "id": "001",
       "title": "Contratos V1 na arquitetura",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [],
       "execution_profile": "FAST",
       "profile_justification": "Somente documentação: registra D1–D13 aprovadas em .agent/ARCHITECTURE.md",
       "reviews_requested": 0,
       "validation": "PASS",
-      "review_result": "NOT_REQUIRED"
+      "review_result": "NOT_REQUIRED",
+      "commit": "5df158a6c41d91218176622f09fd0a4722e35bc4",
+      "push": "origin/docs/spec-001-conversational-learning-v1",
+      "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/001-contratos-v1-5df158a.md"
     },
     {
       "id": "002",
@@ -130,7 +133,7 @@
     "id": "task-001-20260926",
     "agent": "claude",
     "task_id": "001",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-09-26T11:14:54.796Z",
     "execution_profile": "FAST",
     "profile_justification": "Somente documentação: registra D1–D13 aprovadas em .agent/ARCHITECTURE.md",
@@ -168,7 +171,11 @@
     ],
     "done_at": "2026-09-26T11:18:36.251Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "delivery_commit": "5df158a6c41d91218176622f09fd0a4722e35bc4",
+    "push": "origin/docs/spec-001-conversational-learning-v1",
+    "closed_at": "2026-09-26T13:30:51.983Z",
+    "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/001-contratos-v1-5df158a.md"
   },
   "approval": {
     "spec": true,
