@@ -1,14 +1,14 @@
 ---
 id: "001"
 title: "Contratos V1 na arquitetura"
-status: DONE
+status: SESSION_CLOSED
 blocked_by: []
 writer: null
 reviewer: null
-commit: null
-push: null
+commit: 5df158a6c41d91218176622f09fd0a4722e35bc4
+push: origin/docs/spec-001-conversational-learning-v1
 review_result: NOT_REQUIRED
-handoff: null
+handoff: .agent/specs/SPEC-001-conversational-learning-v1/handoffs/001-contratos-v1-5df158a.md
 execution_profile: FAST
 profile_justification: "Somente documentação: registra D1–D13 aprovadas em .agent/ARCHITECTURE.md"
 validation: PASS

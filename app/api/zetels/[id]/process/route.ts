@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
-import { processZetel } from '@/lib/ingestao-service';
+import { processPdfFiles, processZetel } from '@/lib/ingestao-service';
 import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
@@ -10,7 +10,7 @@ const NO_VAULT = 'Caminho do vault não configurado. Configure-o em Configuraç�
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** POST /api/zetels/[id]/process — pipeline determinístico de ingestão (síncrono no MVP). */
+/** POST /api/zetels/[id]/process — pipeline determinístico de ingestão: Markdown e, depois, PDFs. */
 export async function POST(_request: Request, { params }: Ctx) {
   const { id } = await params;
 
@@ -20,8 +20,18 @@ export async function POST(_request: Request, { params }: Ctx) {
   }
 
   try {
-    const result = processZetel(getDb(), vaultPath, id);
-    return NextResponse.json({ result });
+    const db = getDb();
+    const result = processZetel(db, vaultPath, id);
+    const pdf = await processPdfFiles(db, vaultPath, id);
+    return NextResponse.json({
+      result: {
+        ...result,
+        pdfFilesProcessed: pdf.filesProcessed,
+        pdfPagesCount: pdf.pagesCount,
+        pdfNoText: pdf.noText,
+        pdfFailed: pdf.failed,
+      },
+    });
   } catch (err) {
     logger.error('zetel process failed', { id, error: (err as Error).message });
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
