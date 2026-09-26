@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "task_id": "001",
+  "execution_profile": "FAST",
+  "state_revision": 5,
+  "git_head": "4f826d3125eab1001dedbcfdbe98394bcd7abb27",
+  "tree_fingerprint": "fceab5299ef0b063dd4b10291cc2881f9d6ad39df50ff50d9a41f524fc97650f",
+  "tracked_diff_sha256": "711a4cd95ad6d0c53661faff256f1facf00541672e6dde1e8c617ddbd64bd9d1",
+  "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked_sha256": "eac75c8f94ba9c5ba6628a27a1e8fdf1e3faff821a858422ba08fe54b61fb07b",
+  "task_fingerprint": "ce5e419105863af11d55c572f3a6eb259ee912288168517a73b1426d0ad2ce3a",
+  "plan_fingerprint": "4bbd40816e149f54b12c25b973d2c278897e48819420158344e7f679de8a2294",
+  "fixed_point": "264438252fcf1cb0cdb3f777126290f2308c7fae1bc627dc72d4e9e7984d3086",
+  "commands": [
+    {
+      "category": "focused",
+      "argv": [
+        "git",
+        "diff",
+        "--quiet",
+        "--",
+        "app",
+        "components",
+        "lib",
+        "migrations"
+      ],
+      "started_at": "2026-09-26T11:18:33.619Z",
+      "completed_at": "2026-09-26T11:18:33.632Z",
+      "duration_ms": 6,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stderr_bytes": 0,
+        "stdout_preview": "",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "diff-check",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-09-26T11:18:33.632Z",
+      "completed_at": "2026-09-26T11:18:33.643Z",
+      "duration_ms": 11,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stderr_bytes": 0,
+        "stdout_preview": "",
+        "stderr_preview": ""
+      }
+    }
+  ],
+  "waivers": [],
+  "recorded_at": "2026-09-26T11:18:33.689Z",
+  "validation_result": "PASS"
+}

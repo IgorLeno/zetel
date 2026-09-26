@@ -1,0 +1,254 @@
+{
+  "schema_version": 1,
+  "revision": 7,
+  "spec": {
+    "id": "SPEC-001-conversational-learning-v1",
+    "kind": "full",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-09-26T11:14:06.443Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Contratos V1 na arquitetura",
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "FAST",
+      "profile_justification": "Somente documentação: registra D1–D13 aprovadas em .agent/ARCHITECTURE.md",
+      "reviews_requested": 0,
+      "validation": "PASS",
+      "review_result": "NOT_REQUIRED"
+    },
+    {
+      "id": "002",
+      "title": "Ingestão de PDF preservando páginas",
+      "status": "READY",
+      "blocked_by": [
+        "001"
+      ]
+    },
+    {
+      "id": "003",
+      "title": "Leitor PDF e foco de página no chat",
+      "status": "READY",
+      "blocked_by": [
+        "002"
+      ]
+    },
+    {
+      "id": "004",
+      "title": "Seleção verificada: Conversar sobre isto",
+      "status": "READY",
+      "blocked_by": [
+        "003"
+      ]
+    },
+    {
+      "id": "005",
+      "title": "Study sessions e continuidade",
+      "status": "READY",
+      "blocked_by": [
+        "001"
+      ]
+    },
+    {
+      "id": "006",
+      "title": "Retrieval, foco por linguagem natural e referências",
+      "status": "READY",
+      "blocked_by": [
+        "003",
+        "005"
+      ]
+    },
+    {
+      "id": "007",
+      "title": "Perfis do tutor",
+      "status": "READY",
+      "blocked_by": [
+        "005"
+      ]
+    },
+    {
+      "id": "008",
+      "title": "Voz: Parar, cancelamento e estados",
+      "status": "READY",
+      "blocked_by": [
+        "001"
+      ]
+    },
+    {
+      "id": "009",
+      "title": "Ativar professora e starters",
+      "status": "READY",
+      "blocked_by": [
+        "005",
+        "008"
+      ]
+    },
+    {
+      "id": "010",
+      "title": "Spike de voz custo-benefício",
+      "status": "READY",
+      "blocked_by": [
+        "001"
+      ]
+    },
+    {
+      "id": "011",
+      "title": "Conceitos: sugestão, confirmação e proveniência",
+      "status": "READY",
+      "blocked_by": [
+        "005",
+        "006"
+      ]
+    },
+    {
+      "id": "012",
+      "title": "Integração do fluxo principal e E2E não-live",
+      "status": "READY",
+      "blocked_by": [
+        "004",
+        "006",
+        "007",
+        "009",
+        "011"
+      ]
+    },
+    {
+      "id": "013",
+      "title": "Polimento e validação humana final",
+      "status": "READY",
+      "blocked_by": [
+        "012",
+        "010"
+      ]
+    }
+  ],
+  "session": {
+    "id": "task-001-20260926",
+    "agent": "claude",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-09-26T11:14:54.796Z",
+    "execution_profile": "FAST",
+    "profile_justification": "Somente documentação: registra D1–D13 aprovadas em .agent/ARCHITECTURE.md",
+    "reviews_requested": 0,
+    "validating_at": "2026-09-26T11:18:33.600Z",
+    "validation_result": "PASS",
+    "fixed_point": "264438252fcf1cb0cdb3f777126290f2308c7fae1bc627dc72d4e9e7984d3086",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": {},
+    "reviewing_at": "2026-09-26T11:18:33.745Z",
+    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "git",
+          "diff",
+          "--quiet",
+          "--",
+          "app",
+          "components",
+          "lib",
+          "migrations"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-09-26T11:18:36.251Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "17e14bb29b37708d764adf029278acd72698af7d996e89e9ff4fd179c86c32db"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "d4398513906306dd1bb6067eabce5246b78e2f3c7a0085275f6341ae5551bbab"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "486852db89de030ead25d77a35f54dc7c7004c3509031598aa2be13f4e1d71d6"
+        },
+        {
+          "path": "tasks/001-contratos-v1.md",
+          "sha256": "ce5e419105863af11d55c572f3a6eb259ee912288168517a73b1426d0ad2ce3a"
+        },
+        {
+          "path": "tasks/002-pdf-ingest.md",
+          "sha256": "7f3b1773460162f44db9d0c2f00a9cec5814b049ccc668eb0ffcbf23fc4cbf88"
+        },
+        {
+          "path": "tasks/003-pdf-reader-page-focus.md",
+          "sha256": "6bd323ad64805d8ebc6947b7650e9a235677c9c5595906ee4ec1c6fbbe440b05"
+        },
+        {
+          "path": "tasks/004-verified-selection.md",
+          "sha256": "863a14aa6686e9106177d8e435f1f911bb99962a60cc81222f21f0498add9852"
+        },
+        {
+          "path": "tasks/005-study-sessions.md",
+          "sha256": "ba0cb11878df8f6ae9d114d89ea0c81dc598147c0e29684635d5bf6a47ae8ba1"
+        },
+        {
+          "path": "tasks/006-retrieval-focus-references.md",
+          "sha256": "862fb3777363af01cd3ea87247b43408650e497d1cec4dfc8446c7d4cf424f14"
+        },
+        {
+          "path": "tasks/007-tutor-profiles.md",
+          "sha256": "e0b82e3db3ba53cc4e2a64b48a228cb7a354f70747371d74d5f1c678c09e365c"
+        },
+        {
+          "path": "tasks/008-voice-stop-states.md",
+          "sha256": "55969b38e694ed4b588a74aa4cc75b7013c3efa0090684d2ca5b722d00adfbed"
+        },
+        {
+          "path": "tasks/009-teacher-starters.md",
+          "sha256": "2d4a8c4d835a983f869ab7c05ac17fac8a07c26ef19907f32ca2c7a8cbdda144"
+        },
+        {
+          "path": "tasks/010-voice-provider-spike.md",
+          "sha256": "20f410441331bd3e729e9539358cd8326cdba97eafdbbf2b2e992924b459360e"
+        },
+        {
+          "path": "tasks/011-concepts.md",
+          "sha256": "88951d4101573d4401e1d804be6a9037dba3db0f6668a83c0b6070675a8444c4"
+        },
+        {
+          "path": "tasks/012-integration-e2e.md",
+          "sha256": "75328b318321b3003b6a5483363c92359fb7fb80131c1cec066207cd356bbea1"
+        },
+        {
+          "path": "tasks/013-polish-human-validation.md",
+          "sha256": "d0afa74f320ca1a794a7238a9d2e1722f123536bd81e6262585bbf6978db7337"
+        }
+      ],
+      "digest": "ad60ddf71b9b7205fab7f8c89f907382a7a1dc07836e7b3b643e5ed570cbe18b",
+      "kind": "full",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-09-26T11:14:06.443Z"
+    }
+  }
+}

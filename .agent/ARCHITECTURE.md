@@ -31,6 +31,48 @@
 - Memória global não é cacheada em processo. Notas/memórias têm filesystem como
   fonte de verdade e escrita segura contra colisões.
 
+## Conversational Learning V1 (SPEC-001)
+
+Contratos aprovados em
+[SPEC.md](specs/SPEC-001-conversational-learning-v1/SPEC.md) (D1–D13) e
+[PLAN.md](specs/SPEC-001-conversational-learning-v1/PLAN.md) (Arquitetura,
+Interfaces e dados). Em divergência, a SPEC prevalece.
+
+- PDF (D1–D2): `pdfjs-dist` extrai no servidor e renderiza no cliente, sem OCR.
+  Original em `<vault>/zetels/<slug>/arquivos/`; derivados em `pdf_pages` e
+  `pdf_sections`. Proveniência estável: `file_id + page_number + content_hash`.
+  `zetel_pages` segue exclusivo de Markdown.
+- Retrieval (D3): SQLite FTS5 (`unicode61 remove_diacritics 2`, BM25),
+  derivado e reconstruível; sem embeddings.
+- Foco (D4): estado da sessão (`selection | page | section | document |
+  zetel`), alterado por eventos de UI e regras PT-BR determinísticas.
+- Seleção (D5): texto do cliente só vale se for substring normalizada da
+  página server-side; o servidor usa o próprio recorte.
+- Sessões (D6): `study_sessions` + `chat_messages.session_id` nullable, com
+  backfill de uma sessão legada por Zetel; continuidade sem resumo por LLM.
+- Perfis (D7): built-ins em código e imutáveis; personalizados em
+  `tutor_profiles`; ajuste por sessão em `study_sessions.profile_overrides`.
+- Conceitos (D8–D9): Markdown no vault é fonte de verdade
+  (`<vault>/zetels/<slug>/conceitos/`), entradas append-only com proveniência.
+  Sentinela `CONCEPT_SUGGESTION` retida e validada, persistida em
+  `chat_messages.meta`; salvar recebe `messageId` e o servidor reconstrói a
+  proveniência.
+- Citações (D10): `[fonte:ID]` restritas aos IDs enviados no turno; evento
+  `[SOURCES]` mapeia ID → documento/página; TTS remove marcadores.
+- Voz (D11–D12): sem troca de provedor na V1; `/api/voice/status` →
+  `{ tts, sttServer }`. Parar aborta áudio e stream; o servidor persiste a
+  narrativa parcial com `meta.interrupted = true`.
+- Starters (D13): `starter` enumerado; turno persiste mensagem canônica com
+  `meta.starter`.
+
+Invariantes adicionais:
+
+- Texto de fonte é dado, nunca instrução: entra no prompt em blocos `<fonte>`
+  com delimitadores e sentinelas neutralizados; saídas estruturadas são
+  validadas server-side antes de UI especial ou persistência.
+- Proveniência (página, hash, trecho, sessão) nunca vem do cliente.
+- Conceito permanente só é criado ou alterado com confirmação humana.
+
 ## Segurança e observabilidade
 
 - Sanitização HTML usa allowlist explícita; imagens externas são bloqueadas.

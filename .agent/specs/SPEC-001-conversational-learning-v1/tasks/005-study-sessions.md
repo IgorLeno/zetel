@@ -1,0 +1,50 @@
+---
+id: "005"
+title: "Study sessions e continuidade"
+status: READY
+blocked_by: ["001"]
+writer: null
+reviewer: null
+commit: null
+push: null
+review_result: pending
+handoff: null
+---
+
+## Objetivo
+
+Introduzir sessões de estudo nomeáveis com Continuar/Nova sessão e histórico escopado por sessão.
+
+## Perfil planejado
+
+`execution_profile` planejado: `FULL`. Justificativa: Migration com backfill de `chat_messages` e novas rotas de persistência.
+O perfil efetivo é registrado por `./agentctl task start`; elevação autônoma
+permitida, downgrade exige aprovação humana.
+
+## Criterios de aceitacao
+
+- Migration cria `study_sessions` e `chat_messages.session_id`; backfill `legacy-<zetel_id>` para Zetels com mensagens.
+- Rotas listar/criar/renomear/atualizar foco e perfil/arquivar sessão.
+- Chat exige/resolve `sessionId` pertencente ao Zetel; histórico e janela por sessão.
+- Continuar sessão restaura foco (arquivo/página), perfil e mensagens; Nova sessão não apaga memória/notas/conceitos.
+- Título sugerido determinístico (documento · página · data), editável; nome manual persistido.
+- `PATCH` de meta verifica que a mensagem pertence ao Zetel/sessão.
+- "Limpar histórico" passa a agir na sessão atual.
+
+## Testes
+
+Integração: migration sobre banco legado, rotas de sessão, chat escopado, PATCH de mensagem alheia rejeitado. Unit: sugestão de título.
+
+## Gates
+
+Gates FULL completos.
+
+## Escopo
+
+Arquivos ou áreas prováveis: `migrations/007_*.sql`, `lib/study-session-service.ts`, `lib/chat-service.ts`, `app/api/zetels/[id]/sessions/`, rota de chat, `components/ChatPanel.tsx`.
+
+Fora de escopo: Resumo de sessão por LLM, perfis, retrieval.
+
+## Riscos
+
+Backfill em bancos grandes; UI de seleção de sessão mínima (integração final em 012).
