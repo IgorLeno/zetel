@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 18,
+  "revision": 19,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -8,7 +8,7 @@
     "approved_by": "Igor Fernandes",
     "approved_at": "2026-09-26T11:14:06.443Z"
   },
-  "active_task": null,
+  "active_task": "003",
   "tasks": [
     {
       "id": "001",
@@ -43,10 +43,13 @@
     {
       "id": "003",
       "title": "Leitor PDF e foco de página no chat",
-      "status": "READY",
+      "status": "IN_PROGRESS",
       "blocked_by": [
         "002"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "Nova rota serve arquivo do vault (path traversal, posse por Zetel) e altera contrato publico do chat (foco resolvido server-side, texto de fonte no prompt): seguranca e contrato publico, FULL por regra.",
+      "reviews_requested": 2
     },
     {
       "id": "004",
@@ -138,84 +141,14 @@
     }
   ],
   "session": {
-    "id": "task-002-20260926",
+    "id": "task-003-20260926",
     "agent": "claude",
-    "task_id": "002",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-09-26T13:30:57.340Z",
+    "task_id": "003",
+    "status": "IN_PROGRESS",
+    "started_at": "2026-09-26T16:21:45.485Z",
     "execution_profile": "FULL",
-    "profile_justification": "Migration 006 nova (pdf_pages/pdf_sections + colunas em zetel_files), dependencia nova pdfjs-dist, parsing de entrada nao confiavel (PDF) e persistencia de derivados: FULL por regra.",
-    "reviews_requested": 2,
-    "validating_at": "2026-09-26T13:51:27.068Z",
-    "validation_result": "PASS",
-    "fixed_point": "ce2dca05a7ee09d2906b2afe53257b10294c504902566ad512bdd1007e6bcf1d",
-    "review_aggregate": ".agent/specs/SPEC-001-conversational-learning-v1/reviews/002-aggregate.json",
-    "aggregated_at": "2026-09-26T13:58:17.268Z",
-    "review_result": {
-      "engineering-quality": "PASS",
-      "spec-compliance": "PASS"
-    },
-    "reviewing_at": "2026-09-26T13:56:03.603Z",
-    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/002-validation.json",
-    "gates_plan": [
-      {
-        "category": "focused",
-        "argv": [
-          "pnpm",
-          "exec",
-          "vitest",
-          "run",
-          "tests/unit/pdf",
-          "tests/integration/pdf",
-          "tests/unit/ingestao",
-          "tests/integration/ingestao",
-          "tests/integration/study-guide"
-        ]
-      },
-      {
-        "category": "build",
-        "argv": [
-          "pnpm",
-          "build"
-        ]
-      },
-      {
-        "category": "test-ci",
-        "argv": [
-          "pnpm",
-          "test:ci"
-        ]
-      },
-      {
-        "category": "coverage",
-        "argv": [
-          "pnpm",
-          "test:coverage"
-        ]
-      },
-      {
-        "category": "typecheck",
-        "argv": [
-          "pnpm",
-          "typecheck"
-        ]
-      },
-      {
-        "category": "diff-check",
-        "argv": [
-          "git",
-          "diff",
-          "--check"
-        ]
-      }
-    ],
-    "done_at": "2026-09-26T13:58:17.744Z",
-    "active_task_cleared": true,
-    "external_checks": "pending-not-waited",
-    "delivery_commit": "4e3d1c454c54d6b3ec7945ac0470bc7817bf6f57",
-    "push": "origin/feat/spec-001-task-002-pdf-ingest",
-    "closed_at": "2026-09-26T16:13:51.950Z",
-    "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/002-pdf-ingest-4e3d1c4.md"
+    "profile_justification": "Nova rota serve arquivo do vault (path traversal, posse por Zetel) e altera contrato publico do chat (foco resolvido server-side, texto de fonte no prompt): seguranca e contrato publico, FULL por regra.",
+    "reviews_requested": 2
   },
   "approval": {
     "spec": true,

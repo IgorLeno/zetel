@@ -1,7 +1,7 @@
 ---
 id: "003"
 title: "Leitor PDF e foco de página no chat"
-status: READY
+status: IN_PROGRESS
 blocked_by: ["002"]
 writer: null
 reviewer: null
@@ -9,6 +9,8 @@ commit: null
 push: null
 review_result: pending
 handoff: null
+execution_profile: FULL
+profile_justification: "Nova rota serve arquivo do vault (path traversal, posse por Zetel) e altera contrato publico do chat (foco resolvido server-side, texto de fonte no prompt): seguranca e contrato publico, FULL por regra."
 ---
 
 ## Objetivo
