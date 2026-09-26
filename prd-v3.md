@@ -526,3 +526,7 @@ Gate 13.4 aprovado → PRD v5
 ```
 
 Nenhum módulo começa antes do gate do anterior ser aprovado por Igor.
+
+> Nota (2026-09-26): a direção "PRD v5 = prompts editáveis + modo internet"
+> registrada neste documento foi substituída pelo `prd-v5.md` (Conversational
+> Learning V1). Este PRD permanece como histórico.

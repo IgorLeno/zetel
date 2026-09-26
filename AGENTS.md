@@ -2,7 +2,9 @@
 
 Zetel é um parceiro de estudos local-first em Next.js, com vault Obsidian e
 SQLite como estado operacional. O Módulo 14 está concluído; o próximo objetivo
-de produto é o PRD v5 (prompts editáveis em runtime e modo internet).
+de produto é o PRD v5 — Conversational Learning V1 (`prd-v5.md`, visão em
+`docs/PRODUCT_VISION.md`, spec `SPEC-001-conversational-learning-v1`). A antiga
+direção "prompts editáveis + modo internet" foi substituída em 2026-09-26.
 
 ## Fontes de verdade
 
