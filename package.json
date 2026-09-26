@@ -27,6 +27,7 @@
     "highlight.js": "^11.11.1",
     "katex": "^0.16.47",
     "next": "^15.5.0",
+    "pdfjs-dist": "^6.3.289",
     "postcss": "^8.5.15",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

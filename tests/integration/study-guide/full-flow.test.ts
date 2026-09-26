@@ -1,7 +1,8 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { processZetel } from '@/lib/ingestao-service';
+import { addFile, processZetel } from '@/lib/ingestao-service';
 import { zetelArtefatosDir } from '@/lib/paths';
 import { requestJson, readApiKey } from '@/lib/openrouter';
 import {
@@ -11,6 +12,7 @@ import {
   guiaEstudoSourcePath,
   readStudyGuideSourceMap,
 } from '@/lib/study-guide-service';
+import { threePagePdf } from '@/tests/helpers/pdf-fixture';
 import { cleanupTempEnv, makeTempEnv, seedZetelWithFile, type TempEnv } from '@/tests/helpers/temp-env';
 
 vi.mock('@/lib/settings', () => ({
@@ -77,6 +79,29 @@ describe('Guia de Estudo — pipeline ponta-a-ponta', () => {
     expect(existsSync(guiaEstudoHtmlPath(env.vaultPath, slug))).toBe(true);
     expect(existsSync(join(zetelArtefatosDir(env.vaultPath, slug), GUIA_ESTUDO_META_FILENAME))).toBe(true);
     expect(existsSync(guiaEstudoSourcePath(env.vaultPath, slug))).toBe(true);
+  });
+
+  it('PDF anexado fica fora do Markdown enviado ao Guia de Estudo', async () => {
+    const { zetelId } = seedZetelWithFile(env.db, env.vaultPath);
+    const srcDir = mkdtempSync(join(tmpdir(), 'zetel-sg-pdf-'));
+    try {
+      const pdfPath = join(srcDir, 'Livro.pdf');
+      writeFileSync(pdfPath, threePagePdf());
+      addFile(env.db, env.vaultPath, zetelId, pdfPath);
+    } finally {
+      rmSync(srcDir, { recursive: true, force: true });
+    }
+    processZetel(env.db, env.vaultPath, zetelId);
+    mockedRequestJson.mockResolvedValue({
+      content: validGuiaPayload(),
+      usage: { promptTokens: 10, completionTokens: 20, totalTokens: 30 },
+    });
+
+    await generateStudyGuide(env.db, env.vaultPath, zetelId);
+
+    const prompt = JSON.stringify(mockedRequestJson.mock.calls[0]);
+    expect(prompt).not.toContain('Livro.pdf');
+    expect(prompt).not.toContain('%PDF');
   });
 
   it('HTML gerado contém o título do guia', async () => {

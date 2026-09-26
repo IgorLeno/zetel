@@ -36,6 +36,7 @@ import {
 } from './ingestao-service';
 import { getZetelById, slugify } from './zetel-service';
 import { sanitizeSchema } from './sanitize';
+import { isPdfFilename } from './pdf-service';
 import {
   GUIA_ESTUDO_FILENAME,
   GUIA_ESTUDO_META_FILENAME,
@@ -767,13 +768,15 @@ export async function renderZetel(
   const fileRows = db
     .prepare('SELECT filename FROM zetel_files WHERE zetel_id = ? ORDER BY order_index ASC')
     .all(zetelId) as ZetelFileRow[];
+  // PDFs não entram no pipeline Markdown (derivados próprios em pdf_pages).
+  const markdownRows = fileRows.filter((row) => !isPdfFilename(row.filename));
 
   const dir = arquivosDir(vaultPath, slug);
   const maxWords = Number(getSetting('max_words_per_page')) || DEFAULT_MAX_WORDS;
   const anchorOf = makeAnchorFactory(new Set<string>());
   const segmented: SegmentedPage[] = [];
 
-  for (const row of fileRows) {
+  for (const row of markdownRows) {
     const path = join(dir, row.filename);
     if (!existsSync(path)) {
       throw new Error(

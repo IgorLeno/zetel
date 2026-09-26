@@ -1,14 +1,18 @@
 ---
 id: "002"
 title: "Ingestão de PDF preservando páginas"
-status: READY
+status: DONE
 blocked_by: ["001"]
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: FULL
+profile_justification: "Migration 006 nova (pdf_pages/pdf_sections + colunas em zetel_files), dependencia nova pdfjs-dist, parsing de entrada nao confiavel (PDF) e persistencia de derivados: FULL por regra."
+validation: PASS
+validated_at: "2026-09-26T13:56:03.603Z"
 ---
 
 ## Objetivo

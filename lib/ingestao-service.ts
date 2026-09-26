@@ -1,10 +1,13 @@
 import type Database from 'better-sqlite3';
 import { createHash, randomUUID } from 'node:crypto';
 import {
+  closeSync,
   copyFileSync,
   existsSync,
   mkdirSync,
+  openSync,
   readFileSync,
+  readSync,
   rmSync,
   statSync,
 } from 'node:fs';
@@ -17,6 +20,15 @@ import { visit } from 'unist-util-visit';
 import type { Root, RootContent } from 'mdast';
 import type { Node } from 'unist';
 import { logger } from './logger';
+import {
+  extractPdf,
+  isPdfFilename,
+  looksLikePdf,
+  MAX_PDF_BYTES,
+  PDF_TOO_LARGE_MESSAGE,
+  type ExtractionStatus,
+  type PdfExtraction,
+} from './pdf-service';
 import { getSetting, setSetting } from './settings';
 import { getZetelById, slugify } from './zetel-service';
 import type { ZetelFile } from '@/types/zetel-file';
@@ -59,6 +71,8 @@ interface ZetelFileRow {
   content_hash: string | null;
   size_bytes: number | null;
   last_seen_mtime: number | null;
+  page_count: number | null;
+  extraction_status: ExtractionStatus | null;
   created_at: string;
   updated_at: string;
 }
@@ -72,6 +86,8 @@ function rowToFile(row: ZetelFileRow): ZetelFile {
     contentHash: row.content_hash,
     sizeBytes: row.size_bytes,
     lastSeenMtime: row.last_seen_mtime,
+    pageCount: row.page_count,
+    extractionStatus: row.extraction_status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -131,10 +147,23 @@ function resolveSemColisao(dir: string, name: string): string {
 // Funções de arquivo
 // ---------------------------------------------------------------------------
 
+/** Lê só o início do arquivo (sem carregar PDFs grandes inteiros na memória). */
+function readHead(path: string, bytes: number): Buffer {
+  const fd = openSync(path, 'r');
+  try {
+    const buf = Buffer.alloc(bytes);
+    const n = readSync(fd, buf, 0, bytes, 0);
+    return buf.subarray(0, n);
+  } finally {
+    closeSync(fd);
+  }
+}
+
 /**
- * Anexa um arquivo `.md` ao Zetel: valida extensão, copia para `arquivos/` sem
- * colisão, registra em `zetel_files` (ainda não processado: hashes nulos) e
- * marca `reading_stale = 1`.
+ * Anexa um arquivo `.md` ou `.pdf` ao Zetel: valida extensão (e, para PDF,
+ * tamanho ≤ `MAX_PDF_BYTES` e cabeçalho `%PDF-`), copia byte a byte para
+ * `arquivos/` sem colisão, registra em `zetel_files` (ainda não processado:
+ * hashes nulos) e marca `reading_stale = 1`.
  */
 export function addFile(
   db: Database.Database,
@@ -144,8 +173,17 @@ export function addFile(
 ): ZetelFile {
   const slug = assertZetelAtivo(db, zetelId);
 
-  if (extname(sourceFilePath).toLowerCase() !== '.md') {
-    throw new Error('Apenas arquivos .md são aceitos.');
+  const isPdf = isPdfFilename(sourceFilePath);
+  if (!isPdf && extname(sourceFilePath).toLowerCase() !== '.md') {
+    throw new Error('Apenas arquivos .md ou .pdf são aceitos.');
+  }
+  if (isPdf) {
+    if (statSync(sourceFilePath).size > MAX_PDF_BYTES) {
+      throw new Error(PDF_TOO_LARGE_MESSAGE);
+    }
+    if (!looksLikePdf(readHead(sourceFilePath, 1024))) {
+      throw new Error('O arquivo não é um PDF válido.');
+    }
   }
 
   const dir = arquivosDir(vaultPath, slug);
@@ -547,9 +585,12 @@ export function processZetel(
 ): ProcessResult {
   const slug = assertZetelAtivo(db, zetelId);
 
-  const rows = db
-    .prepare('SELECT * FROM zetel_files WHERE zetel_id = ? ORDER BY order_index ASC')
-    .all(zetelId) as ZetelFileRow[];
+  // PDFs têm pipeline próprio (processPdfFiles); aqui só Markdown.
+  const rows = (
+    db
+      .prepare('SELECT * FROM zetel_files WHERE zetel_id = ? ORDER BY order_index ASC')
+      .all(zetelId) as ZetelFileRow[]
+  ).filter((row) => !isPdfFilename(row.filename));
 
   // Passo 1 — ler e validar TODOS os arquivos antes de qualquer escrita.
   const dir = arquivosDir(vaultPath, slug);
@@ -635,6 +676,174 @@ export function processZetel(
     pages: result.pagesCount,
     files: result.filesProcessed,
     imagesCopied: result.imagesCopied,
+  });
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Processamento de PDF (SPEC-001 D1–D2) — derivados em pdf_pages/pdf_sections
+// ---------------------------------------------------------------------------
+
+export interface PdfProcessResult {
+  filesProcessed: number;
+  pagesCount: number;
+  noText: number;
+  failed: number;
+}
+
+interface PdfOutcome {
+  row: ZetelFileRow;
+  /** `null` quando o arquivo excede `MAX_PDF_BYTES` e não chega a ser lido. */
+  hash: string | null;
+  size: number;
+  mtime: number;
+  /** `null` = extração falhou (`failed`). */
+  extraction: PdfExtraction | null;
+}
+
+/**
+ * Extrai texto por página e outline de cada PDF do Zetel e persiste os
+ * derivados. O original nunca é alterado. Idempotente: cada run substitui os
+ * derivados do arquivo (DELETE + INSERT numa transação), então mesmo PDF →
+ * mesmas linhas e hashes. PDF inválido/protegido vira `failed` (derivados
+ * removidos) e PDF sem texto vira `no_text`; nenhum dos dois interrompe os
+ * demais arquivos.
+ */
+export async function processPdfFiles(
+  db: Database.Database,
+  vaultPath: string,
+  zetelId: string,
+): Promise<PdfProcessResult> {
+  const slug = assertZetelAtivo(db, zetelId);
+  const dir = arquivosDir(vaultPath, slug);
+
+  const rows = (
+    db
+      .prepare('SELECT * FROM zetel_files WHERE zetel_id = ? ORDER BY order_index ASC')
+      .all(zetelId) as ZetelFileRow[]
+  ).filter((row) => isPdfFilename(row.filename));
+
+  // Mesma política do Markdown: arquivo ausente é drift e aborta antes de escrever.
+  const driftError = () =>
+    new Error(
+      'Um arquivo deste Zetel não foi encontrado em arquivos/ (pode ter sido removido fora do app). ' +
+        'Verifique a aba Arquivos e reprocesse.',
+    );
+  for (const row of rows) {
+    if (!existsSync(join(dir, row.filename))) throw driftError();
+  }
+
+  const outcomes: PdfOutcome[] = [];
+  for (const row of rows) {
+    const path = join(dir, row.filename);
+    const fsFailed = (err: unknown): Error => {
+      // Regra #6: o erro de fs traz o caminho (com filename) — só o código vai ao log.
+      logger.warn('pdf read failed', {
+        fileId: row.id,
+        code: (err as NodeJS.ErrnoException).code ?? 'unknown',
+      });
+      return driftError();
+    };
+
+    let st: ReturnType<typeof statSync>;
+    try {
+      st = statSync(path);
+    } catch (err) {
+      throw fsFailed(err);
+    }
+    const mtime = Math.floor(st.mtimeMs);
+    if (st.size > MAX_PDF_BYTES) {
+      // Arquivo trocado no vault depois do upload: decidido pelo stat, sem
+      // carregar os bytes na memória nem passar pelo parser (hash fica nulo).
+      logger.warn('pdf extraction skipped', { fileId: row.id, bytes: st.size, reason: 'max_bytes' });
+      outcomes.push({ row, hash: null, size: st.size, mtime, extraction: null });
+      continue;
+    }
+
+    let buf: Buffer;
+    try {
+      // stat antes do read: mtime nunca é mais novo que os bytes hasheados.
+      buf = readFileSync(path);
+    } catch (err) {
+      throw fsFailed(err);
+    }
+    const base = { row, hash: sha256(buf), size: buf.length, mtime };
+    try {
+      outcomes.push({ ...base, extraction: await extractPdf(buf) });
+    } catch (err) {
+      // Regra #6: só o tipo do erro (ex.: InvalidPDFException), nunca a mensagem.
+      logger.warn('pdf extraction failed', {
+        fileId: row.id,
+        zetelId,
+        error: (err as Error)?.name ?? 'unknown',
+      });
+      outcomes.push({ ...base, extraction: null });
+    }
+  }
+
+  const result: PdfProcessResult = { filesProcessed: 0, pagesCount: 0, noText: 0, failed: 0 };
+  const persisted: PdfOutcome[] = [];
+  const now = new Date().toISOString();
+  db.transaction(() => {
+    const stillOwned = db.prepare('SELECT 1 FROM zetel_files WHERE id = ? AND zetel_id = ?');
+    const updateFile = db.prepare(
+      `UPDATE zetel_files
+          SET content_hash = ?, size_bytes = ?, last_seen_mtime = ?,
+              page_count = ?, extraction_status = ?, updated_at = ?
+        WHERE id = ?`,
+    );
+    const deletePages = db.prepare('DELETE FROM pdf_pages WHERE file_id = ?');
+    const deleteSections = db.prepare('DELETE FROM pdf_sections WHERE file_id = ?');
+    const insertPage = db.prepare(
+      `INSERT INTO pdf_pages (file_id, page_number, content_text, content_hash, char_count)
+       VALUES (?, ?, ?, ?, ?)`,
+    );
+    const insertSection = db.prepare(
+      `INSERT INTO pdf_sections (file_id, ord, title, level, start_page, end_page)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+
+    for (const o of outcomes) {
+      // A extração é assíncrona: o arquivo pode ter sido removido nesse meio-tempo.
+      if (!stillOwned.get(o.row.id, zetelId)) continue;
+      persisted.push(o);
+
+      const x = o.extraction;
+      const status: ExtractionStatus = x ? x.status : 'failed';
+      updateFile.run(o.hash, o.size, o.mtime, x ? x.pageCount : null, status, now, o.row.id);
+      deletePages.run(o.row.id);
+      deleteSections.run(o.row.id);
+
+      result.filesProcessed++;
+      if (!x) {
+        result.failed++;
+        continue;
+      }
+      for (const p of x.pages) {
+        insertPage.run(o.row.id, p.pageNumber, p.contentText, p.contentHash, p.charCount);
+      }
+      for (const s of x.sections) {
+        insertSection.run(o.row.id, s.ord, s.title, s.level, s.startPage, s.endPage);
+      }
+      result.pagesCount += x.pageCount;
+      if (x.status === 'no_text') result.noText++;
+    }
+  })();
+
+  for (const o of persisted) {
+    logger.info('pdf processed', {
+      fileId: o.row.id,
+      pages: o.extraction?.pageCount ?? 0,
+      bytes: o.size,
+      status: o.extraction?.status ?? 'failed',
+    });
+  }
+  logger.info('zetel pdfs processed', {
+    zetelId,
+    files: result.filesProcessed,
+    pages: result.pagesCount,
+    noText: result.noText,
+    failed: result.failed,
   });
   return result;
 }

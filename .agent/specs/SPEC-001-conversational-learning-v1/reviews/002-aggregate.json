@@ -1,0 +1,327 @@
+{
+  "schema_version": 1,
+  "spec_id": "SPEC-001-conversational-learning-v1",
+  "task_id": "002",
+  "fixed_point": "ce2dca05a7ee09d2906b2afe53257b10294c504902566ad512bdd1007e6bcf1d",
+  "generated_at": "2026-09-26T13:58:17.268Z",
+  "reviews_requested": 2,
+  "axes": [
+    "engineering-quality",
+    "spec-compliance"
+  ],
+  "report_paths": [
+    ".agent/specs/SPEC-001-conversational-learning-v1/reviews/002-engineering-quality.md",
+    ".agent/specs/SPEC-001-conversational-learning-v1/reviews/002-spec-compliance.md"
+  ],
+  "report_hashes": {
+    ".agent/specs/SPEC-001-conversational-learning-v1/reviews/002-engineering-quality.md": "9144458fa5b01f17a374653251942b946da5b6159094fbaa107fb6986f7cb014",
+    ".agent/specs/SPEC-001-conversational-learning-v1/reviews/002-spec-compliance.md": "1e77ceadc69187ba1d44ceb26207c2f2517ce5ee5c9c2d3627c4ef4265535e34"
+  },
+  "reviewers": [
+    "claude-subagent-engineering-quality",
+    "claude-subagent-spec-compliance"
+  ],
+  "review_run_ids": [
+    "review-quality-002-claude-subagent-r2",
+    "review-spec-002-claude-subagent-r2"
+  ],
+  "package_ids": [
+    "pkg_215b1ec8d5948dee78957882",
+    "pkg_e5be2330472a5bffc931a4fa"
+  ],
+  "findings_by_severity": {
+    "BLOCKING": 0,
+    "MAJOR": 2,
+    "MINOR": 11,
+    "NIT": 7
+  },
+  "findings_by_status": {
+    "OPEN": 9,
+    "RESOLVED": 8,
+    "NOT_APPLICABLE": 3
+  },
+  "findings": [
+    {
+      "axis": "engineering-quality",
+      "id": "F001",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "title": "No resource bounds on PDF extraction beyond the 50 MB input size",
+      "location": {
+        "file": "lib/pdf-service.ts",
+        "line": 926,
+        "not_applicable_reason": null
+      },
+      "evidence": "diff.patch 777-781 defines maxPages 5000, maxTotalChars 20M and timeoutMs 120s. 952 rejects when numPages > maxPages, 956 checks the deadline before each page, and 967-968 enforces the running character total. processPdfFiles skips files over MAX_PDF_BYTES before the parser (316-321). The tests at 1606-1615 and 1473-1480 exercise every branch. The worker thread was an optional part of the recommendation; leaving it for a local single-user app is acceptable. The remaining time-bound gap is tracked separately as F011.",
+      "recommendation": "None beyond F011/F012."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F002",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "title": "fs errors in processPdfFiles can leak absolute path/filename into logs and HTTP response",
+      "location": {
+        "file": "lib/ingestao-service.ts",
+        "line": 303,
+        "not_applicable_reason": null
+      },
+      "evidence": "diff.patch 303-314: statSync/readFileSync are in a try/catch. It logs only { fileId, code } and throws the path-free driftError (289-293). The route's err.message logging (92-93) is unchanged, but the errors this service throws on these paths no longer contain paths. No test covers this catch branch (see F005).",
+      "recommendation": "None required. A test that forces the read to fail (e.g., chmod 000 or replacing the file with a directory) would lock the behaviour in."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F003",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "Process route can return 400 after Markdown was already committed",
+      "location": {
+        "file": "app/api/zetels/[id]/process/route.ts",
+        "line": 80,
+        "not_applicable_reason": null
+      },
+      "evidence": "Unchanged (diff.patch 79-93): processZetel commits, then `await processPdfFiles` can throw the drift error, and the route returns only { error } with status 400. The writer deferred this deliberately: re-running is idempotent and is the recovery path. Concurrent /process calls for the same Zetel can still interleave across the await.",
+      "recommendation": "In a later task, return the Markdown result together with a PDF error field, and consider a per-Zetel in-process mutex."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F004",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "Extraction config may mark recoverable or CJK PDFs as 'failed'",
+      "location": {
+        "file": "lib/pdf-service.ts",
+        "line": 932,
+        "not_applicable_reason": null
+      },
+      "evidence": "stopAtErrors is now false (diff.patch 944-946), which resolves the recoverable-error part. No cMapUrl/cMapPacked or standardFontDataUrl is passed (932-947), so PDFs using predefined non-Identity CMaps will still extract poorly or not at all. The writer deferred this deliberately. Only Helvetica/WinAnsi fixtures exist.",
+      "recommendation": "When CJK support is scheduled, pass cMapUrl (pdfjs-dist/cmaps/) with cMapPacked: true and standardFontDataUrl, and add a CMap fixture."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F005",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "Concurrency guard and several adversarial paths are untested",
+      "location": {
+        "file": "tests/integration/pdf/pdf-ingest-flow.test.ts",
+        "line": 1461,
+        "not_applicable_reason": null
+      },
+      "evidence": "New tests cover removal during extraction (diff.patch 1461-1471), a PDF-only Zetel (1453-1459) and an oversized replaced file (1473-1480). Still missing: an encrypted/password PDF (the extractPdf docstring at 921-925 promises it rejects), outlines deeper than MAX_OUTLINE_DEPTH or larger than MAX_OUTLINE_ITEMS (792-793), the fs-read failure branch (307-314), and the 413 route path (45-47). The repo has no route tests.",
+      "recommendation": "Add an encrypted fixture expecting 'failed' / PasswordException, a deep-outline and a huge-outline fixture, and a test for a read failure. Route-level coverage can wait until the repo adopts route tests."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F006",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "Rejected dynamic import of pdf.js is cached for the process lifetime",
+      "location": {
+        "file": "lib/pdf-service.ts",
+        "line": 867,
+        "not_applicable_reason": null
+      },
+      "evidence": "diff.patch 867-870: `.catch` resets pdfjsPromise to null and rethrows.",
+      "recommendation": "None."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F007",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "Hash, size and mtime may describe different file versions",
+      "location": {
+        "file": "lib/ingestao-service.ts",
+        "line": 305,
+        "not_applicable_reason": null
+      },
+      "evidence": "diff.patch 304-315: statSync runs before readFileSync, and size = buf.length, so size and hash come from the same bytes and mtime is never newer than them.",
+      "recommendation": "None."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F008",
+      "severity": "NIT",
+      "status": "NOT_APPLICABLE",
+      "title": "Defense-in-depth: set isEvalSupported: false",
+      "location": {
+        "file": "lib/pdf-service.ts",
+        "line": 758,
+        "not_applicable_reason": null
+      },
+      "evidence": "The writer says the option no longer exists in pdfjs-dist 6.x. The module comment now records this (diff.patch 758-759). I could not check the pdfjs-dist sources because they are outside this package, so this status rests on the writer's claim and is not independently verified.",
+      "recommendation": "None, provided the claim holds. If a future pdf.js version brings the option back, set it to false."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F009",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Schema does not constrain extraction_status or section ranges",
+      "location": {
+        "file": "migrations/006_pdf_pages.sql",
+        "line": 1020,
+        "not_applicable_reason": null
+      },
+      "evidence": "Unchanged (diff.patch 1019-1020). The writer is keeping the migration SQL exactly as in the approved PLAN.",
+      "recommendation": "Consider CHECK constraints in a future migration if the PLAN is revised."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F010",
+      "severity": "NIT",
+      "status": "RESOLVED",
+      "title": "Minor inconsistencies in logging/UI and duplicated message",
+      "location": {
+        "file": "lib/ingestao-service.ts",
+        "line": 384,
+        "not_applicable_reason": null
+      },
+      "evidence": "Only persisted outcomes are logged (diff.patch 336, 360, 384-391). The UI checks pdfPagesCount (102). There is a single PDF_TOO_LARGE_MESSAGE (767), used at 46 and 217. Titles are sliced by code point (856). The optional O(n^2) endPage change was not made, which is fine at these limits.",
+      "recommendation": "None."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F011",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "Time budget is not enforced inside the document open, a single page or the outline walk",
+      "location": {
+        "file": "lib/pdf-service.ts",
+        "line": 956,
+        "not_applicable_reason": null
+      },
+      "evidence": "diff.patch 950-977: the deadline is checked only before each getPage. The call at 950 (`await task.promise`), each `getTextContent` (958) and `extractSections` (977, up to 5000 destination lookups) all run with no deadline. One hostile page or a very large outline can therefore take far longer than timeoutMs. Text for a single page is also built in full (959-964) before maxTotalChars is checked (968).",
+      "recommendation": "Race task.promise, each getTextContent and extractSections against the remaining budget (Promise.race with a timer that calls task.destroy()). Check the deadline inside the outline loop too, and optionally cap raw per page as it is built."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F012",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "Oversized re-check happens after reading the whole file into memory",
+      "location": {
+        "file": "lib/ingestao-service.ts",
+        "line": 306,
+        "not_applicable_reason": null
+      },
+      "evidence": "diff.patch 305-316: statSync is called only for mtime, then readFileSync loads the entire file, and only afterwards is `buf.length > MAX_PDF_BYTES` checked. A file replaced out of band with a few hundred MB is fully buffered and hashed for nothing. Above about 2 GiB, readFileSync throws ERR_FS_FILE_TOO_LARGE, which the catch at 307-314 reports as drift and uses to abort processing of every PDF in the Zetel, instead of marking that one file 'failed'.",
+      "recommendation": "Use the stat result already taken: if st.size > MAX_PDF_BYTES, record 'failed' (size from st.size, hash null or skipped) without calling readFileSync."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "F001",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "No test covers a Zetel whose only files are PDFs going through the process route (processZetel then renderZetel)",
+      "location": {
+        "file": "tests/integration/pdf/pdf-ingest-flow.test.ts",
+        "line": 1453,
+        "not_applicable_reason": null
+      },
+      "evidence": "The new test 'Zetel só com PDF processa pelo mesmo caminho da rota sem erro' (diff.patch 1453-1459) runs processZetel, which returns pagesCount 0 and filesProcessed 0 without throwing, then processPdfFiles, which fills 3 pdf_pages rows. That is the same sequence the /process route runs (diff.patch 80-81). The route does not chain renderZetel, and the Documento Técnico being Markdown-only matches SPEC D2 ('zetel_pages permanece exclusivo de Markdown').",
+      "recommendation": "None."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "F002",
+      "severity": "MINOR",
+      "status": "NOT_APPLICABLE",
+      "title": "pdf.js getDocument is not called with isEvalSupported: false",
+      "location": {
+        "file": "lib/pdf-service.ts",
+        "line": 758,
+        "not_applicable_reason": null
+      },
+      "evidence": "The module comment now says isEvalSupported no longer exists in pdf.js 6 because the new Function path for fonts was removed (diff.patch 758-759). The pdfjs-dist sources are not in the package, so this reviewer cannot confirm the claim directly. It is consistent with upstream removing eval-based glyph compilation, with the pinned version 6.3.289, and with the passing test that OpenAction/annotation JavaScript is not executed (1590-1604). Adding an option that does not exist would not harden anything.",
+      "recommendation": "None for this task. If a future pdfjs-dist upgrade reintroduces an eval-related option, disable it explicitly."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "F003",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "The HTTP upload route's early 413 rejection and error mapping have no test",
+      "location": {
+        "file": "app/api/zetels/[id]/files/route.ts",
+        "line": 45,
+        "not_applicable_reason": null
+      },
+      "evidence": "Unchanged. The 413 guard (diff.patch 44-47) now uses the shared PDF_TOO_LARGE_MESSAGE (767), which removes message drift. The branch itself and the HTTP mapping for a rejected .txt or a fake .pdf are still not exercised. The writer says the repo has no route-level tests and that the underlying addFile limit is tested (1354-1365). The acceptance criteria hold through the service layer, so this is not blocking.",
+      "recommendation": "Optionally add a route handler test that calls POST with a Request built from a FormData, in a follow-up or when route testing is introduced."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "F004",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "processPdfFiles reads the whole file without re-checking MAX_PDF_BYTES",
+      "location": {
+        "file": "lib/ingestao-service.ts",
+        "line": 316,
+        "not_applicable_reason": null
+      },
+      "evidence": "processPdfFiles now marks any file over MAX_PDF_BYTES as failed without calling extractPdf, and logs only fileId, bytes and reason (diff.patch 316-321). The test 'PDF trocado no vault acima do limite vira failed sem passar pelo parser' covers it (1473-1480). The file is still read into memory before the check; see F008.",
+      "recommendation": "None for the limit itself; see F008."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "F005",
+      "severity": "NIT",
+      "status": "NOT_APPLICABLE",
+      "title": "The package cannot confirm that migration 006 is transactional",
+      "location": {
+        "file": "migrations/006_pdf_pages.sql",
+        "line": 1,
+        "not_applicable_reason": null
+      },
+      "evidence": "The writer says lib/migrate.ts wraps each migration file in db.transaction. That file is unchanged and not in the package, so it falls outside the diff under review. The migration test goes through runMigrations (diff.patch 1179-1274 region), which is consistent with the claim.",
+      "recommendation": "None."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "F006",
+      "severity": "NIT",
+      "status": "RESOLVED",
+      "title": "The per-file 'pdf processed' log also fires for files skipped because they were removed during extraction",
+      "location": {
+        "file": "lib/ingestao-service.ts",
+        "line": 384,
+        "not_applicable_reason": null
+      },
+      "evidence": "Outcomes are pushed to 'persisted' only after the stillOwned check (diff.patch 359-360), and 'pdf processed' is logged only for persisted outcomes (384-391). The test 'arquivo removido durante a extração não é persistido' covers the skip path (1461-1471).",
+      "recommendation": "None."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "F007",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "The extraction timeout is only checked between pages, so a single slow page is not bounded",
+      "location": {
+        "file": "lib/pdf-service.ts",
+        "line": 956,
+        "not_applicable_reason": null
+      },
+      "evidence": "The deadline is checked before each getPage and getTextContent call (diff.patch 956-958) but not during them, and not during extractSections (977). A hostile page or outline could take longer than timeoutMs. This is defensive hardening beyond the acceptance criteria, not a violation.",
+      "recommendation": "Optionally race each page's getTextContent and the outline pass against the remaining budget, for example with Promise.race and a timer, and destroy the task when it expires."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "F008",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "A PDF over the limit that was swapped into the vault is still read fully into memory before the size check",
+      "location": {
+        "file": "lib/ingestao-service.ts",
+        "line": 306,
+        "not_applicable_reason": null
+      },
+      "evidence": "processPdfFiles calls readFileSync(path) (diff.patch 306) and only then compares buf.length with MAX_PDF_BYTES (316). The statSync call just before it (305) already yields the size. The parser is correctly skipped, but an arbitrarily large file placed in the vault by hand is still loaded into memory and hashed.",
+      "recommendation": "Use the statSync result to check the size before readFileSync, and mark the file failed without reading it. The content hash can stay null or come from a streamed hash."
+    }
+  ],
+  "blocking_findings": 0,
+  "result": "PASS"
+}

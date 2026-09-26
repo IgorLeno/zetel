@@ -7,6 +7,7 @@ import { getDb } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
 import { addFile, listFiles } from '@/lib/ingestao-service';
 import { logger } from '@/lib/logger';
+import { isPdfFilename, MAX_PDF_BYTES, PDF_TOO_LARGE_MESSAGE } from '@/lib/pdf-service';
 
 export const runtime = 'nodejs'; // better-sqlite3 + fs não rodam no Edge
 
@@ -32,7 +33,7 @@ export async function GET(_request: Request, { params }: Ctx) {
   }
 }
 
-/** POST /api/zetels/[id]/files — upload de um único `.md` (multipart `file`). */
+/** POST /api/zetels/[id]/files — upload de um único `.md` ou `.pdf` (multipart `file`). */
 export async function POST(request: Request, { params }: Ctx) {
   const { id } = await params;
 
@@ -51,6 +52,10 @@ export async function POST(request: Request, { params }: Ctx) {
   const entry = form.get('file');
   if (!(entry instanceof File)) {
     return NextResponse.json({ error: 'Nenhum arquivo enviado.' }, { status: 400 });
+  }
+  // Recusa cedo, antes de copiar os bytes; addFile revalida no disco.
+  if (isPdfFilename(entry.name) && entry.size > MAX_PDF_BYTES) {
+    return NextResponse.json({ error: PDF_TOO_LARGE_MESSAGE }, { status: 413 });
   }
 
   // Grava num diretório temporário preservando o nome original (addFile valida
