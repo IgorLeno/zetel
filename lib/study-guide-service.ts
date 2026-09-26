@@ -4,6 +4,7 @@ import { basename, extname, join } from 'node:path';
 import { logger } from './logger';
 import { getSetting } from './settings';
 import { getOpenRouterModel } from './config';
+import { isPdfFilename } from './pdf-service';
 import { readApiKey, requestJson, type RequestUsage } from './openrouter';
 import {
   assertZetelAtivo,
@@ -305,6 +306,8 @@ function loadSegmentedFiles(
   const fileRows = db
     .prepare('SELECT filename FROM zetel_files WHERE zetel_id = ? ORDER BY order_index ASC')
     .all(zetelId) as ZetelFileRow[];
+  // PDFs não entram no pipeline Markdown (derivados próprios em pdf_pages).
+  const markdownRows = fileRows.filter((row) => !isPdfFilename(row.filename));
 
   const dir = zetelArquivosDir(vaultPath, slug);
   const maxWords = Number(getSetting('max_words_per_page')) || DEFAULT_MAX_WORDS;
@@ -314,7 +317,7 @@ function loadSegmentedFiles(
   const markdownParts: string[] = [];
   let globalIndex = 0;
 
-  for (const row of fileRows) {
+  for (const row of markdownRows) {
     const path = join(dir, row.filename);
     if (!existsSync(path)) {
       // Regra #6: sem filename na mensagem; a aba Arquivos já sinaliza o drift.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 9,
+  "revision": 16,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -27,10 +27,15 @@
     {
       "id": "002",
       "title": "Ingestão de PDF preservando páginas",
-      "status": "READY",
+      "status": "DONE",
       "blocked_by": [
         "001"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "Migration 006 nova (pdf_pages/pdf_sections + colunas em zetel_files), dependencia nova pdfjs-dist, parsing de entrada nao confiavel (PDF) e persistencia de derivados: FULL por regra.",
+      "reviews_requested": 2,
+      "validation": "PASS",
+      "review_result": "PASS"
     },
     {
       "id": "003",
@@ -130,34 +135,66 @@
     }
   ],
   "session": {
-    "id": "task-001-20260926",
+    "id": "task-002-20260926",
     "agent": "claude",
-    "task_id": "001",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-09-26T11:14:54.796Z",
-    "execution_profile": "FAST",
-    "profile_justification": "Somente documentação: registra D1–D13 aprovadas em .agent/ARCHITECTURE.md",
-    "reviews_requested": 0,
-    "validating_at": "2026-09-26T11:18:33.600Z",
+    "task_id": "002",
+    "status": "DONE",
+    "started_at": "2026-09-26T13:30:57.340Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Migration 006 nova (pdf_pages/pdf_sections + colunas em zetel_files), dependencia nova pdfjs-dist, parsing de entrada nao confiavel (PDF) e persistencia de derivados: FULL por regra.",
+    "reviews_requested": 2,
+    "validating_at": "2026-09-26T13:51:27.068Z",
     "validation_result": "PASS",
-    "fixed_point": "264438252fcf1cb0cdb3f777126290f2308c7fae1bc627dc72d4e9e7984d3086",
-    "review_aggregate": null,
-    "aggregated_at": null,
-    "review_result": {},
-    "reviewing_at": "2026-09-26T11:18:33.745Z",
-    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/001-validation.json",
+    "fixed_point": "ce2dca05a7ee09d2906b2afe53257b10294c504902566ad512bdd1007e6bcf1d",
+    "review_aggregate": ".agent/specs/SPEC-001-conversational-learning-v1/reviews/002-aggregate.json",
+    "aggregated_at": "2026-09-26T13:58:17.268Z",
+    "review_result": {
+      "engineering-quality": "PASS",
+      "spec-compliance": "PASS"
+    },
+    "reviewing_at": "2026-09-26T13:56:03.603Z",
+    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/002-validation.json",
     "gates_plan": [
       {
         "category": "focused",
         "argv": [
-          "git",
-          "diff",
-          "--quiet",
-          "--",
-          "app",
-          "components",
-          "lib",
-          "migrations"
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/pdf",
+          "tests/integration/pdf",
+          "tests/unit/ingestao",
+          "tests/integration/ingestao",
+          "tests/integration/study-guide"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
         ]
       },
       {
@@ -169,13 +206,9 @@
         ]
       }
     ],
-    "done_at": "2026-09-26T11:18:36.251Z",
+    "done_at": "2026-09-26T13:58:17.744Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited",
-    "delivery_commit": "5df158a6c41d91218176622f09fd0a4722e35bc4",
-    "push": "origin/docs/spec-001-conversational-learning-v1",
-    "closed_at": "2026-09-26T13:30:51.983Z",
-    "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/001-contratos-v1-5df158a.md"
+    "external_checks": "pending-not-waited"
   },
   "approval": {
     "spec": true,

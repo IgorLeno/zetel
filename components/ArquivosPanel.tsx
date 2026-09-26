@@ -132,6 +132,9 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
         const parts = [`${r.pagesCount} página${r.pagesCount === 1 ? '' : 's'} gerada${r.pagesCount === 1 ? '' : 's'}`];
         if (r.imagesCopied) parts.push(`${r.imagesCopied} imagem(ns) copiada(s)`);
         if (r.imagesBlocked) parts.push(`${r.imagesBlocked} externa(s) bloqueada(s)`);
+        if (r.pdfPagesCount) parts.push(`${r.pdfPagesCount} página(s) de PDF extraída(s)`);
+        if (r.pdfNoText) parts.push(`${r.pdfNoText} PDF(s) sem texto (OCR não suportado)`);
+        if (r.pdfFailed) parts.push(`${r.pdfFailed} PDF(s) com falha na extração`);
         setProcessMsg(parts.join(' · '));
       } else {
         setError(data.error ?? 'Falha ao processar.');
@@ -169,7 +172,7 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
         <input
           ref={fileInput}
           type="file"
-          accept=".md"
+          accept=".md,.pdf"
           multiple
           hidden
           onChange={onPickFiles}
@@ -180,7 +183,7 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
       {processMsg && <p className="feedback ok">{processMsg}</p>}
 
       {files.length === 0 ? (
-        <p className="field-hint">Nenhum arquivo ainda. Adicione um arquivo .md para começar.</p>
+        <p className="field-hint">Nenhum arquivo ainda. Adicione um arquivo .md ou .pdf para começar.</p>
       ) : (
         <ul className="file-list">
           {files.map((f, index) => (

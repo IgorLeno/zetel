@@ -41,7 +41,9 @@ Interfaces e dados). Em divergência, a SPEC prevalece.
 - PDF (D1–D2): `pdfjs-dist` extrai no servidor e renderiza no cliente, sem OCR.
   Original em `<vault>/zetels/<slug>/arquivos/`; derivados em `pdf_pages` e
   `pdf_sections`. Proveniência estável: `file_id + page_number + content_hash`.
-  `zetel_pages` segue exclusivo de Markdown.
+  `zetel_pages` segue exclusivo de Markdown. Upload de PDF limitado a 50 MB
+  (`MAX_PDF_BYTES` em `lib/pdf-service.ts`); `zetel_files.extraction_status`
+  é `ok | no_text | failed`.
 - Retrieval (D3): SQLite FTS5 (`unicode61 remove_diacritics 2`, BM25),
   derivado e reconstruível; sem embeddings.
 - Foco (D4): estado da sessão (`selection | page | section | document |
