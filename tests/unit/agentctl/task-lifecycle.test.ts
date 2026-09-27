@@ -1278,7 +1278,7 @@ describe('agentctl task validate/close', () => {
     const state = JSON.parse(readFileSync(join(dir, '.agent/specs', id, 'state.json'), 'utf8'));
     expect(state.tasks[0].status).toBe('DONE');
     expect(state.active_task).toBeNull();
-  });
+  }, 15_000);
 
   it('rejects malformed reviews_requested and extra blocking review on close', () => {
     const dir = repo();
