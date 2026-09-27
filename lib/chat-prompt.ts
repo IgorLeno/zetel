@@ -261,9 +261,14 @@ export function buildOpenRouterMessages(opts: {
   interactionMode?: 'text' | 'voice';
   /** Fontes resolvidas no servidor (tarefa 003: página PDF em foco; 004: seleção verificada antes dela). */
   sources?: SourceBlockInput[];
+  /** Instruções compiladas do perfil (tarefa 007). Só texto gerado de inteiros validados. */
+  tutorInstructions?: string;
 }): { messages: OpenRouterMessage[]; memoryWarnings: MemoryWarnings } {
   const basePrompt = opts.partnerPrompt ?? PARCEIRO_PROMPT;
   let systemContent = `${basePrompt}\n\nZetel atual: "${opts.displayName}".`;
+  if (opts.tutorInstructions) {
+    systemContent += `\n\nPerfil pedagógico desta sessão:\n${opts.tutorInstructions}`;
+  }
   const sources = opts.sources ?? [];
 
   if (opts.interactionMode === 'voice') {

@@ -1,3 +1,5 @@
+import type { ProfileOverrides } from '@/lib/tutor-profiles';
+
 export type FocusScope = 'selection' | 'page' | 'section' | 'document' | 'zetel';
 
 /** Só identidade/posição; texto de seleção nunca é estado da sessão. */
@@ -18,7 +20,7 @@ export interface StudySession {
   status: StudySessionStatus;
   focus: FocusState | null;
   profileId: string;
-  profileOverrides: Record<string, unknown> | null;
+  profileOverrides: ProfileOverrides | null;
   createdAt: string;
   updatedAt: string;
   lastActiveAt: string;

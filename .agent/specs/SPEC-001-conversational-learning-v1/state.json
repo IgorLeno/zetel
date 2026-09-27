@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 53,
+  "revision": 54,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -8,7 +8,7 @@
     "approved_by": "Igor Fernandes",
     "approved_at": "2026-09-26T11:14:06.443Z"
   },
-  "active_task": null,
+  "active_task": "007",
   "tasks": [
     {
       "id": "001",
@@ -111,10 +111,13 @@
     {
       "id": "007",
       "title": "Perfis do tutor",
-      "status": "READY",
+      "status": "IN_PROGRESS",
       "blocked_by": [
         "005"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "Migration (tutor_profiles) e mudança do contrato de prompt.",
+      "reviews_requested": 2
     },
     {
       "id": "008",
@@ -173,86 +176,14 @@
     }
   ],
   "session": {
-    "id": "task-006-20260927",
+    "id": "task-007-20260927",
     "agent": "cursor",
-    "task_id": "006",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-09-27T12:22:47.490Z",
+    "task_id": "007",
+    "status": "IN_PROGRESS",
+    "started_at": "2026-09-27T13:29:45.554Z",
     "execution_profile": "FULL",
-    "profile_justification": "Nova tabela FTS5 derivada, mudança no contrato de prompt/SSE e mitigação de prompt injection.",
-    "reviews_requested": 2,
-    "validating_at": "2026-09-27T12:47:54.767Z",
-    "validation_result": "PASS",
-    "fixed_point": "89e8b4e26b45f470860756298b447cb98e49625bc7e270042cd08e70be3724e4",
-    "review_aggregate": null,
-    "aggregated_at": null,
-    "review_result": {
-      "spec-compliance": "NOT_RUN",
-      "engineering-quality": "NOT_RUN"
-    },
-    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/006-validation.json",
-    "gates_plan": [
-      {
-        "category": "focused",
-        "argv": [
-          "pnpm",
-          "exec",
-          "vitest",
-          "run",
-          "tests/unit/focus/focus-command.test.ts",
-          "tests/unit/fonte-markers.test.ts",
-          "tests/unit/chat-prompt/source-block.test.ts",
-          "tests/integration/retrieval/passages.test.ts",
-          "tests/integration/pdf/pdf-focus-chat.test.ts",
-          "tests/integration/study-sessions.test.ts"
-        ]
-      },
-      {
-        "category": "build",
-        "argv": [
-          "pnpm",
-          "build"
-        ]
-      },
-      {
-        "category": "test-ci",
-        "argv": [
-          "pnpm",
-          "test:ci"
-        ]
-      },
-      {
-        "category": "coverage",
-        "argv": [
-          "pnpm",
-          "test:coverage"
-        ]
-      },
-      {
-        "category": "typecheck",
-        "argv": [
-          "pnpm",
-          "typecheck"
-        ]
-      },
-      {
-        "category": "diff-check",
-        "argv": [
-          "git",
-          "diff",
-          "--check"
-        ]
-      }
-    ],
-    "reviewing_at": "2026-09-27T12:58:34.501Z",
-    "done_at": "2026-09-27T13:17:51.586Z",
-    "active_task_cleared": true,
-    "external_checks": "pending-not-waited",
-    "delivery_commit": "472cdd9d42aed3fb1df79df3dcbc37efc6b9a637",
-    "push": "origin/main (PR #23 merge 4092173f39b87f1973ba97b9cbf7c1ad633dd574)",
-    "closed_at": "2026-09-27T13:17:51.661Z",
-    "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/006-retrieval-focus-472cdd9.md",
-    "reconciliation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/006-reconciliation.json"
+    "profile_justification": "Migration (tutor_profiles) e mudança do contrato de prompt.",
+    "reviews_requested": 2
   },
   "approval": {
     "spec": true,
