@@ -1,14 +1,14 @@
 ---
 id: "002"
 title: "Ingestão de PDF preservando páginas"
-status: DONE
+status: SESSION_CLOSED
 blocked_by: ["001"]
 writer: null
 reviewer: null
-commit: null
-push: null
+commit: 4e3d1c454c54d6b3ec7945ac0470bc7817bf6f57
+push: origin/feat/spec-001-task-002-pdf-ingest
 review_result: PASS
-handoff: null
+handoff: .agent/specs/SPEC-001-conversational-learning-v1/handoffs/002-pdf-ingest-4e3d1c4.md
 execution_profile: FULL
 profile_justification: "Migration 006 nova (pdf_pages/pdf_sections + colunas em zetel_files), dependencia nova pdfjs-dist, parsing de entrada nao confiavel (PDF) e persistencia de derivados: FULL por regra."
 validation: PASS
