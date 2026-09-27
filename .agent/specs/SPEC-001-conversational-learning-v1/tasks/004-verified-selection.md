@@ -1,14 +1,14 @@
 ---
 id: "004"
 title: "Seleção verificada: Conversar sobre isto"
-status: VALIDATING
+status: SESSION_CLOSED
 blocked_by: ["003"]
 writer: null
 reviewer: null
-commit: null
-push: null
-review_result: pending
-handoff: null
+commit: fc2f9f3043365f4ae9fd4533fa8095a024c00761
+push: "origin/main (merge 643283d33727d006a7269a897cc07e96fc243ec4, PR #17)"
+review_result: NOT_RUN
+handoff: .agent/specs/SPEC-001-conversational-learning-v1/handoffs/004-verified-selection-fc2f9f3.md
 execution_profile: FULL
 profile_justification: "Contrato de confiança cliente→servidor da seleção: texto do cliente só vale se for substring normalizada de pdf_pages.content_text; servidor usa o próprio recorte"
 validation: FAIL
