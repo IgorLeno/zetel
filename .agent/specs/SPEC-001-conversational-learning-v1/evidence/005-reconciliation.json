@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "kind": "post-merge-reconciliation",
+  "task_id": "005",
+  "spec_id": "SPEC-001-conversational-learning-v1",
+  "note": "Reconciliacao administrativa POS-MERGE, gerada fora do agentctl com autorizacao humana em chat. Existe apenas para alinhar o workflow ao estado real do repositorio (implementacao ja mergeada em main). NAO substitui nem altera evidence/005-validation.json, que permanece com validation_result FAIL. Nao registra PASS de validacao. Nao registra PASS de review do fixed point entregue: as revisoes formais desse fixed point nao foram possiveis porque task validate nao chegou a PASS.",
+  "original_validation": {
+    "evidence": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/005-validation.json",
+    "preserved": true,
+    "converted_to_pass": false,
+    "fixed_point": "de2a099c1f3bc2eadb14efad584004e5e71a642daf9d5afd7a348e469d1932e3",
+    "git_head": "13975e207df802d05c94a8f9d76fa14edab402bf",
+    "recorded_at": "2026-09-27T11:17:18.483Z",
+    "validation_result": "FAIL",
+    "gates": [
+      { "category": "focused", "exit_code": 0, "result": "PASS" },
+      { "category": "build", "exit_code": 0, "result": "PASS" },
+      { "category": "test-ci", "exit_code": 0, "result": "PASS" },
+      { "category": "coverage", "exit_code": 1, "result": "FAIL", "duration_ms": 65888 },
+      { "category": "typecheck", "result": "NOT_RUN_BY_GATE", "detail": "validate parou em coverage" },
+      { "category": "diff-check", "result": "NOT_RUN_BY_GATE", "detail": "validate parou em coverage" }
+    ],
+    "coverage_failure_detail": "A evidencia oficial guarda so o preview (stdout ELIFECYCLE exit 1, stderr o separador do Vitest), sem o nome do teste. Diagnostico da sessao: o gate parou por timeout em tests/unit/agentctl/task-lifecycle.test.ts, caso 'requires matching review fixed_point for STANDARD'. O teste e do lifecycle do agentctl, nao do codigo da 005. Uma evidencia oficial anterior, depois substituida pelo arquivo preservado, tinha test-ci FAIL no fixed point 798f1d795e68ee253592484a391db78a21af34961d77f5e778b2144976ea46bf (git_head d51fdd2011db5be6d11d2af584ff3034e1992631)."
+  },
+  "post_validation_checks": [
+    {
+      "category": "coverage",
+      "argv": ["pnpm", "test:coverage"],
+      "context": "execucao isolada de diagnostico, fora do agentctl, apos a correcao do backfill; nao substitui o FAIL oficial",
+      "exit_code": 0,
+      "test_files": "40 passed (40)",
+      "tests": "435 passed (435)",
+      "log_sha256": "63df29970718b7dfbbdf5cf76051285593b82d9d32314cff2338668c38ed7083",
+      "log_committed": false
+    },
+    {
+      "category": "test-ci",
+      "argv": ["pnpm", "test:ci"],
+      "context": "execucao isolada de diagnostico, alem do PASS ja registrado na evidencia oficial preservada",
+      "exit_code": 0,
+      "log_sha256": "508e0da5272f5a3bf53ea4ad70b2872c93af7682d8e32f1d7ec490b9d06ae4ac",
+      "log_committed": false
+    },
+    {
+      "category": "typecheck",
+      "argv": ["pnpm", "typecheck"],
+      "context": "execucao manual na sessao de implementacao, fora do gate que parou em coverage",
+      "exit_code": 0
+    },
+    {
+      "category": "diff-check",
+      "argv": ["git", "diff", "--check"],
+      "context": "execucao manual na sessao de implementacao, fora do gate que parou em coverage",
+      "exit_code": 0
+    },
+    {
+      "category": "focused",
+      "context": "testes especificos da 005 permaneceram verdes; o PASS focado tambem esta na evidencia oficial",
+      "exit_code": 0
+    }
+  ],
+  "timeout_adjustment": {
+    "test": "tests/unit/agentctl/task-lifecycle.test.ts",
+    "case": "requires matching review fixed_point for STANDARD",
+    "from_ms": 5000,
+    "to_ms": 15000,
+    "commit": "13975e207df802d05c94a8f9d76fa14edab402bf",
+    "already_on_main": true,
+    "note": "Ajuste pontual do timeout do lifecycle do agentctl. Nao e correcao de produto da 005. O FAIL oficial preservado tem git_head nesse commit; o resultado FAIL nao foi reescrito."
+  },
+  "human_decision": {
+    "by": "Igor Fernandes (chat)",
+    "decision": "Reconciliar o workflow com a implementacao ja mergeada em main. A falha restante do gate era de workflow/lifecycle do agentctl, nao perda ou corrupcao de dados da 005. Nao reexecutar task validate, suites FULL, build ou reviews. Nao converter o FAIL oficial em PASS.",
+    "original_result_preserved": true,
+    "false_validation_pass": false
+  },
+  "reviews": {
+    "requested": 2,
+    "official_on_delivered_fixed_point": 0,
+    "result": "NOT_RUN",
+    "delivered_fixed_point": "de2a099c1f3bc2eadb14efad584004e5e71a642daf9d5afd7a348e469d1932e3",
+    "reason": "Houve duas revisoes sobre um fixed point anterior. O defeito material de backfill foi corrigido depois. O workflow nao gerou pacote oficial novo porque task validate do fixed point corrigido nao chegou a PASS. Nao ha aggregate em reviews/ e este arquivo nao promove aquelas revisoes a PASS do fixed point entregue.",
+    "historical": [
+      {
+        "fixed_point": "fad089f53ceafa48e3085eb466243f5097d60cdeecbdfb2db53369ba1b50e521",
+        "axis": "spec-compliance",
+        "result": "PASS",
+        "package_id": "pkg_4430d453276364f09046fea9",
+        "reviewed_at": "2026-09-27T09:30:30.186056Z",
+        "blocking_findings": 0,
+        "promoted_to_official_aggregate": false
+      },
+      {
+        "fixed_point": "fad089f53ceafa48e3085eb466243f5097d60cdeecbdfb2db53369ba1b50e521",
+        "axis": "engineering-quality",
+        "result": "BLOCK",
+        "package_id": "pkg_8b96815c3400ca99afee3a21",
+        "reviewed_at": "2026-09-27T09:28:40Z",
+        "blocking_findings": 2,
+        "material_defect": "Backfill de foco PDF podia retomar posicao antiga ou referencia nao validada.",
+        "material_defect_corrected_before_merge": true,
+        "deferred_not_reopened": [
+          "Restauracao visual automatica de Markdown ao continuar sessao.",
+          "MINOR: FK de chat_messages nao garante o mesmo zetel_id da study_session."
+        ],
+        "promoted_to_official_aggregate": false
+      }
+    ]
+  },
+  "delivery": {
+    "implementation_commit": "e94866f1b9a44944ac0e5b879f3c21cc20680a12",
+    "timeout_commit": "13975e207df802d05c94a8f9d76fa14edab402bf",
+    "implementation_merge_commit": "d49495c1eb29a2a79975bff662e0d231a56419de",
+    "evidence_merge_commit": "7a1a8f2af38b84c359c4bcde1c7c9ef5fb124139",
+    "merged_into": "origin/main",
+    "pull_requests": ["IgorLeno/zetel#20", "IgorLeno/zetel#21"],
+    "merged_before_lifecycle_close": true,
+    "fixed_point_not_rewritten": true
+  },
+  "workflow_mechanism": {
+    "tool": "script descartavel no scratchpad",
+    "uses": [
+      "scripts/agentctl/infra/read-state.mjs loadSpecState",
+      "scripts/agentctl/domain/state-machine.mjs assertTransition + validateState",
+      "scripts/agentctl/infra/atomic-write.mjs writeJsonAtomic (expectedRevision)",
+      "scripts/agentctl/domain/task-frontmatter.mjs prepareOperationalFrontmatter + scripts/agentctl/infra/atomic-file.mjs writeTextAtomic"
+    ],
+    "edges": ["VALIDATING->REVIEWING", "REVIEWING->DONE", "DONE->PUSHED", "PUSHED->SESSION_CLOSED"],
+    "bypassed_command_guards": ["task review/close: gate-failed (validation FAIL)", "task close: reviews agregadas do fixed point atual"],
+    "agentctl_modified": false,
+    "product_code_modified": false,
+    "validation_evidence_modified": false
+  }
+}
