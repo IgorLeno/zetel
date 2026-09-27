@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 47,
+  "revision": 49,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -93,14 +93,15 @@
     {
       "id": "006",
       "title": "Retrieval, foco por linguagem natural e referências",
-      "status": "IN_PROGRESS",
+      "status": "VALIDATING",
       "blocked_by": [
         "003",
         "005"
       ],
       "execution_profile": "FULL",
       "profile_justification": "Nova tabela FTS5 derivada, mudança no contrato de prompt/SSE e mitigação de prompt injection.",
-      "reviews_requested": 2
+      "reviews_requested": 2,
+      "validation": "FAIL"
     },
     {
       "id": "007",
@@ -170,11 +171,71 @@
     "id": "task-006-20260927",
     "agent": "cursor",
     "task_id": "006",
-    "status": "IN_PROGRESS",
+    "status": "VALIDATING",
     "started_at": "2026-09-27T12:22:47.490Z",
     "execution_profile": "FULL",
     "profile_justification": "Nova tabela FTS5 derivada, mudança no contrato de prompt/SSE e mitigação de prompt injection.",
-    "reviews_requested": 2
+    "reviews_requested": 2,
+    "validating_at": "2026-09-27T12:47:54.767Z",
+    "validation_result": "FAIL",
+    "fixed_point": "89e8b4e26b45f470860756298b447cb98e49625bc7e270042cd08e70be3724e4",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": null,
+    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/006-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/focus/focus-command.test.ts",
+          "tests/unit/fonte-markers.test.ts",
+          "tests/unit/chat-prompt/source-block.test.ts",
+          "tests/integration/retrieval/passages.test.ts",
+          "tests/integration/pdf/pdf-focus-chat.test.ts",
+          "tests/integration/study-sessions.test.ts"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ]
   },
   "approval": {
     "spec": true,
