@@ -218,6 +218,16 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
                   {formatBytes(f.sizeBytes)} · {formatRelative(f.updatedAt)}
                 </span>
               </div>
+              {f.filename.toLowerCase().endsWith('.pdf') && confirmingRemove !== f.id && (
+                <button
+                  className="btn"
+                  type="button"
+                  aria-label={`Estudar ${f.filename}`}
+                  onClick={() => router.push(`?view=pdf&file=${encodeURIComponent(f.id)}`)}
+                >
+                  Estudar
+                </button>
+              )}
               {confirmingRemove === f.id ? (
                 <span className="file-confirm">
                   <button

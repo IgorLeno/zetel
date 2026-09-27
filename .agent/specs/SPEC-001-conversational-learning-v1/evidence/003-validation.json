@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "task_id": "003",
+  "execution_profile": "FULL",
+  "state_revision": 21,
+  "git_head": "5d0522377329bd4b5e834ff978ce37009cff24a2",
+  "tree_fingerprint": "a655b0cfa793dc66b7bf823b9d47c01b9d8931eecff1966d6006e535e6ff0f91",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "task_fingerprint": "6bd323ad64805d8ebc6947b7650e9a235677c9c5595906ee4ec1c6fbbe440b05",
+  "plan_fingerprint": "db7e6b212e0a9d07b5ded52d321c2f25435fdf050fec9d048b25b1193712955e",
+  "fixed_point": "73f50868fbc7e6a866ca3a6f0461f360193689844d96ff7345323da10bafe048",
+  "commands": [
+    {
+      "category": "focused",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/unit/chat-prompt",
+        "tests/integration/pdf"
+      ],
+      "started_at": "2026-09-26T17:01:46.932Z",
+      "completed_at": "2026-09-26T17:01:55.996Z",
+      "duration_ms": 9058,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "6a1c5bd716ed8fa7babb48c3c162ece6aae2dc6fd24b3acc25fedd3cbde74526",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 1100,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  5.90s (transform 2.57s, setup 0ms, collect 9.41s, tests 3.18s, environment 10ms, prepare 4.14s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "build",
+      "argv": [
+        "pnpm",
+        "build"
+      ],
+      "started_at": "2026-09-26T17:01:55.997Z",
+      "completed_at": "2026-09-26T17:05:28.650Z",
+      "duration_ms": 212651,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "5cbb421c85bd2baf7bf51577f8894831bcb8b9aed4c1488a5304e3898a26c0e1",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 3291,
+        "stderr_bytes": 0,
+        "stdout_preview": "ƒ  (Dynamic)  server-rendered on demand",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "test-ci",
+      "argv": [
+        "pnpm",
+        "test:ci"
+      ],
+      "started_at": "2026-09-26T17:05:28.650Z",
+      "completed_at": "2026-09-26T17:06:42.202Z",
+      "duration_ms": 73551,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "99ed8347d6ecbe13aed7be516931e37adf404b7a3e12e53798a54eeabf3909c6",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 57786,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  5.30s (transform 2.19s, setup 0ms, collect 11.05s, tests 4.23s, environment 8ms, prepare 3.33s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "coverage",
+      "argv": [
+        "pnpm",
+        "test:coverage"
+      ],
+      "started_at": "2026-09-26T17:06:42.202Z",
+      "completed_at": "2026-09-26T17:07:48.644Z",
+      "duration_ms": 66442,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "448bd80ef3224faaf877a122f48ae9345e55e272f83ed5880de02b00911854ff",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 13421,
+        "stderr_bytes": 0,
+        "stdout_preview": "-------------------|---------|----------|---------|---------|-------------------",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "typecheck",
+      "argv": [
+        "pnpm",
+        "typecheck"
+      ],
+      "started_at": "2026-09-26T17:07:48.644Z",
+      "completed_at": "2026-09-26T17:07:55.757Z",
+      "duration_ms": 7111,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e87f658d79ce7cab0c3553cf450dd8c27dcdc625c97bd411e30fd4140a9e951f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 74,
+        "stderr_bytes": 0,
+        "stdout_preview": "> tsc --noEmit",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "diff-check",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-09-26T17:07:55.757Z",
+      "completed_at": "2026-09-26T17:07:55.767Z",
+      "duration_ms": 9,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stderr_bytes": 0,
+        "stdout_preview": "",
+        "stderr_preview": ""
+      }
+    }
+  ],
+  "waivers": [],
+  "recorded_at": "2026-09-26T17:07:55.806Z",
+  "validation_result": "PASS"
+}
