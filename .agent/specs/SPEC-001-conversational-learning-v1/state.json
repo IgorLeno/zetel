@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 29,
+  "revision": 33,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -8,7 +8,7 @@
     "approved_by": "Igor Fernandes",
     "approved_at": "2026-09-26T11:14:06.443Z"
   },
-  "active_task": "004",
+  "active_task": null,
   "tasks": [
     {
       "id": "001",
@@ -59,14 +59,19 @@
     {
       "id": "004",
       "title": "Seleção verificada: Conversar sobre isto",
-      "status": "VALIDATING",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "003"
       ],
       "execution_profile": "FULL",
       "profile_justification": "Contrato de confiança cliente→servidor da seleção: texto do cliente só vale se for substring normalizada de pdf_pages.content_text; servidor usa o próprio recorte",
       "reviews_requested": 2,
-      "validation": "FAIL"
+      "validation": "FAIL",
+      "review_result": "NOT_RUN",
+      "reconciliation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/004-reconciliation.json",
+      "commit": "fc2f9f3043365f4ae9fd4533fa8095a024c00761",
+      "push": "origin/main (merge 643283d33727d006a7269a897cc07e96fc243ec4, PR #17)",
+      "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/004-verified-selection-fc2f9f3.md"
     },
     {
       "id": "005",
@@ -153,7 +158,7 @@
     "id": "task-004-20260927",
     "agent": "claude",
     "task_id": "004",
-    "status": "VALIDATING",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-09-27T05:48:34.526Z",
     "execution_profile": "FULL",
     "profile_justification": "Contrato de confiança cliente→servidor da seleção: texto do cliente só vale se for substring normalizada de pdf_pages.content_text; servidor usa o próprio recorte",
@@ -163,7 +168,10 @@
     "fixed_point": "37d7b9646b71ccd1d3f4d4bc7a81b7c0e2f90a2daa001ad1972a296899172d2c",
     "review_aggregate": null,
     "aggregated_at": null,
-    "review_result": null,
+    "review_result": {
+      "spec-compliance": "NOT_RUN",
+      "engineering-quality": "NOT_RUN"
+    },
     "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/004-validation.json",
     "gates_plan": [
       {
@@ -214,7 +222,16 @@
           "--check"
         ]
       }
-    ]
+    ],
+    "reviewing_at": "2026-09-27T06:20:02.112Z",
+    "reconciliation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/004-reconciliation.json",
+    "done_at": "2026-09-27T06:20:02.157Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited",
+    "delivery_commit": "fc2f9f3043365f4ae9fd4533fa8095a024c00761",
+    "push": "origin/main (merge 643283d33727d006a7269a897cc07e96fc243ec4, PR #17)",
+    "closed_at": "2026-09-27T06:20:02.190Z",
+    "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/004-verified-selection-fc2f9f3.md"
   },
   "approval": {
     "spec": true,

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "post-merge-reconciliation",
+  "task_id": "004",
+  "spec_id": "SPEC-001-conversational-learning-v1",
+  "note": "Reconciliacao administrativa POS-MERGE, gerada fora do agentctl com autorizacao humana em chat. Existe apenas para alinhar o workflow ao estado real do repositorio (implementacao ja mergeada em main). NAO substitui nem altera evidence/004-validation.json, que permanece com validation_result FAIL. Nao registra PASS de validacao nem de review.",
+  "original_validation": {
+    "evidence": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/004-validation.json",
+    "fixed_point": "37d7b9646b71ccd1d3f4d4bc7a81b7c0e2f90a2daa001ad1972a296899172d2c",
+    "recorded_at": "2026-09-27T06:02:44.217Z",
+    "validation_result": "FAIL",
+    "gates": [
+      { "category": "focused", "exit_code": 0, "result": "PASS" },
+      { "category": "build", "exit_code": 0, "result": "PASS" },
+      { "category": "test-ci", "exit_code": 0, "result": "PASS" },
+      { "category": "coverage", "exit_code": 1, "result": "FAIL" },
+      { "category": "typecheck", "result": "NOT_RUN_BY_GATE", "detail": "validate parou em coverage" },
+      { "category": "diff-check", "result": "NOT_RUN_BY_GATE", "detail": "validate parou em coverage" }
+    ],
+    "coverage_failure_detail": "Evidencia guarda so preview (stdout 'ELIFECYCLE Command failed with exit code 1', stderr separador). Causa exata nao recuperavel. Maquina com load average ~7-8.5 logo apos build de 157 s."
+  },
+  "post_validation_checks": [
+    {
+      "category": "coverage",
+      "argv": ["pnpm", "test:coverage"],
+      "context": "execucao isolada de diagnostico, fora do agentctl, sobre a mesma working tree do fixed point (sem edicoes entre o validate e esta execucao)",
+      "started_at_local": "2026-09-27T03:03:12-03:00",
+      "exit_code": 0,
+      "test_files": "38 passed (38)",
+      "tests": "427 passed (427)",
+      "log_sha256": "41b3e4ce313072468958ca50ddf68f5e8e3dfb6ccaf68bd67940b1f775a39a23",
+      "log_committed": false
+    },
+    {
+      "category": "typecheck",
+      "argv": ["pnpm", "typecheck"],
+      "context": "execucao manual durante a implementacao, antes do validate",
+      "exit_code": 0
+    },
+    {
+      "category": "diff-check",
+      "argv": ["git", "diff", "--check"],
+      "context": "execucao manual antes do validate",
+      "exit_code": 0
+    }
+  ],
+  "human_decision": {
+    "by": "Igor Fernandes (chat)",
+    "decision": "Falha de coverage no gate tratada como flake de infraestrutura/carga, nao regressao funcional da 004. Nao reexecutar suite FULL.",
+    "original_result_preserved": true
+  },
+  "reviews": {
+    "requested": 2,
+    "executed": 0,
+    "result": "NOT_RUN",
+    "reason": "Reviews exigem sessao REVIEWING, alcancavel pelo agentctl somente com validate PASS; a implementacao foi mergeada antes."
+  },
+  "delivery": {
+    "implementation_commit": "fc2f9f3043365f4ae9fd4533fa8095a024c00761",
+    "merge_commit": "643283d33727d006a7269a897cc07e96fc243ec4",
+    "merged_into": "origin/main",
+    "pull_request": "IgorLeno/zetel#17",
+    "merged_before_lifecycle_close": true,
+    "byte_identity_with_fixed_point": "nao verificada (fixed point cobria working tree nao commitada; commit feito pelo usuario)"
+  },
+  "workflow_mechanism": {
+    "tool": "script descartavel no scratchpad",
+    "uses": [
+      "scripts/agentctl/infra/read-state.mjs loadSpecState",
+      "scripts/agentctl/domain/state-machine.mjs assertTransition + validateState",
+      "scripts/agentctl/infra/atomic-write.mjs writeJsonAtomic (expectedRevision)",
+      "scripts/agentctl/domain/task-frontmatter.mjs prepareOperationalFrontmatter + scripts/agentctl/infra/atomic-file.mjs writeTextAtomic"
+    ],
+    "edges": ["VALIDATING->REVIEWING", "REVIEWING->DONE", "DONE->PUSHED", "PUSHED->SESSION_CLOSED"],
+    "bypassed_command_guards": ["task review/close: gate-failed (validation FAIL)", "task close: reviews agregadas"],
+    "agentctl_modified": false
+  }
+}
