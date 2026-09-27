@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ChatMessage } from '@/types/chat-message';
+import type { StudySession } from '@/types/study-session';
 import { NoteCard, type Suggestion, type SaveNotePayload } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
 import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
@@ -108,6 +110,9 @@ export function ChatPanel({
   currentGuideBlockTotal,
   pdfFocus = null,
   onClearPdfSelection,
+  onSessionChange,
+  createSessionIfEmpty = false,
+  active = true,
 }: {
   zetelId: string;
   currentReadingMode: ReadingMode;
@@ -124,7 +129,11 @@ export function ChatPanel({
   pdfFocus?: { fileId: string; pageNumber: number; selectionText?: string } | null;
   /** Descarta a seleção anexada (✕ no chip ou após o turno aceito). */
   onClearPdfSelection?: () => void;
+  onSessionChange?: (session: StudySession | null) => void;
+  createSessionIfEmpty?: boolean;
+  active?: boolean;
 }) {
+  const router = useRouter();
   // Ref: o fluxo de voz chama sendMessage por closures antigas; a página enviada
   // precisa ser a atual. Mudar de página só atualiza a ref (não dispara turno).
   const pdfFocusRef = useRef(pdfFocus);
@@ -132,6 +141,9 @@ export function ChatPanel({
 
   // ── Core chat state ──────────────────────────────────────────────────────────
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessions, setSessions] = useState<StudySession[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
   const [streaming, setStreaming] = useState('');
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -211,15 +223,43 @@ export function ChatPanel({
     if (el) el.scrollTop = el.scrollHeight;
   }, []);
 
-  // ── Carrega histórico ────────────────────────────────────────────────────────
+  // ── Sessão e histórico ───────────────────────────────────────────────────────
   useEffect(() => {
+    if (!active) return;
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/zetels/${zetelId}/chat`);
-        const data = await res.json();
-        if (!cancelled && res.ok) {
-          setMessages(data.messages ?? []);
+        const res = await fetch(`/api/zetels/${zetelId}/sessions`);
+        if (!res.ok) throw new Error('sessions');
+        const data = await res.json() as { sessions: StudySession[] };
+        let available = data.sessions;
+        const wanted = new URL(window.location.href).searchParams.get('session');
+        let selected = available.find((s) => s.id === wanted && s.status !== 'archived') ??
+          available.find((s) => s.status === 'active') ??
+          available.find((s) => s.status !== 'archived') ?? null;
+        if (!selected && createSessionIfEmpty) {
+          const focus = pdfFocusRef.current;
+          const created = await fetch(`/api/zetels/${zetelId}/sessions`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ focus: focus
+              ? { scope: 'page', fileId: focus.fileId, pageNumber: focus.pageNumber } : null }),
+          });
+          if (!created.ok) throw new Error('create session');
+          selected = (await created.json() as { session: StudySession }).session;
+          available = [selected, ...available];
+        }
+        if (cancelled) return;
+        setSessions(available);
+        sessionIdRef.current = selected?.id ?? null;
+        setSessionId(selected?.id ?? null);
+        onSessionChange?.(selected);
+        if (selected) {
+          const history = await fetch(`/api/zetels/${zetelId}/chat?sessionId=${encodeURIComponent(selected.id)}`);
+          if (!history.ok) throw new Error('history');
+          const result = await history.json() as { messages: ChatMessage[] };
+          if (!cancelled) setMessages(result.messages);
+        } else {
+          setMessages([]);
         }
       } catch {
         if (!cancelled) setError('Não foi possível carregar o histórico.');
@@ -230,7 +270,117 @@ export function ChatPanel({
     return () => {
       cancelled = true;
     };
-  }, [zetelId]);
+  }, [zetelId, active, createSessionIfEmpty, onSessionChange]);
+
+  const initialMarkdownPage = useRef<number | null | undefined>(undefined);
+  const markdownFocusWrite = useRef<Promise<void>>(Promise.resolve());
+  useEffect(() => {
+    if (!active || pdfFocus) return;
+    if (initialMarkdownPage.current === undefined) {
+      initialMarkdownPage.current = currentPageIndex;
+      return;
+    }
+    if (initialMarkdownPage.current === currentPageIndex) return;
+    initialMarkdownPage.current = currentPageIndex;
+    const id = sessionIdRef.current;
+    if (!id || currentPageIndex === null) return;
+    markdownFocusWrite.current = markdownFocusWrite.current.then(async () => {
+      const res = await fetch(`/api/zetels/${zetelId}/sessions`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: id,
+          focus: { scope: 'page', fileId: null, pageNumber: currentPageIndex } }),
+      });
+      if (!res.ok) throw new Error('focus');
+    }).catch(() => setError('Não foi possível guardar a posição da página.'));
+  }, [active, currentPageIndex, pdfFocus, zetelId]);
+
+  async function chooseSession(session: StudySession) {
+    if (isLoading || session.status === 'archived') return;
+    try {
+      const activated = await fetch(`/api/zetels/${zetelId}/sessions`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, status: 'active' }),
+      });
+      if (!activated.ok) throw new Error('activate');
+      const current = (await activated.json() as { session: StudySession }).session;
+      sessionIdRef.current = current.id;
+      setSessionId(current.id);
+      setMessages([]);
+      setLoaded(false);
+      setSessions((items) => items.map((s) => s.id === current.id ? current
+        : s.status === 'active' ? { ...s, status: 'paused' } : s));
+      setSuggestion(null);
+      setMemorySuggestion(null);
+      onSessionChange?.(current);
+      const history = await fetch(`/api/zetels/${zetelId}/chat?sessionId=${encodeURIComponent(current.id)}`);
+      if (!history.ok) throw new Error('history');
+      setMessages((await history.json() as { messages: ChatMessage[] }).messages);
+      const url = new URL(window.location.href);
+      url.searchParams.set('session', current.id);
+      if (current.focus?.fileId) {
+        url.searchParams.set('view', 'pdf');
+        url.searchParams.set('file', current.focus.fileId);
+        url.searchParams.set('page', String(current.focus.pageNumber ?? 1));
+      } else if (url.searchParams.get('view') === 'pdf') {
+        url.searchParams.set('view', 'tecnico');
+        url.searchParams.delete('file');
+        url.searchParams.delete('page');
+      }
+      router.push(`${url.pathname}${url.search}`);
+    } catch {
+      setError('Não foi possível continuar a sessão.');
+    } finally {
+      setLoaded(true);
+    }
+  }
+
+  async function newSession() {
+    if (isLoading) return;
+    try {
+      const focus = pdfFocusRef.current;
+      const res = await fetch(`/api/zetels/${zetelId}/sessions`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ focus: focus
+          ? { scope: 'page', fileId: focus.fileId, pageNumber: focus.pageNumber }
+          : currentPageIndex !== null
+            ? { scope: 'page', fileId: null, pageNumber: currentPageIndex } : null }),
+      });
+      if (!res.ok) throw new Error('create');
+      const created = (await res.json() as { session: StudySession }).session;
+      setSessions((items) => [created, ...items.map((s) => s.status === 'active'
+        ? { ...s, status: 'paused' as const } : s)]);
+      sessionIdRef.current = created.id;
+      setSessionId(created.id);
+      setMessages([]);
+      setSuggestion(null);
+      setMemorySuggestion(null);
+      onSessionChange?.(created);
+      const url = new URL(window.location.href);
+      url.searchParams.set('session', created.id);
+      router.push(`${url.pathname}${url.search}`);
+    } catch {
+      setError('Não foi possível criar a sessão.');
+    }
+  }
+
+  async function renameSession() {
+    const id = sessionIdRef.current;
+    const current = sessions.find((s) => s.id === id);
+    if (!current) return;
+    const title = window.prompt('Nome da sessão', current.title);
+    if (title === null || title.trim() === current.title) return;
+    try {
+      const res = await fetch(`/api/zetels/${zetelId}/sessions`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: id, title }),
+      });
+      if (!res.ok) throw new Error('rename');
+      const renamed = (await res.json() as { session: StudySession }).session;
+      setSessions((items) => items.map((s) => s.id === id ? renamed : s));
+    } catch {
+      setError('Não foi possível renomear a sessão.');
+    }
+  }
 
   // ── Verifica disponibilidade de voz ─────────────────────────────────────────
   useEffect(() => {
@@ -450,16 +600,20 @@ export function ChatPanel({
   // ── Chat functions ───────────────────────────────────────────────────────────
 
   async function clearHistory() {
-    if (!confirm('Apagar todo o histórico deste Zetel?')) return;
+    const id = sessionIdRef.current;
+    if (!id || !confirm('Apagar o histórico desta sessão?')) return;
     setError(null);
     setClearing(true);
     try {
-      const res = await fetch(`/api/zetels/${zetelId}/chat`, { method: 'DELETE' });
+      const res = await fetch(`/api/zetels/${zetelId}/chat?sessionId=${encodeURIComponent(id)}`,
+        { method: 'DELETE' });
       if (res.ok) {
         setMessages([]);
         setStreaming('');
         setSuggestion(null);
         setMemorySuggestion(null);
+      } else {
+        setError('Falha ao limpar o histórico.');
       }
     } catch {
       setError('Falha ao limpar o histórico.');
@@ -501,6 +655,7 @@ export function ChatPanel({
         body: JSON.stringify(
           pdfFocusRef.current
             ? {
+                ...(sessionIdRef.current ? { sessionId: sessionIdRef.current } : {}),
                 userMessage: text,
                 focus: {
                   fileId: pdfFocusRef.current.fileId,
@@ -512,6 +667,7 @@ export function ChatPanel({
                 interactionMode: mode,
               }
             : {
+                ...(sessionIdRef.current ? { sessionId: sessionIdRef.current } : {}),
                 userMessage: text,
                 pageIndex: currentPageIndex,
                 readingMode: currentReadingMode,
@@ -533,6 +689,7 @@ export function ChatPanel({
         setIsLoading(false);
         return;
       }
+      const turnSessionId = res.headers.get('X-Study-Session-Id') ?? sessionIdRef.current;
 
       // Seleção vale para um turno só (tarefa 004).
       if (pdfFocusRef.current?.selectionText) onClearPdfSelection?.();
@@ -591,9 +748,18 @@ export function ChatPanel({
         if (mode === 'voice') abortVoiceTurn();
         setError('O parceiro encerrou a resposta sem conteúdo visível. Tente novamente.');
       } else {
-        const histRes = await fetch(`/api/zetels/${zetelId}/chat`);
+        const histRes = await fetch(`/api/zetels/${zetelId}/chat${turnSessionId
+          ? `?sessionId=${encodeURIComponent(turnSessionId)}` : ''}`);
         const histData = await histRes.json();
-        if (histRes.ok) setMessages(histData.messages ?? []);
+        if (histRes.ok) {
+          setMessages(histData.messages ?? []);
+          if (!sessionIdRef.current && turnSessionId) {
+            sessionIdRef.current = turnSessionId;
+            setSessionId(turnSessionId);
+            const sessionsRes = await fetch(`/api/zetels/${zetelId}/sessions`);
+            if (sessionsRes.ok) setSessions((await sessionsRes.json()).sessions ?? []);
+          }
+        }
         if (received) {
           setSuggestion({ data: received, canDiscuss: !discussNextRef.current });
         }
@@ -668,7 +834,7 @@ export function ChatPanel({
       await fetch(`/api/zetels/${zetelId}/chat`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messageId, rejected: true }),
+        body: JSON.stringify({ messageId, sessionId: sessionIdRef.current, rejected: true }),
       });
     } catch {
       /* flag só para auditoria; falha não bloqueia */
@@ -722,7 +888,8 @@ export function ChatPanel({
       await fetch(`/api/zetels/${zetelId}/chat`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messageId, rejected: true, kind: 'memory' }),
+        body: JSON.stringify({ messageId, sessionId: sessionIdRef.current,
+          rejected: true, kind: 'memory' }),
       });
     } catch {
       /* flag só para auditoria */
@@ -823,6 +990,32 @@ export function ChatPanel({
           {clearing ? 'Limpando…' : 'Limpar'}
         </button>
       </header>
+
+      <div className="chat-session-controls" aria-label="Sessões de estudo">
+        <select
+          aria-label="Sessão de estudo"
+          value={sessionId ?? ''}
+          disabled={isLoading}
+          onChange={(e) => {
+            const selected = sessions.find((s) => s.id === e.target.value);
+            if (selected) void chooseSession(selected);
+          }}
+        >
+          {!sessionId && <option value="">Nenhuma sessão</option>}
+          {sessions.filter((s) => s.status !== 'archived').map((s) => (
+            <option key={s.id} value={s.id}>{s.title}</option>
+          ))}
+        </select>
+        <button type="button" className="mini-btn" disabled={!sessionId || isLoading}
+          onClick={() => {
+            const selected = sessions.find((s) => s.id === sessionId);
+            if (selected) void chooseSession(selected);
+          }}>Continuar sessão</button>
+        <button type="button" className="mini-btn" disabled={isLoading}
+          onClick={() => void newSession()}>Nova sessão</button>
+        <button type="button" className="mini-btn" disabled={!sessionId || isLoading}
+          onClick={() => void renameSession()}>Renomear</button>
+      </div>
 
       <div className="chat-messages" ref={messagesRef} data-testid="chat-messages">
         {!loaded && <p className="chat-placeholder">Carregando histórico…</p>}

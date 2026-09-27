@@ -681,6 +681,24 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   font-weight: 600;
 }
 
+.chat-session-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.chat-session-controls select {
+  min-width: 0;
+  flex: 1 1 100%;
+  padding: 5px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+}
+
 .btn-sm {
   font-size: 12px;
   padding: 4px 10px;

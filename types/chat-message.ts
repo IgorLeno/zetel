@@ -43,6 +43,7 @@ export interface ChatMessageMeta {
 export interface ChatMessage {
   id: string;
   zetelId: string;
+  sessionId: string;
   role: 'user' | 'assistant';
   content: string;
   pageIndex: number | null;
@@ -53,6 +54,7 @@ export interface ChatMessage {
 
 export interface NewChatMessage {
   zetelId: string;
+  sessionId: string;
   role: 'user' | 'assistant';
   content: string;
   pageIndex: number | null;

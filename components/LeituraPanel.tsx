@@ -58,11 +58,13 @@ export function LeituraPanel({
   readingStale,
   lastBuiltAt,
   selectedMode,
+  chatActive = true,
 }: {
   zetelId: string;
   readingStale: boolean;
   lastBuiltAt: string | null;
   selectedMode: ReadingMode;
+  chatActive?: boolean;
 }) {
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -109,6 +111,9 @@ export function LeituraPanel({
         : null;
 
   const showIframe = anyBuilt && !building && viewArtifact !== null;
+  useEffect(() => {
+    if (chatActive && artifacts && !showIframe) setChatOpen(true);
+  }, [chatActive, artifacts, showIframe]);
 
   const iframeSrc = (() => {
     const params = new URLSearchParams();
@@ -263,30 +268,23 @@ export function LeituraPanel({
       )}
       {error && <p className="feedback err">{error}</p>}
 
-      {!anyBuilt && !building ? (
-        <div className="empty-state leitura-empty">
-          <div>Nenhuma leitura construída ainda.</div>
-        </div>
-      ) : building ? (
-        <div className="empty-state leitura-empty">
-          <div>
+      {/* O parceiro fica acessível para retomar um PDF mesmo sem HTML construído. */}
+      <div className={`leitura-body${chatOpen ? ' leitura-with-chat' : ''}`}>
+        {!anyBuilt && !building ? (
+          <div className="empty-state leitura-empty">Nenhuma leitura construída ainda.</div>
+        ) : building ? (
+          <div className="empty-state leitura-empty">
             {buildingMode === 'guia-estudo'
               ? 'Gerando guia de estudo com IA… isso pode levar até um minuto.'
               : 'Gerando HTML de leitura…'}
           </div>
-        </div>
-      ) : viewArtifact === null ? (
-        <div className="empty-state leitura-empty">
-          <div>
+        ) : viewArtifact === null ? (
+          <div className="empty-state leitura-empty">
             {selectedMode === 'guia-estudo'
               ? 'Guia de Estudo ainda não gerado.'
               : 'Documento Técnico ainda não construído.'}
           </div>
-        </div>
-      ) : (
-        /* ChatPanel sempre montado — toggle de visibilidade via CSS para não perder
-           streams em curso ao recolher o painel (M6-3). */
-        <div className={`leitura-body${chatOpen ? ' leitura-with-chat' : ''}`}>
+        ) : (
           <iframe
             ref={iframeRef}
             className="leitura-iframe"
@@ -296,6 +294,7 @@ export function LeituraPanel({
             onLoad={postCurrentTheme}
             style={isDragging ? { pointerEvents: 'none' } : undefined}
           />
+        )}
           <div
             inert={!chatOpen}
             aria-hidden={!chatOpen}
@@ -316,7 +315,7 @@ export function LeituraPanel({
               aria-label="Redimensionar painel do parceiro"
             />
             <div style={{ width: chatWidth, minWidth: CHAT_WIDTH_MIN, maxWidth: chatWidth, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
-              <button
+              {showIframe && <button
                 type="button"
                 className="partner-close-tab"
                 title="Fechar parceiro"
@@ -326,9 +325,10 @@ export function LeituraPanel({
                 <svg viewBox="0 0 16 16" aria-hidden>
                   <path d="M10 4L6 8l4 4" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-              </button>
+              </button>}
               <ChatPanel
                 zetelId={zetelId}
+                active={chatActive}
                 currentReadingMode={currentReadingMode}
                 currentPageIndex={currentPageIndex}
                 currentGuideBlockId={currentGuideBlockId}
@@ -339,8 +339,7 @@ export function LeituraPanel({
               />
             </div>
           </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

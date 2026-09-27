@@ -6,6 +6,7 @@ import { logger } from './logger';
 interface ChatMessageRow {
   id: string;
   zetel_id: string;
+  session_id: string;
   role: 'user' | 'assistant';
   content: string;
   page_index: number | null;
@@ -27,6 +28,7 @@ function rowToMessage(row: ChatMessageRow): ChatMessage {
   return {
     id: row.id,
     zetelId: row.zetel_id,
+    sessionId: row.session_id,
     role: row.role,
     content: row.content,
     pageIndex: row.page_index,
@@ -36,13 +38,15 @@ function rowToMessage(row: ChatMessageRow): ChatMessage {
   };
 }
 
-/** Histórico do Zetel, ordenado por `created_at` ASC. */
-export function listMessages(db: Database.Database, zetelId: string): ChatMessage[] {
-  const rows = db
-    .prepare(
-      'SELECT * FROM chat_messages WHERE zetel_id = ? ORDER BY created_at ASC',
-    )
-    .all(zetelId) as ChatMessageRow[];
+/** Histórico ordenado por data. A rota passa sessionId para isolar conversas. */
+export function listMessages(db: Database.Database, zetelId: string, sessionId?: string): ChatMessage[] {
+  const rows = sessionId
+    ? db.prepare(
+      `SELECT * FROM chat_messages WHERE zetel_id = ? AND session_id = ?
+       ORDER BY created_at ASC, rowid ASC`,
+    ).all(zetelId, sessionId) as ChatMessageRow[]
+    : db.prepare('SELECT * FROM chat_messages WHERE zetel_id = ? ORDER BY created_at ASC, rowid ASC')
+      .all(zetelId) as ChatMessageRow[];
   return rows.map(rowToMessage);
 }
 
@@ -50,14 +54,15 @@ export function listMessages(db: Database.Database, zetelId: string): ChatMessag
 export function listRecentMessages(
   db: Database.Database,
   zetelId: string,
+  sessionId: string,
   limit: number,
 ): ChatMessage[] {
   const rows = db
     .prepare(
-      `SELECT * FROM chat_messages WHERE zetel_id = ?
-       ORDER BY created_at DESC LIMIT ?`,
+      `SELECT * FROM chat_messages WHERE zetel_id = ? AND session_id = ?
+       ORDER BY created_at DESC, rowid DESC LIMIT ?`,
     )
-    .all(zetelId, limit) as ChatMessageRow[];
+    .all(zetelId, sessionId, limit) as ChatMessageRow[];
   return rows.map(rowToMessage).reverse();
 }
 
@@ -65,14 +70,18 @@ export function saveMessage(db: Database.Database, msg: NewChatMessage): ChatMes
   const id = randomUUID();
   const createdAt = new Date().toISOString();
   const meta = msg.meta ? JSON.stringify(msg.meta) : null;
-  db.prepare(
-    `INSERT INTO chat_messages (id, zetel_id, role, content, page_index, model, created_at, meta)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(id, msg.zetelId, msg.role, msg.content, msg.pageIndex, msg.model, createdAt, meta);
+  const result = db.prepare(
+    `INSERT INTO chat_messages (id, zetel_id, session_id, role, content, page_index, model, created_at, meta)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+     WHERE EXISTS (SELECT 1 FROM study_sessions WHERE id = ? AND zetel_id = ? AND status != 'archived')`,
+  ).run(id, msg.zetelId, msg.sessionId, msg.role, msg.content, msg.pageIndex, msg.model,
+    createdAt, meta, msg.sessionId, msg.zetelId);
+  if (result.changes !== 1) throw new Error('Sessão de chat indisponível.');
   logger.info('chat message saved', { zetelId: msg.zetelId, role: msg.role, model: msg.model });
   return {
     id,
     zetelId: msg.zetelId,
+    sessionId: msg.sessionId,
     role: msg.role,
     content: msg.content,
     pageIndex: msg.pageIndex,
@@ -97,9 +106,34 @@ export function updateMessageMeta(
   logger.info('chat message meta updated', { messageId });
 }
 
-export function clearHistory(db: Database.Database, zetelId: string): void {
-  db.prepare('DELETE FROM chat_messages WHERE zetel_id = ?').run(zetelId);
-  logger.info('chat history cleared', { zetelId });
+/** PATCH do chat: não revela nem modifica mensagem alheia. */
+export function updateOwnedMessageMeta(
+  db: Database.Database,
+  zetelId: string,
+  messageId: string,
+  patch: ChatMessageMeta,
+  sessionId?: string,
+): boolean {
+  return db.transaction(() => {
+    const row = db.prepare(
+      `SELECT meta FROM chat_messages WHERE id = ? AND zetel_id = ?
+       AND (? IS NULL OR session_id = ?)`,
+    ).get(messageId, zetelId, sessionId ?? null, sessionId ?? null) as { meta: string | null } | undefined;
+    if (!row) return false;
+    const merged: ChatMessageMeta = { ...parseMeta(row.meta), ...patch };
+    db.prepare(
+      `UPDATE chat_messages SET meta = ? WHERE id = ? AND zetel_id = ?
+       AND (? IS NULL OR session_id = ?)`,
+    ).run(JSON.stringify(merged), messageId, zetelId, sessionId ?? null, sessionId ?? null);
+    logger.info('chat message meta updated', { messageId });
+    return true;
+  })();
+}
+
+export function clearHistory(db: Database.Database, zetelId: string, sessionId: string): void {
+  db.prepare('DELETE FROM chat_messages WHERE zetel_id = ? AND session_id = ?')
+    .run(zetelId, sessionId);
+  logger.info('chat history cleared', { zetelId, sessionId });
 }
 
 /** Busca página por índice global; null se não existir. */

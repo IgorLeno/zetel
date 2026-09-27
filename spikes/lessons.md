@@ -937,3 +937,17 @@ Rule: para preservar `ChatPanel` montado no layout lateral, não esconder seu wr
 [2026-06-03] Context: o usuário pedia explicitamente "faça uma nota", mas o backend aceitava que o modelo respondesse em texto livre sem emitir `<<<NOTA_SUGERIDA>>>`.
 Mistake: a rubrica de nota ensinava o formato, mas não tornava o marcador obrigatório para pedidos explícitos de criação de nota; sem marcador, o stream não gera `[SUGGESTION]` e o `NoteCard` não renderiza.
 Rule: quando o usuário pedir uma nota explicitamente e houver contexto suficiente, o prompt backend deve exigir o bloco `<<<NOTA_SUGERIDA>>> ... <<<FIM_NOTA>>>`; texto livre do tipo "preparei uma sugestão" nunca é resposta válida para renderização de cartão.
+
+## SPEC-001 Task 005 — retomada sem artefato HTML (2026-09-27)
+
+[2026-09-27] Context: a lista de sessões precisava estar acessível ao voltar a um Zetel que tem PDF, mas ainda não tem HTML de leitura construído.
+Mistake: ampliar a visibilidade do botão flutuante do parceiro também para estados sem iframe violou o contrato visual do shell de leitura.
+Rule: manter o botão flutuante restrito ao iframe visível; quando falta o artefato, abrir o painel de chat com os controles de sessão no próprio layout de leitura.
+
+[2026-09-27] Context: foco da sessão é atualizado por requests independentes ao navegar páginas.
+Mistake: PATCHs paralelos podiam terminar fora de ordem e persistir uma página anterior.
+Rule: serializar as gravações de foco por painel; o último evento de navegação deve ser a última escrita aplicada.
+
+[2026-09-27] Context: migration de sessões reconstrói foco PDF a partir de metadados legados do chat.
+Mistake: aceitar `focusFileId` e página só pelo formato do JSON podia restaurar um PDF apagado, alheio ou com página fora do limite.
+Rule: validar arquivo, ownership, tipo, estado de extração e `page_count` no backfill antes de persistir foco PDF; usar a posição Markdown disponível quando não houver PDF válido.

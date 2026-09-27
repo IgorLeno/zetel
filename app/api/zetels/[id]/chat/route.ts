@@ -6,8 +6,12 @@ import {
   listMessages,
   listRecentMessages,
   saveMessage,
-  updateMessageMeta,
+  updateOwnedMessageMeta,
 } from '@/lib/chat-service';
+import {
+  createStudySession, getStudySession, resolveCurrentStudySession,
+  touchStudySession, updateStudySession,
+} from '@/lib/study-session-service';
 import {
   buildOpenRouterMessages,
   ensureParceiroPrompt,
@@ -63,7 +67,7 @@ function friendlyKeyError(err: unknown): string | null {
 }
 
 /** GET /api/zetels/[id]/chat */
-export async function GET(_request: Request, { params }: Ctx) {
+export async function GET(request: Request, { params }: Ctx) {
   const { id } = await params;
   const db = getDb();
   try {
@@ -71,7 +75,18 @@ export async function GET(_request: Request, { params }: Ctx) {
   } catch {
     return NextResponse.json({ error: 'Zetel não encontrado.' }, { status: 404 });
   }
-  return NextResponse.json({ messages: listMessages(db, id) });
+  const sessionId = new URL(request.url).searchParams.get('sessionId');
+  if (sessionId === '') {
+    return NextResponse.json({ error: 'sessionId inválido.' }, { status: 400 });
+  }
+  const session = sessionId
+    ? getStudySession(db, id, sessionId)
+    : resolveCurrentStudySession(db, id);
+  if (sessionId && !session) {
+    return NextResponse.json({ error: 'Sessão não encontrada.' }, { status: 404 });
+  }
+  return NextResponse.json({ sessionId: session?.id ?? null,
+    messages: session ? listMessages(db, id, session.id) : [] });
 }
 
 /** PATCH /api/zetels/[id]/chat — registra rejeição de sugestão de nota (só flag). */
@@ -84,10 +99,13 @@ export async function PATCH(request: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'Zetel não encontrado.' }, { status: 404 });
   }
 
-  let body: { messageId?: unknown; rejected?: unknown; kind?: unknown };
+  let body: { messageId?: unknown; sessionId?: unknown; rejected?: unknown; kind?: unknown };
   try {
     body = await request.json();
   } catch {
+    return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 });
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 });
   }
 
@@ -95,16 +113,25 @@ export async function PATCH(request: Request, { params }: Ctx) {
   if (!messageId) {
     return NextResponse.json({ error: 'messageId ausente.' }, { status: 400 });
   }
-  if (body.rejected === true) {
-    // `kind: 'memory'` distingue a rejeição de memória da de nota (Módulo 7).
-    const patch = body.kind === 'memory' ? { memoryRejected: true } : { noteRejected: true };
-    updateMessageMeta(db, messageId, patch);
+  if (body.sessionId !== undefined &&
+      (typeof body.sessionId !== 'string' || !body.sessionId)) {
+    return NextResponse.json({ error: 'sessionId inválido.' }, { status: 400 });
+  }
+  const sessionId = body.sessionId as string | undefined;
+  if (sessionId && !getStudySession(db, id, sessionId)) {
+    return NextResponse.json({ error: 'Sessão não encontrada.' }, { status: 404 });
+  }
+  const patch = body.rejected === true
+    ? body.kind === 'memory' ? { memoryRejected: true } : { noteRejected: true }
+    : {};
+  if (!updateOwnedMessageMeta(db, id, messageId, patch, sessionId)) {
+    return NextResponse.json({ error: 'Mensagem não encontrada.' }, { status: 404 });
   }
   return NextResponse.json({ ok: true });
 }
 
 /** DELETE /api/zetels/[id]/chat */
-export async function DELETE(_request: Request, { params }: Ctx) {
+export async function DELETE(request: Request, { params }: Ctx) {
   const { id } = await params;
   const db = getDb();
   try {
@@ -112,7 +139,12 @@ export async function DELETE(_request: Request, { params }: Ctx) {
   } catch {
     return NextResponse.json({ error: 'Zetel não encontrado.' }, { status: 404 });
   }
-  clearHistory(db, id);
+  const sessionId = new URL(request.url).searchParams.get('sessionId');
+  if (!sessionId) return NextResponse.json({ error: 'sessionId ausente.' }, { status: 400 });
+  if (!getStudySession(db, id, sessionId)) {
+    return NextResponse.json({ error: 'Sessão não encontrada.' }, { status: 404 });
+  }
+  clearHistory(db, id, sessionId);
   return NextResponse.json({ ok: true });
 }
 
@@ -139,10 +171,14 @@ export async function POST(request: Request, { params }: Ctx) {
     guideBlockTotal?: unknown;
     interactionMode?: unknown;
     focus?: unknown;
+    sessionId?: unknown;
   };
   try {
     body = await request.json();
   } catch {
+    return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 });
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 });
   }
 
@@ -153,6 +189,19 @@ export async function POST(request: Request, { params }: Ctx) {
       { error: 'Mensagem inválida (vazia ou acima de 4000 caracteres).' },
       { status: 400 },
     );
+  }
+  if (body.sessionId !== undefined &&
+      (typeof body.sessionId !== 'string' || !body.sessionId)) {
+    return NextResponse.json({ error: 'sessionId inválido.' }, { status: 400 });
+  }
+  const requestedSessionId = body.sessionId as string | undefined;
+  const requestedSession = requestedSessionId
+    ? getStudySession(db, zetelId, requestedSessionId) : null;
+  if (requestedSessionId && !requestedSession) {
+    return NextResponse.json({ error: 'Sessão não encontrada.' }, { status: 404 });
+  }
+  if (requestedSession?.status === 'archived') {
+    return NextResponse.json({ error: 'Sessão arquivada.' }, { status: 409 });
   }
 
   let apiKey: string;
@@ -266,6 +315,21 @@ export async function POST(request: Request, { params }: Ctx) {
     pageAnchor = page.anchor;
   }
 
+  const session = requestedSession ?? resolveCurrentStudySession(db, zetelId) ??
+    createStudySession(db, zetelId, {
+      focus: pdfFocus
+        ? { scope: 'page', fileId: pdfFocus.fileId, pageNumber: pdfFocus.pageNumber }
+        : pageIndex !== null
+          ? { scope: 'page', fileId: null, pageNumber: pageIndex }
+          : null,
+    });
+  const sessionFocus = pdfFocus
+    ? { scope: 'page' as const, fileId: pdfFocus.fileId, pageNumber: pdfFocus.pageNumber }
+    : pageIndex !== null
+      ? { scope: 'page' as const, fileId: null, pageNumber: pageIndex }
+      : { scope: 'zetel' as const, fileId: null, pageNumber: null };
+  updateStudySession(db, zetelId, session.id, { focus: sessionFocus, status: 'active' });
+
   const model = resolveChatModel(
     typeof body.model === 'string' ? body.model : undefined,
     getSetting('chat_model') || getSetting('default_model'),
@@ -273,7 +337,7 @@ export async function POST(request: Request, { params }: Ctx) {
   );
 
   const historyWindow = resolveHistoryWindow(getSetting('chat_history_window'));
-  const history = listRecentMessages(db, zetelId, historyWindow);
+  const history = listRecentMessages(db, zetelId, session.id, historyWindow);
 
   // Prompt do parceiro + rubricas + títulos (Módulo 8: parceiro.md lido do vault).
   // Sem vault, degrada como chat simples (regra #5: leitura sob demanda, nunca cache).
@@ -375,6 +439,7 @@ export async function POST(request: Request, { params }: Ctx) {
 
   saveMessage(db, {
     zetelId,
+    sessionId: session.id,
     role: 'user',
     content: userMessage,
     pageIndex,
@@ -385,6 +450,7 @@ export async function POST(request: Request, { params }: Ctx) {
       ...locationMeta,
     },
   });
+  touchStudySession(db, zetelId, session.id);
 
   const encoder = new TextEncoder();
 
@@ -478,6 +544,7 @@ export async function POST(request: Request, { params }: Ctx) {
             emit(fallback);
             saveMessage(db, {
               zetelId,
+              sessionId: session.id,
               role: 'assistant',
               content: fallback,
               pageIndex,
@@ -508,6 +575,7 @@ export async function POST(request: Request, { params }: Ctx) {
 
         const saved = saveMessage(db, {
           zetelId,
+          sessionId: session.id,
           role: 'assistant',
           content: assistantContent,
           pageIndex,
@@ -557,6 +625,7 @@ export async function POST(request: Request, { params }: Ctx) {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
+      'X-Study-Session-Id': session.id,
     },
   });
 }
