@@ -1,14 +1,18 @@
 ---
 id: "003"
 title: "Leitor PDF e foco de página no chat"
-status: READY
+status: SESSION_CLOSED
 blocked_by: ["002"]
 writer: null
 reviewer: null
-commit: null
-push: null
-review_result: pending
-handoff: null
+commit: 5d0522377329bd4b5e834ff978ce37009cff24a2
+push: origin/feat/spec-001-task-003-pdf-reader
+review_result: PASS
+handoff: .agent/specs/SPEC-001-conversational-learning-v1/handoffs/003-pdf-reader-page-focus-5d05223.md
+execution_profile: FULL
+profile_justification: "Nova rota serve arquivo do vault (path traversal, posse por Zetel) e altera contrato publico do chat (foco resolvido server-side, texto de fonte no prompt): seguranca e contrato publico, FULL por regra."
+validation: PASS
+validated_at: "2026-09-26T17:07:55.860Z"
 ---
 
 ## Objetivo

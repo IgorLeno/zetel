@@ -1933,3 +1933,74 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 .vault-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity var(--t-fast), max-width var(--t-med); max-width: 120px; }
 .app[data-rail="true"] .vault-name,
 html[data-sidebar-collapsed="true"] .app .vault-name { max-width: 0; opacity: 0; pointer-events: none; }
+
+/* ── Leitor PDF (SPEC-001 tarefa 003) ─────────────────────────────────────── */
+.pdf-reader {
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+}
+.pdf-reader-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.pdf-reader-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.pdf-reader-page { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.pdf-reader-page input { width: 4.5em; }
+.pdf-reader-scroll { flex: 1; min-height: 0; overflow: auto; padding: 12px; }
+.pdf-reader-page-box { position: relative; margin: 0 auto; background: #fff; }
+.pdf-reader-page-box canvas { display: block; }
+
+/* Camada de texto do pdf.js (subconjunto de pdfjs-dist/web/pdf_viewer.css). */
+.textLayer {
+  position: absolute;
+  text-align: initial;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+}
+.textLayer > :not(.markedContent),
+.textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.textLayer .markedContent { display: contents; }
+.textLayer ::selection { background: rgba(0 0 255 / 0.25); }
+.textLayer br::selection { background: transparent; }

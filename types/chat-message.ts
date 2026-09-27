@@ -8,6 +8,12 @@ export interface ChatMessageMeta {
   guideBlockId?: string;
   /** Seção visual ativa do Guia de Estudo, quando aplicável. */
   guideSectionId?: string;
+  /** Arquivo PDF em foco no turno (SPEC-001 tarefa 003); resolvido no servidor. */
+  focusFileId?: string;
+  /** Página PDF em foco (1-based). */
+  focusPageNumber?: number;
+  /** `pdf_pages.content_hash` da página usada no turno (proveniência, sem conteúdo). */
+  focusContentHash?: string;
   /** `false` se o cliente enviou conteúdo divergente do `content_hash` (D8). */
   pageHashMatch?: boolean;
   tokensIn?: number;

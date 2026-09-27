@@ -106,6 +106,7 @@ export function ChatPanel({
   currentGuideBlockTitle,
   currentGuideBlockIndex,
   currentGuideBlockTotal,
+  pdfFocus = null,
 }: {
   zetelId: string;
   currentReadingMode: ReadingMode;
@@ -115,7 +116,14 @@ export function ChatPanel({
   currentGuideBlockTitle: string | null;
   currentGuideBlockIndex: number | null;
   currentGuideBlockTotal: number | null;
+  /** Página do leitor PDF (tarefa 003). Só IDs: o texto vem do servidor. */
+  pdfFocus?: { fileId: string; pageNumber: number } | null;
 }) {
+  // Ref: o fluxo de voz chama sendMessage por closures antigas; a página enviada
+  // precisa ser a atual. Mudar de página só atualiza a ref (não dispara turno).
+  const pdfFocusRef = useRef(pdfFocus);
+  useEffect(() => { pdfFocusRef.current = pdfFocus; }, [pdfFocus]);
+
   // ── Core chat state ──────────────────────────────────────────────────────────
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState('');
@@ -476,17 +484,28 @@ export function ChatPanel({
       const res = await fetch(`/api/zetels/${zetelId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userMessage: text,
-          pageIndex: currentPageIndex,
-          readingMode: currentReadingMode,
-          guideBlockId: currentGuideBlockId,
-          guideSectionId: currentGuideSectionId,
-          guideBlockTitle: currentGuideBlockTitle,
-          guideBlockIndex: currentGuideBlockIndex,
-          guideBlockTotal: currentGuideBlockTotal,
-          interactionMode: mode,
-        }),
+        body: JSON.stringify(
+          pdfFocusRef.current
+            ? {
+                userMessage: text,
+                focus: {
+                  fileId: pdfFocusRef.current.fileId,
+                  pageNumber: pdfFocusRef.current.pageNumber,
+                },
+                interactionMode: mode,
+              }
+            : {
+                userMessage: text,
+                pageIndex: currentPageIndex,
+                readingMode: currentReadingMode,
+                guideBlockId: currentGuideBlockId,
+                guideSectionId: currentGuideSectionId,
+                guideBlockTitle: currentGuideBlockTitle,
+                guideBlockIndex: currentGuideBlockIndex,
+                guideBlockTotal: currentGuideBlockTotal,
+                interactionMode: mode,
+              },
+        ),
       });
 
       if (!res.ok) {

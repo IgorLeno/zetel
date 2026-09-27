@@ -26,6 +26,8 @@ import { readApiKey, streamChat, type UsageSink } from '@/lib/openrouter';
 import { getOpenRouterModel } from '@/lib/config';
 import { getSetting } from '@/lib/settings';
 import { getZetelById } from '@/lib/zetel-service';
+import { parsePdfPageFocus, resolvePdfPageFocus, type ResolvedPdfPageFocus } from '@/lib/focus';
+import type { ChatMessageMeta } from '@/types/chat-message';
 import { logger } from '@/lib/logger';
 import {
   findStudyGuideSourceEntry,
@@ -130,6 +132,7 @@ export async function POST(request: Request, { params }: Ctx) {
     guideBlockIndex?: unknown;
     guideBlockTotal?: unknown;
     interactionMode?: unknown;
+    focus?: unknown;
   };
   try {
     body = await request.json();
@@ -201,6 +204,29 @@ export async function POST(request: Request, { params }: Ctx) {
     pageIndex = guideSourceEntry.page_indices[0] ?? null;
   }
 
+  // Foco de página PDF (tarefa 003): o cliente manda só fileId/pageNumber; texto
+  // e hash vêm de `pdf_pages`. Qualquer conteúdo enviado junto é ignorado.
+  const focusInput = parsePdfPageFocus(body.focus);
+  if (focusInput === 'invalid') {
+    return NextResponse.json({ error: 'Foco inválido.' }, { status: 400 });
+  }
+  if (focusInput && (pageIndex !== null || readingMode === 'guia-estudo')) {
+    return NextResponse.json(
+      { error: 'Foco de PDF não combina com página do Documento Técnico ou Guia.' },
+      { status: 400 },
+    );
+  }
+  let pdfFocus: ResolvedPdfPageFocus | null = null;
+  if (focusInput) {
+    pdfFocus = resolvePdfPageFocus(db, zetelId, focusInput);
+    if (!pdfFocus) {
+      return NextResponse.json(
+        { error: 'Página do PDF não encontrada neste Zetel. Processe os arquivos e tente de novo.' },
+        { status: 400 },
+      );
+    }
+  }
+
   let pageContent: string | null = null;
   let pageAnchor: string | null = null;
   if (pageIndex !== null) {
@@ -244,7 +270,7 @@ export async function POST(request: Request, { params }: Ctx) {
     }
   }
 
-  const readingLocation: ReadingLocationContext = {
+  const readingLocation: ReadingLocationContext | undefined = pdfFocus ? undefined : {
     readingMode,
     pageIndex,
     guideBlockId,
@@ -271,6 +297,17 @@ export async function POST(request: Request, { params }: Ctx) {
     existingTitles,
     vaultPath: vaultPath ?? undefined,
     interactionMode,
+    sources: pdfFocus
+      ? [
+          {
+            id: 'S1',
+            doc: pdfFocus.filename,
+            pagina: pdfFocus.pageNumber,
+            tipo: 'foco',
+            text: pdfFocus.contentText,
+          },
+        ]
+      : undefined,
   });
   if (memoryWarnings.truncatedCount > 0) {
     // Regra #6: só contagem, nunca conteúdo.
@@ -281,6 +318,19 @@ export async function POST(request: Request, { params }: Ctx) {
   // então o hash sempre confere quando há página.
   const pageHashMatch = pageIndex !== null ? true : undefined;
 
+  // Localização persistida no meta: só IDs, número de página e hash (regra #6).
+  const locationMeta: ChatMessageMeta = pdfFocus
+    ? {
+        focusFileId: pdfFocus.fileId,
+        focusPageNumber: pdfFocus.pageNumber,
+        focusContentHash: pdfFocus.contentHash,
+      }
+    : {
+        readingMode,
+        guideBlockId: guideBlockId ?? undefined,
+        guideSectionId: guideSectionId ?? undefined,
+      };
+
   saveMessage(db, {
     zetelId,
     role: 'user',
@@ -290,9 +340,7 @@ export async function POST(request: Request, { params }: Ctx) {
     meta: {
       pageAnchor,
       pageHashMatch,
-      readingMode,
-      guideBlockId: guideBlockId ?? undefined,
-      guideSectionId: guideSectionId ?? undefined,
+      ...locationMeta,
     },
   });
 
@@ -397,9 +445,7 @@ export async function POST(request: Request, { params }: Ctx) {
                 pageHashMatch,
                 tokensIn: usageSink.tokensIn,
                 tokensOut: usageSink.tokensOut,
-                readingMode,
-                guideBlockId: guideBlockId ?? undefined,
-                guideSectionId: guideSectionId ?? undefined,
+                ...locationMeta,
               },
             });
           } else {
@@ -433,9 +479,7 @@ export async function POST(request: Request, { params }: Ctx) {
             noteTipo: suggestion?.tipo,
             suggestedMemory: memorySuggestion ? true : undefined,
             memoryLong: memoryWarnings.hasLongFile || undefined,
-            readingMode,
-            guideBlockId: guideBlockId ?? undefined,
-            guideSectionId: guideSectionId ?? undefined,
+            ...locationMeta,
           },
         });
 

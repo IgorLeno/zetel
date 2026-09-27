@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 18,
+  "revision": 26,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -43,10 +43,18 @@
     {
       "id": "003",
       "title": "Leitor PDF e foco de página no chat",
-      "status": "READY",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "002"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "Nova rota serve arquivo do vault (path traversal, posse por Zetel) e altera contrato publico do chat (foco resolvido server-side, texto de fonte no prompt): seguranca e contrato publico, FULL por regra.",
+      "reviews_requested": 2,
+      "validation": "PASS",
+      "review_result": "PASS",
+      "commit": "5d0522377329bd4b5e834ff978ce37009cff24a2",
+      "push": "origin/feat/spec-001-task-003-pdf-reader",
+      "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/003-pdf-reader-page-focus-5d05223.md"
     },
     {
       "id": "004",
@@ -138,25 +146,24 @@
     }
   ],
   "session": {
-    "id": "task-002-20260926",
+    "id": "task-003-20260926",
     "agent": "claude",
-    "task_id": "002",
+    "task_id": "003",
     "status": "SESSION_CLOSED",
-    "started_at": "2026-09-26T13:30:57.340Z",
+    "started_at": "2026-09-26T16:21:45.485Z",
     "execution_profile": "FULL",
-    "profile_justification": "Migration 006 nova (pdf_pages/pdf_sections + colunas em zetel_files), dependencia nova pdfjs-dist, parsing de entrada nao confiavel (PDF) e persistencia de derivados: FULL por regra.",
+    "profile_justification": "Nova rota serve arquivo do vault (path traversal, posse por Zetel) e altera contrato publico do chat (foco resolvido server-side, texto de fonte no prompt): seguranca e contrato publico, FULL por regra.",
     "reviews_requested": 2,
-    "validating_at": "2026-09-26T13:51:27.068Z",
+    "validating_at": "2026-09-26T16:43:14.742Z",
     "validation_result": "PASS",
-    "fixed_point": "ce2dca05a7ee09d2906b2afe53257b10294c504902566ad512bdd1007e6bcf1d",
-    "review_aggregate": ".agent/specs/SPEC-001-conversational-learning-v1/reviews/002-aggregate.json",
-    "aggregated_at": "2026-09-26T13:58:17.268Z",
+    "fixed_point": "73f50868fbc7e6a866ca3a6f0461f360193689844d96ff7345323da10bafe048",
+    "review_aggregate": ".agent/specs/SPEC-001-conversational-learning-v1/reviews/003-aggregate.json",
+    "aggregated_at": "2026-09-27T05:07:39.764Z",
     "review_result": {
       "engineering-quality": "PASS",
       "spec-compliance": "PASS"
     },
-    "reviewing_at": "2026-09-26T13:56:03.603Z",
-    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/002-validation.json",
+    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/003-validation.json",
     "gates_plan": [
       {
         "category": "focused",
@@ -165,11 +172,8 @@
           "exec",
           "vitest",
           "run",
-          "tests/unit/pdf",
-          "tests/integration/pdf",
-          "tests/unit/ingestao",
-          "tests/integration/ingestao",
-          "tests/integration/study-guide"
+          "tests/unit/chat-prompt",
+          "tests/integration/pdf"
         ]
       },
       {
@@ -209,13 +213,14 @@
         ]
       }
     ],
-    "done_at": "2026-09-26T13:58:17.744Z",
+    "reviewing_at": "2026-09-26T17:07:55.860Z",
+    "done_at": "2026-09-27T05:07:42.935Z",
     "active_task_cleared": true,
     "external_checks": "pending-not-waited",
-    "delivery_commit": "4e3d1c454c54d6b3ec7945ac0470bc7817bf6f57",
-    "push": "origin/feat/spec-001-task-002-pdf-ingest",
-    "closed_at": "2026-09-26T16:13:51.950Z",
-    "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/002-pdf-ingest-4e3d1c4.md"
+    "delivery_commit": "5d0522377329bd4b5e834ff978ce37009cff24a2",
+    "push": "origin/feat/spec-001-task-003-pdf-reader",
+    "closed_at": "2026-09-27T05:07:50.274Z",
+    "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/003-pdf-reader-page-focus-5d05223.md"
   },
   "approval": {
     "spec": true,

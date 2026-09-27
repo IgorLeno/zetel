@@ -6,8 +6,9 @@ import { ArquivosPanel } from './ArquivosPanel';
 import { LeituraPanel } from './LeituraPanel';
 import { ArtefatosPanel } from './ArtefatosPanel';
 import { NotasPanel } from './NotasPanel';
+import { PdfStudyView } from './PdfStudyView';
 
-type ViewParam = 'tecnico' | 'guia-estudo' | 'arquivos' | 'notas-rapidas' | 'notas-literatura' | 'notas-elaboradas' | 'notas-do-usuario' | 'artefatos';
+type ViewParam = 'tecnico' | 'guia-estudo' | 'arquivos' | 'pdf' | 'notas-rapidas' | 'notas-literatura' | 'notas-elaboradas' | 'notas-do-usuario' | 'artefatos';
 
 function isReadingView(view: ViewParam): view is 'tecnico' | 'guia-estudo' {
   return view === 'tecnico' || view === 'guia-estudo';
@@ -24,13 +25,14 @@ function WorkspaceView({
 }) {
   const searchParams = useSearchParams();
   const rawView = searchParams.get('view') ?? 'tecnico';
-  const view = (['tecnico', 'guia-estudo', 'arquivos', 'notas-rapidas', 'notas-literatura', 'notas-elaboradas', 'notas-do-usuario', 'artefatos'] as const).includes(
+  const view = (['tecnico', 'guia-estudo', 'arquivos', 'pdf', 'notas-rapidas', 'notas-literatura', 'notas-elaboradas', 'notas-do-usuario', 'artefatos'] as const).includes(
     rawView as ViewParam,
   )
     ? (rawView as ViewParam)
     : 'tecnico';
 
   const selectedMode = isReadingView(view) ? view : 'tecnico';
+  const pdfFileId = view === 'pdf' ? searchParams.get('file') : null;
 
   return (
     <div className="zetel-workspace">
@@ -44,6 +46,12 @@ function WorkspaceView({
         />
       </div>
       {view === 'arquivos' && <ArquivosPanel zetelId={zetelId} />}
+      {view === 'pdf' &&
+        (pdfFileId ? (
+          <PdfStudyView key={pdfFileId} zetelId={zetelId} fileId={pdfFileId} />
+        ) : (
+          <p className="feedback err">Nenhum PDF selecionado. Abra um PDF pela aba Arquivos.</p>
+        ))}
       {view === 'notas-rapidas' && (
         <div data-testid="notas-rapidas-panel">
           <NotasPanel zetelId={zetelId} tipo="rapida" />
