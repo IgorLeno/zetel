@@ -2,6 +2,13 @@ import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { FocusState, StudySession, StudySessionStatus } from '@/types/study-session';
 import { isPdfFilename } from './pdf-service';
+import { isKnownTutorProfile } from './tutor-profile-service';
+import {
+  parseProfileOverrides,
+  readStoredOverrides,
+  TutorProfileError,
+  type ProfileOverrides,
+} from './tutor-profiles';
 
 interface SessionRow {
   id: string;
@@ -26,9 +33,7 @@ function fromRow(row: SessionRow): StudySession {
     status: row.status,
     focus: row.focus ? JSON.parse(row.focus) as FocusState : null,
     profileId: row.profile_id,
-    profileOverrides: row.profile_overrides
-      ? JSON.parse(row.profile_overrides) as Record<string, unknown>
-      : null,
+    profileOverrides: parseOverridesColumn(row.profile_overrides),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastActiveAt: row.last_active_at,
@@ -56,16 +61,30 @@ export function validateProfileId(value: unknown): string {
   return value;
 }
 
-export function validateProfileOverrides(value: unknown): Record<string, unknown> | null {
-  if (value === null) return null;
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new SessionValidationError('Ajustes de perfil inválidos.');
+function parseOverridesColumn(raw: string | null): ProfileOverrides | null {
+  if (!raw) return null;
+  try {
+    return readStoredOverrides(JSON.parse(raw));
+  } catch {
+    return null;
   }
-  const encoded = JSON.stringify(value);
-  if (encoded.length > 4096 || Object.keys(value).length > 30) {
-    throw new SessionValidationError('Ajustes de perfil grandes demais.');
+}
+
+export function validateProfileOverrides(value: unknown): ProfileOverrides | null {
+  try {
+    return parseProfileOverrides(value);
+  } catch (err) {
+    if (err instanceof TutorProfileError) throw new SessionValidationError(err.message);
+    throw err;
   }
-  return value as Record<string, unknown>;
+}
+
+function assertKnownProfile(db: Database.Database, value: unknown): string {
+  const profileId = validateProfileId(value);
+  if (!isKnownTutorProfile(db, profileId)) {
+    throw new SessionValidationError('Perfil não encontrado.');
+  }
+  return profileId;
 }
 
 /** Valida apenas a posição estrutural; nunca aceita texto de página/seleção. */
@@ -172,7 +191,9 @@ export function createStudySession(
   db: Database.Database, zetelId: string, input: CreateStudySessionInput = {},
 ): StudySession {
   const focus = input.focus === undefined ? null : validateSessionFocus(db, zetelId, input.focus);
-  const profileId = input.profileId === undefined ? 'conversa-livre' : validateProfileId(input.profileId);
+  const profileId = input.profileId === undefined
+    ? 'conversa-livre'
+    : assertKnownProfile(db, input.profileId);
   const overrides = input.profileOverrides === undefined
     ? null : validateProfileOverrides(input.profileOverrides);
   const file = focus?.fileId
@@ -217,7 +238,9 @@ export function updateStudySession(
   if (current.status === 'archived') throw new SessionValidationError('Sessão arquivada.');
   const title = input.title === undefined ? current.title : validateTitle(input.title);
   const focus = input.focus === undefined ? current.focus : validateSessionFocus(db, zetelId, input.focus);
-  const profileId = input.profileId === undefined ? current.profileId : validateProfileId(input.profileId);
+  const profileId = input.profileId === undefined
+    ? current.profileId
+    : assertKnownProfile(db, input.profileId);
   const overrides = input.profileOverrides === undefined
     ? current.profileOverrides : validateProfileOverrides(input.profileOverrides);
   const status = input.status === undefined ? current.status : input.status;

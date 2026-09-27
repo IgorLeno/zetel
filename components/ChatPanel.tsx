@@ -8,6 +8,7 @@ import { stripFonteMarkers } from '@/lib/fonte-markers';
 import { FonteText } from './FonteText';
 import { NoteCard, type Suggestion, type SaveNotePayload } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
+import { TutorProfilePanel } from './TutorProfilePanel';
 import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
@@ -1037,6 +1038,15 @@ export function ChatPanel({
         <button type="button" className="mini-btn" disabled={!sessionId || isLoading}
           onClick={() => void renameSession()}>Renomear</button>
       </div>
+
+      <TutorProfilePanel
+        zetelId={zetelId}
+        session={sessions.find((item) => item.id === sessionId) ?? null}
+        disabled={isLoading}
+        onSessionChange={(session) => {
+          setSessions((items) => items.map((item) => item.id === session.id ? session : item));
+        }}
+      />
 
       <div className="chat-messages" ref={messagesRef} data-testid="chat-messages">
         {!loaded && <p className="chat-placeholder">Carregando histórico…</p>}

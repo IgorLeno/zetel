@@ -1,7 +1,7 @@
 ---
 id: "007"
 title: "Perfis do tutor"
-status: READY
+status: IN_PROGRESS
 blocked_by: ["005"]
 writer: null
 reviewer: null
@@ -9,6 +9,8 @@ commit: null
 push: null
 review_result: pending
 handoff: null
+execution_profile: FULL
+profile_justification: "Migration (tutor_profiles) e mudança do contrato de prompt."
 ---
 
 ## Objetivo

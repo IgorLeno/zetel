@@ -26,6 +26,8 @@ import {
 import { ensureSugestaoNotaPrompt, listNoteTitles } from '@/lib/notes-service';
 import { ensureSugestaoMemoriaPrompt } from '@/lib/memory-service';
 import { assertZetelAtivo } from '@/lib/ingestao-service';
+import { compileTutorInstructions } from '@/lib/tutor-profiles';
+import { resolveSessionTutorProfile } from '@/lib/tutor-profile-service';
 import { readApiKey, streamChat, type UsageSink } from '@/lib/openrouter';
 import { getOpenRouterModel } from '@/lib/config';
 import { getSetting } from '@/lib/settings';
@@ -386,6 +388,7 @@ export async function POST(request: Request, { params }: Ctx) {
   };
 
   // Memória global é lida sob demanda dentro de buildOpenRouterMessages (regra #5).
+  const tutorProfile = resolveSessionTutorProfile(db, session.profileId, session.profileOverrides);
   const { messages: openRouterMessages, memoryWarnings } = buildOpenRouterMessages({
     displayName: zetel.displayName,
     pageContent,
@@ -399,6 +402,7 @@ export async function POST(request: Request, { params }: Ctx) {
     vaultPath: vaultPath ?? undefined,
     interactionMode,
     sources: turnSources?.promptSources,
+    tutorInstructions: compileTutorInstructions(tutorProfile),
   });
   if (memoryWarnings.truncatedCount > 0) {
     // Regra #6: só contagem, nunca conteúdo.

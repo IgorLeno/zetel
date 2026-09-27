@@ -143,13 +143,13 @@ describe('sessões e chat escopado', () => {
     expect(sessions.find((s) => s.id === first.id)?.status).toBe('paused');
     expect(sessions.find((s) => s.id === second.id)?.status).toBe('active');
     const patch = await call(sessionsRoute.PATCH, z1, 'PATCH', {
-      sessionId: first.id, title: 'Meu estudo', profileId: 'socratico',
+      sessionId: first.id, title: 'Meu estudo', profileId: 'professor-socratico',
       profileOverrides: { pace: 2 }, focus: { scope: 'page', fileId: null, pageNumber: 0 },
       status: 'active',
     });
     expect(patch.status).toBe(200);
     expect((await patch.json()).session).toMatchObject({ title: 'Meu estudo',
-      profileId: 'socratico', profileOverrides: { pace: 2 },
+      profileId: 'professor-socratico', profileOverrides: { pace: 2 },
       focus: { scope: 'page', fileId: null, pageNumber: 0 }, status: 'active' });
     expect((await (await call(chatRoute.GET, z1, 'GET', undefined, '?')).json()).sessionId)
       .toBe(first.id);
