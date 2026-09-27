@@ -1,7 +1,7 @@
 ---
 id: "004"
 title: "Seleção verificada: Conversar sobre isto"
-status: READY
+status: VALIDATING
 blocked_by: ["003"]
 writer: null
 reviewer: null
@@ -9,6 +9,10 @@ commit: null
 push: null
 review_result: pending
 handoff: null
+execution_profile: FULL
+profile_justification: "Contrato de confiança cliente→servidor da seleção: texto do cliente só vale se for substring normalizada de pdf_pages.content_text; servidor usa o próprio recorte"
+validation: FAIL
+validated_at: "2026-09-27T06:02:44.233Z"
 ---
 
 ## Objetivo

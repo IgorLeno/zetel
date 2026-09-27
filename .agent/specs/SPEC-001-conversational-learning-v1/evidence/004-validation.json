@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "task_id": "004",
+  "execution_profile": "FULL",
+  "state_revision": 28,
+  "git_head": "f78f448a30d5d1c729bb4e94dd10a777e1f44f6f",
+  "tree_fingerprint": "9c70b167b73452a6fb68fed9c0a2e89db2440bbabe5aa4d8c90961fa0931f8fe",
+  "tracked_diff_sha256": "97733e48b7d7ffc9ab2b7a44e429484c9e1db5f43335b41321a1cd64c71502df",
+  "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked_sha256": "fd595b7737c8ae68633f37f3317aa9326e505f034199f35a1ad7727faebd340f",
+  "task_fingerprint": "863a14aa6686e9106177d8e435f1f911bb99962a60cc81222f21f0498add9852",
+  "plan_fingerprint": "d47ee82fd0d28ae8fd1403d28061efafa7398f377b2ec20118718a93f402d674",
+  "fixed_point": "37d7b9646b71ccd1d3f4d4bc7a81b7c0e2f90a2daa001ad1972a296899172d2c",
+  "commands": [
+    {
+      "category": "focused",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/unit/focus/verify-selection.test.ts",
+        "tests/unit/chat-prompt/source-block.test.ts",
+        "tests/integration/pdf/pdf-focus-chat.test.ts"
+      ],
+      "started_at": "2026-09-27T05:57:46.352Z",
+      "completed_at": "2026-09-27T05:57:52.451Z",
+      "duration_ms": 6094,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "c51388589c4f23336d82bd9d87bd21334912b5f8c9bd6d0e2147caceae450c9c",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 559,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  3.96s (transform 1.10s, setup 0ms, collect 2.06s, tests 874ms, environment 2ms, prepare 782ms)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "build",
+      "argv": [
+        "pnpm",
+        "build"
+      ],
+      "started_at": "2026-09-27T05:57:52.451Z",
+      "completed_at": "2026-09-27T06:00:29.302Z",
+      "duration_ms": 156850,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "ed3ba86578d5f6bdd04a3b22b0f277683bfdd08e9130c044cc59a25f07a75b8e",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 3289,
+        "stderr_bytes": 0,
+        "stdout_preview": "ƒ  (Dynamic)  server-rendered on demand",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "test-ci",
+      "argv": [
+        "pnpm",
+        "test:ci"
+      ],
+      "started_at": "2026-09-27T06:00:29.302Z",
+      "completed_at": "2026-09-27T06:01:33.753Z",
+      "duration_ms": 64450,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "d2e5528d13912e4b6b6c72e08764511a0f04fcb68ef3aac34314584d8234f416",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 60033,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  5.28s (transform 2.53s, setup 0ms, collect 11.65s, tests 4.24s, environment 12ms, prepare 3.26s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "coverage",
+      "argv": [
+        "pnpm",
+        "test:coverage"
+      ],
+      "started_at": "2026-09-27T06:01:33.753Z",
+      "completed_at": "2026-09-27T06:02:44.157Z",
+      "duration_ms": 70404,
+      "exit_code": 1,
+      "result": "FAIL",
+      "output": {
+        "stdout_sha256": "801cb3661178a411abec75b8e37f8b193263245608fd25a2780dd378c02711e2",
+        "stderr_sha256": "13b8e8c4c3726cd0998c699697effecc3447aa56d9d799d4ea4ed7808814a471",
+        "stdout_bytes": 13648,
+        "stderr_bytes": 1579,
+        "stdout_preview": " ELIFECYCLE  Command failed with exit code 1.",
+        "stderr_preview": "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯"
+      }
+    }
+  ],
+  "waivers": [],
+  "recorded_at": "2026-09-27T06:02:44.217Z",
+  "validation_result": "FAIL"
+}

@@ -14,6 +14,13 @@ export interface ChatMessageMeta {
   focusPageNumber?: number;
   /** `pdf_pages.content_hash` da página usada no turno (proveniência, sem conteúdo). */
   focusContentHash?: string;
+  /** Cliente enviou seleção: `true` se verificada contra `pdf_pages` (tarefa 004, D5). */
+  selectionVerified?: boolean;
+  /** Offsets do recorte verificado em `pdf_pages.content_text` (UTF-16, fim exclusivo). */
+  selectionStart?: number;
+  selectionEnd?: number;
+  /** SHA-256 do recorte verificado — proveniência sem conteúdo (regra #6). */
+  selectionHash?: string;
   /** `false` se o cliente enviou conteúdo divergente do `content_hash` (D8). */
   pageHashMatch?: boolean;
   tokensIn?: number;

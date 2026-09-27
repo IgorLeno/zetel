@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { realpathSync, statSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import type Database from 'better-sqlite3';
@@ -13,6 +14,19 @@ import { isPdfFilename } from './pdf-service';
 export interface PdfPageFocusInput {
   fileId: string;
   pageNumber: number;
+  /** Seleção do cliente (tarefa 004): só candidata; vale apenas após `verifyPdfSelection`. */
+  selectionText?: string;
+}
+
+/** Teto da seleção enviada pelo cliente e do recorte usado no prompt (PLAN: ≤ 2000). */
+export const SELECTION_MAX_CHARS = 2000;
+
+/** Recorte verificado: texto e offsets vêm de `pdf_pages.content_text`, nunca do cliente. */
+export interface VerifiedSelection {
+  text: string;
+  start: number;
+  end: number;
+  hash: string;
 }
 
 export interface ResolvedPdfPageFocus {
@@ -36,19 +50,80 @@ const FILE_ID_MAX = 120;
 /**
  * Valida a forma do `focus` enviado pelo cliente. Retorna `null` quando ausente,
  * `'invalid'` quando presente mas malformado. Qualquer campo extra (ex.: texto
- * da página) é ignorado por construção.
+ * da página) é ignorado por construção; `selectionText` só é repassado para
+ * verificação contra `pdf_pages` (tarefa 004).
  */
 export function parsePdfPageFocus(raw: unknown): PdfPageFocusInput | null | 'invalid' {
   if (raw === undefined || raw === null) return null;
   if (typeof raw !== 'object' || Array.isArray(raw)) return 'invalid';
-  const { fileId, pageNumber } = raw as { fileId?: unknown; pageNumber?: unknown };
+  const { fileId, pageNumber, selectionText } = raw as {
+    fileId?: unknown;
+    pageNumber?: unknown;
+    selectionText?: unknown;
+  };
   if (typeof fileId !== 'string' || !fileId.trim() || fileId.length > FILE_ID_MAX) {
     return 'invalid';
   }
   if (typeof pageNumber !== 'number' || !Number.isInteger(pageNumber) || pageNumber < 1) {
     return 'invalid';
   }
-  return { fileId: fileId.trim(), pageNumber };
+  if (selectionText !== undefined && selectionText !== null && typeof selectionText !== 'string') {
+    return 'invalid';
+  }
+  return typeof selectionText === 'string'
+    ? { fileId: fileId.trim(), pageNumber, selectionText }
+    : { fileId: fileId.trim(), pageNumber };
+}
+
+const WHITESPACE = /\s/;
+const HYPHENS = new Set(['-', '\u2010']);
+
+/**
+ * Forma de comparação (D5): ignora espaços e quebras, soft hyphen e o hífen de
+ * fim de linha (`entro-\npia` ≡ `entropia`). A tolerância a espaços é segura
+ * porque o texto usado no turno é sempre o recorte do servidor. `map[i]` é o
+ * índice em `text` do i-ésimo caractere normalizado.
+ */
+function comparisonForm(text: string): { norm: string; map: number[] } {
+  let norm = '';
+  const map: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (WHITESPACE.test(ch) || ch === '\u00AD') continue;
+    if (HYPHENS.has(ch)) {
+      let j = i + 1;
+      let sawNewline = false;
+      while (j < text.length && WHITESPACE.test(text[j])) {
+        if (text[j] === '\n' || text[j] === '\r') sawNewline = true;
+        j++;
+      }
+      if (sawNewline) continue;
+    }
+    norm += ch;
+    map.push(i);
+  }
+  return { norm, map };
+}
+
+/**
+ * Verifica a seleção do cliente contra o texto server-side da página (D5).
+ * Retorna o recorte do PRÓPRIO servidor (primeira ocorrência) com offsets e
+ * hash, ou `null` quando vazia, acima do teto ou não encontrada.
+ */
+export function verifyPdfSelection(
+  pageText: string,
+  selectionText: string,
+): VerifiedSelection | null {
+  if (selectionText.length > SELECTION_MAX_CHARS) return null;
+  const needle = comparisonForm(selectionText.normalize('NFC')).norm;
+  if (!needle) return null;
+  const hay = comparisonForm(pageText);
+  const idx = hay.norm.indexOf(needle);
+  if (idx === -1) return null;
+  const start = hay.map[idx];
+  const end = hay.map[idx + needle.length - 1] + 1;
+  const text = pageText.slice(start, end);
+  return { text, start, end, hash: createHash('sha256').update(text).digest('hex') };
 }
 
 interface PdfFileRow {

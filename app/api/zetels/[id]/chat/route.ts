@@ -26,7 +26,13 @@ import { readApiKey, streamChat, type UsageSink } from '@/lib/openrouter';
 import { getOpenRouterModel } from '@/lib/config';
 import { getSetting } from '@/lib/settings';
 import { getZetelById } from '@/lib/zetel-service';
-import { parsePdfPageFocus, resolvePdfPageFocus, type ResolvedPdfPageFocus } from '@/lib/focus';
+import {
+  parsePdfPageFocus,
+  resolvePdfPageFocus,
+  verifyPdfSelection,
+  type ResolvedPdfPageFocus,
+  type VerifiedSelection,
+} from '@/lib/focus';
 import type { ChatMessageMeta } from '@/types/chat-message';
 import { logger } from '@/lib/logger';
 import {
@@ -227,6 +233,22 @@ export async function POST(request: Request, { params }: Ctx) {
     }
   }
 
+  // Seleção (tarefa 004, D5): só vale se for substring normalizada do texto da
+  // página no servidor; o prompt recebe o recorte do servidor. Não verificada →
+  // descartada, o turno segue com o foco da página.
+  let selection: VerifiedSelection | null = null;
+  const selectionSent = pdfFocus !== null && focusInput?.selectionText !== undefined;
+  if (pdfFocus && focusInput?.selectionText !== undefined) {
+    selection = verifyPdfSelection(pdfFocus.contentText, focusInput.selectionText);
+    if (!selection) {
+      logger.info('pdf selection unverified', {
+        zetelId,
+        fileId: pdfFocus.fileId,
+        pageNumber: pdfFocus.pageNumber,
+      });
+    }
+  }
+
   let pageContent: string | null = null;
   let pageAnchor: string | null = null;
   if (pageIndex !== null) {
@@ -299,11 +321,22 @@ export async function POST(request: Request, { params }: Ctx) {
     interactionMode,
     sources: pdfFocus
       ? [
+          ...(selection
+            ? [
+                {
+                  id: 'S1',
+                  doc: pdfFocus.filename,
+                  pagina: pdfFocus.pageNumber,
+                  tipo: 'selecao' as const,
+                  text: selection.text,
+                },
+              ]
+            : []),
           {
-            id: 'S1',
+            id: selection ? 'S2' : 'S1',
             doc: pdfFocus.filename,
             pagina: pdfFocus.pageNumber,
-            tipo: 'foco',
+            tipo: 'foco' as const,
             text: pdfFocus.contentText,
           },
         ]
@@ -324,6 +357,15 @@ export async function POST(request: Request, { params }: Ctx) {
         focusFileId: pdfFocus.fileId,
         focusPageNumber: pdfFocus.pageNumber,
         focusContentHash: pdfFocus.contentHash,
+        // Seleção: só flag, offsets e hash do recorte do servidor — nunca o texto.
+        ...(selectionSent ? { selectionVerified: selection !== null } : {}),
+        ...(selection
+          ? {
+              selectionStart: selection.start,
+              selectionEnd: selection.end,
+              selectionHash: selection.hash,
+            }
+          : {}),
       }
     : {
         readingMode,
