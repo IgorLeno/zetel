@@ -16,6 +16,34 @@ export interface TtsQueue {
   cancel: () => void;
 }
 
+/**
+ * Turno de fala. Depois de `cancel`, `enqueue` não aceita frases novas
+ * até o próximo `beginTurn` — chunks atrasados do stream não retomam o áudio.
+ */
+export function createSpeechTurn() {
+  let generation = 0;
+  let cancelled = false;
+  return {
+    beginTurn() {
+      generation += 1;
+      cancelled = false;
+    },
+    cancel() {
+      generation += 1;
+      cancelled = true;
+    },
+    get cancelled() {
+      return cancelled;
+    },
+    get generation() {
+      return generation;
+    },
+    holds(token: number) {
+      return !cancelled && token === generation;
+    },
+  };
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const FIRST_CHUNK_MAX = 140;
@@ -126,7 +154,7 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
   useEffect(() => { onPlaybackStateChangeRef.current = onPlaybackStateChange; }, [onPlaybackStateChange]);
   useEffect(() => { onTurnDrainedRef.current = onTurnDrained; }, [onTurnDrained]);
 
-  const genRef = useRef(0);
+  const turnRef = useRef(createSpeechTurn());
   const chainRef = useRef<Promise<void>>(Promise.resolve());
   const controllersRef = useRef<AbortController[]>([]);
   // Resolves the currently-awaited playUrl promise on cancel (pause alone won't fire onended).
@@ -137,7 +165,7 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
   const turnStartRef = useRef(0); // for first-audio latency logging
 
   function cancel() {
-    genRef.current++;
+    turnRef.current.cancel();
     for (const ctrl of controllersRef.current) ctrl.abort();
     controllersRef.current = [];
     // stop() pauses the current audio and clears its own refs by identity.
@@ -157,9 +185,9 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
     }
   }
 
-  function playUrl(url: string, gen: number): Promise<void> {
+  function playUrl(url: string, token: number): Promise<void> {
     return new Promise<void>((resolve) => {
-      if (gen !== genRef.current) {
+      if (!turnRef.current.holds(token)) {
         URL.revokeObjectURL(url);
         resolve();
         return;
@@ -237,9 +265,9 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
 
   function enqueue(text: string): void {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || turnRef.current.cancelled) return;
 
-    const gen = genRef.current;
+    const token = turnRef.current.generation;
     const ctrl = new AbortController();
     controllersRef.current.push(ctrl);
 
@@ -249,7 +277,7 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
     const urlPromise = fetchTtsUrl(trimmed, ctrl.signal);
 
     chainRef.current = chainRef.current.then(async () => {
-      if (gen !== genRef.current) {
+      if (!turnRef.current.holds(token)) {
         ctrl.abort();
         const idx = controllersRef.current.indexOf(ctrl);
         if (idx !== -1) controllersRef.current.splice(idx, 1);
@@ -261,19 +289,19 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
       const idx = controllersRef.current.indexOf(ctrl);
       if (idx !== -1) controllersRef.current.splice(idx, 1);
 
-      if (!url || gen !== genRef.current) {
+      if (!url || !turnRef.current.holds(token)) {
         if (url) URL.revokeObjectURL(url);
         return;
       }
 
-      await playUrl(url, gen);
+      await playUrl(url, token);
     });
   }
 
   function seal(): void {
-    const gen = genRef.current;
+    const token = turnRef.current.generation;
     chainRef.current = chainRef.current.then(() => {
-      if (gen !== genRef.current) return;
+      if (!turnRef.current.holds(token)) return;
       speakingRef.current = false;
       onPlaybackStateChangeRef.current(false);
       onTurnDrainedRef.current();
@@ -281,7 +309,8 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
   }
 
   function beginTurn(): void {
-    cancel(); // bumps gen, aborts in-flight, resets audio state
+    cancel(); // invalida frases em voo e corta o áudio
+    turnRef.current.beginTurn(); // o turno novo volta a aceitar frases
     chainRef.current = Promise.resolve();
     turnStartRef.current = performance.now();
   }
@@ -289,7 +318,7 @@ export function useTtsQueue(options: UseTtsQueueOptions): TtsQueue {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      genRef.current++;
+      turnRef.current.cancel();
       for (const ctrl of controllersRef.current) ctrl.abort();
       controllersRef.current = [];
       if (audioRef.current) audioRef.current.pause();

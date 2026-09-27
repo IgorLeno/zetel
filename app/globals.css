@@ -1806,6 +1806,16 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   padding: 6px 8px 8px 10px;
 }
 .composer-bar .grow { flex: 1; }
+.voice-status {
+  min-width: 4.5rem; font-size: 12px; font-weight: 600; color: var(--text-2);
+}
+.voice-status[data-state="error"] { color: var(--danger); }
+.stop-turn-btn {
+  height: 34px; padding: 0 12px; border-radius: 99px; flex-shrink: 0;
+  border: 1px solid var(--danger); background: var(--danger-tint); color: var(--danger);
+  font-size: 13px; font-weight: 600;
+}
+.stop-turn-btn:hover { background: var(--danger); color: white; }
 .composer-selection { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; color: var(--text-2); }
 .composer-selection-label { flex-shrink: 0; font-weight: 600; }
 .composer-selection-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; }

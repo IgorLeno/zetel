@@ -71,6 +71,11 @@ function friendlyKeyError(err: unknown): string | null {
   return null;
 }
 
+function isAbort(err: unknown, signal: AbortSignal): boolean {
+  if (signal.aborted) return true;
+  return err instanceof Error && err.name === 'AbortError';
+}
+
 /** GET /api/zetels/[id]/chat */
 export async function GET(request: Request, { params }: Ctx) {
   const { id } = await params;
@@ -470,7 +475,40 @@ export async function POST(request: Request, { params }: Ctx) {
       let fullContent = '';
       let emittedLen = 0; // quanto de `fullContent` já foi para o cliente
       let markerFound = false;
+      let assistantSaved = false;
       const usageSink: UsageSink = {};
+
+      const persistInterrupted = () => {
+        if (assistantSaved) return;
+        const cut = earliestMark(fullContent);
+        const partial = (cut === -1 ? fullContent : fullContent.slice(0, cut)).trim();
+        if (!partial) return;
+        assistantSaved = true;
+        saveMessage(db, {
+          zetelId,
+          sessionId: session.id,
+          role: 'assistant',
+          content: partial,
+          pageIndex,
+          model,
+          meta: {
+            pageAnchor,
+            pageHashMatch,
+            tokensIn: usageSink.tokensIn,
+            tokensOut: usageSink.tokensOut,
+            interrupted: true,
+            ...locationMeta,
+            ...(turnSources && Object.keys(turnSources.sourceMap).length > 0
+              ? { sources: turnSources.sourceMap }
+              : {}),
+          },
+        });
+        logger.info('chat stream interrupted', { zetelId, chars: partial.length });
+      };
+
+      const closeQuiet = () => {
+        try { controller.close(); } catch { /* cliente já soltou o stream */ }
+      };
 
       const emit = (text: string) => {
         if (text) controller.enqueue(encoder.encode(`data: ${JSON.stringify(text)}\n\n`));
@@ -487,7 +525,9 @@ export async function POST(request: Request, { params }: Ctx) {
           model,
           messages: openRouterMessages,
           usageSink,
+          signal: request.signal,
         })) {
+          if (request.signal.aborted) break;
           fullContent += chunk;
           if (markerFound) continue; // já em modo "só acumula" (bloco da sugestão)
 
@@ -506,6 +546,12 @@ export async function POST(request: Request, { params }: Ctx) {
               emittedLen = safeEnd;
             }
           }
+        }
+
+        if (request.signal.aborted) {
+          persistInterrupted();
+          closeQuiet();
+          return;
         }
 
         // Sem marcador: libera o tail retido.
@@ -560,6 +606,7 @@ export async function POST(request: Request, { params }: Ctx) {
                 ...locationMeta,
               },
             });
+            assistantSaved = true;
           } else {
             logger.warn('chat stream ended without visible content', { zetelId, model });
             controller.enqueue(
@@ -598,6 +645,7 @@ export async function POST(request: Request, { params }: Ctx) {
               : {}),
           },
         });
+        assistantSaved = true;
 
         if (suggestion) {
           // Evento separado, sem `justificativa`. Inclui o id da mensagem p/ Rejeitar.
@@ -611,6 +659,11 @@ export async function POST(request: Request, { params }: Ctx) {
         }
         controller.close();
       } catch (err) {
+        if (isAbort(err, request.signal)) {
+          persistInterrupted();
+          closeQuiet();
+          return;
+        }
         logger.error('chat stream failed', {
           zetelId,
           model,

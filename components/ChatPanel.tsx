@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ChatMessage, CitedSource } from '@/types/chat-message';
 import type { StudySession } from '@/types/study-session';
-import { stripFonteMarkers } from '@/lib/fonte-markers';
+import { toSpeakable } from '@/lib/speech-text';
 import { FonteText } from './FonteText';
 import { NoteCard, type Suggestion, type SaveNotePayload } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
@@ -12,7 +12,16 @@ import { TutorProfilePanel } from './TutorProfilePanel';
 import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
-type VoiceState = 'idle' | 'listening' | 'speaking';
+type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'stopped' | 'error';
+
+const VOICE_STATE_LABEL: Record<VoiceState, string> = {
+  idle: '',
+  listening: 'Ouvindo',
+  thinking: 'Pensando',
+  speaking: 'Falando',
+  stopped: 'Parado',
+  error: 'Erro',
+};
 
 const VOICE_PREFS_KEY = 'zetel_voice_prefs';
 
@@ -184,7 +193,7 @@ export function ChatPanel({
 
   // ── Voice UI state ───────────────────────────────────────────────────────────
   // Default false para evitar mismatch SSR; localStorage é lido no useEffect.
-  const [voiceStatus, setVoiceStatus] = useState<{ tts: boolean; stt: boolean } | null>(null);
+  const [voiceStatus, setVoiceStatus] = useState<{ tts: boolean; sttServer: boolean } | null>(null);
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   const [micAtivo, setMicAtivo] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
@@ -199,6 +208,10 @@ export function ChatPanel({
   const pendingMicStartRef = useRef(false);
   // Usuário parou o TTS manualmente — reinicia o mic no finally se o turno ainda estiver carregando.
   const userCancelledTtsRef = useRef(false);
+  // Frases que chegarem depois de Parar não entram na fila deste turno.
+  const turnCancelledRef = useRef(false);
+  const turnSeqRef = useRef(0);
+  const chatAbortRef = useRef<AbortController | null>(null);
 
   // Container do painel — usado para o listener de gesto que inicia o mic pendente.
   const chatPanelRef = useRef<HTMLElement>(null);
@@ -219,9 +232,17 @@ export function ChatPanel({
   // ── TTS streaming queue ──────────────────────────────────────────────────────
   const tts = useTtsQueue({
     onPlaybackStateChange: (speaking) => {
+      if (turnCancelledRef.current) {
+        voiceStateRef.current = 'stopped';
+        setVoiceState('stopped');
+        return;
+      }
       if (speaking) {
         voiceStateRef.current = 'speaking';
         setVoiceState('speaking');
+      } else if (isLoadingRef.current) {
+        voiceStateRef.current = 'thinking';
+        setVoiceState('thinking');
       } else if (voiceStateRef.current === 'speaking') {
         voiceStateRef.current = 'idle';
         setVoiceState('idle');
@@ -409,7 +430,7 @@ export function ChatPanel({
       try {
         const res = await fetch('/api/voice/status');
         if (!cancelled && res.ok) {
-          const data = (await res.json()) as { tts: boolean; stt: boolean };
+          const data = (await res.json()) as { tts: boolean; sttServer: boolean };
           setVoiceStatus(data);
         }
       } catch {
@@ -431,15 +452,10 @@ export function ChatPanel({
     if (prefs.micAtivo) pendingMicStartRef.current = true;
   }, []);
 
-  // ── Degradação silenciosa: se chave sumiu, desliga os modos que dependem dela ──
+  // ── Degradação: auto-play depende da chave TTS. O mic é Web Speech e não. ──
   useEffect(() => {
     if (!voiceStatus) return;
     let changed = false;
-    if (micAtivoRef.current && !voiceStatus.stt) {
-      micAtivoRef.current = false;
-      setMicAtivo(false);
-      changed = true;
-    }
     if (autoPlayRef.current && !voiceStatus.tts) {
       autoPlayRef.current = false;
       setAutoPlay(false);
@@ -538,8 +554,8 @@ export function ChatPanel({
           pendingMicStartRef.current = false;
           saveVoicePrefs(false, autoPlayRef.current);
           setError('Microfone não disponível. Verifique as permissões do navegador.');
-          voiceStateRef.current = 'idle';
-          setVoiceState('idle');
+          voiceStateRef.current = 'error';
+          setVoiceState('error');
         }
         // no-speech e aborted são benignos; onend trata o reinício
       };
@@ -577,10 +593,23 @@ export function ChatPanel({
     }
   }
 
-  /** Interrompe TTS do turno e agenda onTurnDrained (reinício do mic via seal). */
+  /** Corta o áudio do turno. O mic volta no finally, depois de liberar a entrada. */
   function abortVoiceTurn(): void {
     tts.cancel();
-    tts.seal();
+  }
+
+  function stopPartner(): void {
+    const streamStillOpen = isLoadingRef.current;
+    turnCancelledRef.current = true;
+    userCancelledTtsRef.current = true;
+    voiceStateRef.current = 'stopped';
+    setVoiceState('stopped');
+    tts.cancel();
+    chatAbortRef.current?.abort();
+    isLoadingRef.current = false;
+    setIsLoading(false);
+    if (!streamStillOpen) maybeRestartMic();
+    inputRef.current?.focus();
   }
 
   // ── Toggles ──────────────────────────────────────────────────────────────────
@@ -651,6 +680,12 @@ export function ChatPanel({
     // D36: interactionMode derivado de autoPlay — estilo oral no backend quando autoPlay=ON
     const mode: 'text' | 'voice' = autoPlayRef.current ? 'voice' : 'text';
 
+    const turn = ++turnSeqRef.current;
+    const still = () => turn === turnSeqRef.current;
+    turnCancelledRef.current = false;
+    const abort = new AbortController();
+    chatAbortRef.current = abort;
+
     // Cancela turno anterior e prepara nova fila de frases para TTS streaming.
     if (mode === 'voice') tts.beginTurn();
 
@@ -660,19 +695,52 @@ export function ChatPanel({
     setError(null);
     isLoadingRef.current = true;
     setIsLoading(true);
+    voiceStateRef.current = 'thinking';
+    setVoiceState('thinking');
     setStreaming('');
     setSuggestion(null);
     setMemorySuggestion(null);
 
+    let turnSessionId: string | null = sessionIdRef.current;
+    const loadInterruptedHistory = async () => {
+      if (!still()) return;
+      try {
+        const histRes = await fetch(`/api/zetels/${zetelId}/chat${turnSessionId
+          ? `?sessionId=${encodeURIComponent(turnSessionId)}` : ''}`);
+        if (!still() || !histRes.ok) return;
+        const histData = await histRes.json() as { messages?: ChatMessage[] };
+        setMessages(histData.messages ?? []);
+        setStreaming('');
+      } catch {
+        /* mantém o texto já recebido na bolha de streaming */
+      }
+    };
+
     let received: Suggestion | null = null;
     let receivedMemory: MemorySuggestionData | null = null;
     let willPlayAudio = false;
-    let speechBuffer = ''; // buffer para extração de frases TTS mid-stream
+    let speechRaw = '';
+    let spokenCount = 0;
+
+    const fail = (message: string) => {
+      if (!still()) return;
+      setError(message);
+      voiceStateRef.current = 'error';
+      setVoiceState('error');
+    };
+
+    const enqueueFresh = () => {
+      if (mode !== 'voice' || turnCancelledRef.current) return;
+      const { sentences } = extractSentences(toSpeakable(speechRaw));
+      for (const sentence of sentences.slice(spokenCount)) tts.enqueue(sentence);
+      spokenCount = sentences.length;
+    };
 
     try {
       const res = await fetch(`/api/zetels/${zetelId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: abort.signal,
         body: JSON.stringify(
           pdfFocusRef.current
             ? {
@@ -702,21 +770,22 @@ export function ChatPanel({
         ),
       });
 
+      if (!still()) return;
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? 'Falha ao enviar mensagem.');
+        fail(data.error ?? 'Falha ao enviar mensagem.');
         if (mode === 'voice') abortVoiceTurn();
         isLoadingRef.current = false;
         setIsLoading(false);
         return;
       }
-      const turnSessionId = res.headers.get('X-Study-Session-Id') ?? sessionIdRef.current;
+      turnSessionId = res.headers.get('X-Study-Session-Id') ?? sessionIdRef.current;
 
       // Seleção vale para um turno só (tarefa 004).
       if (pdfFocusRef.current?.selectionText) onClearPdfSelection?.();
 
       if (!res.body) {
-        setError('Resposta sem stream.');
+        fail('Resposta sem stream.');
         if (mode === 'voice') abortVoiceTurn();
         isLoadingRef.current = false;
         setIsLoading(false);
@@ -739,18 +808,14 @@ export function ChatPanel({
         if (parsed.done) return;
         for (const c of parsed.chunks) {
           accumulated += c;
-          setStreaming(accumulated);
-          // TTS streaming: enfileira frases à medida que chegam (áudio começa mid-stream).
-          if (mode === 'voice') {
-            speechBuffer += c;
-            const { sentences, rest } = extractSentences(stripFonteMarkers(speechBuffer));
-            speechBuffer = rest;
-            sentences.forEach((s) => tts.enqueue(s));
-          }
+          if (still()) setStreaming(accumulated);
+          speechRaw += c;
+          enqueueFresh();
         }
       };
 
       while (true) {
+        if (abort.signal.aborted || !still()) break;
         const { done, value } = await reader.read();
         if (done) break;
         sseBuffer += decoder.decode(value, { stream: true });
@@ -759,16 +824,21 @@ export function ChatPanel({
         flush(sseBuffer.slice(0, boundary + 1));
         sseBuffer = sseBuffer.slice(boundary + 1);
       }
-      if (sseBuffer.trim()) flush(sseBuffer);
+      if (!abort.signal.aborted && still() && sseBuffer.trim()) flush(sseBuffer);
 
-      setStreaming('');
-
-      if (streamError) {
+      if (abort.signal.aborted) {
         if (mode === 'voice') abortVoiceTurn();
-        setError(streamError);
+        await loadInterruptedHistory();
+      } else if (!still()) {
+        return;
+      } else if (streamError) {
+        if (mode === 'voice') abortVoiceTurn();
+        fail(streamError);
+        setStreaming('');
       } else if (!accumulated.trim() && !received && !receivedMemory) {
         if (mode === 'voice') abortVoiceTurn();
-        setError('O parceiro encerrou a resposta sem conteúdo visível. Tente novamente.');
+        fail('O parceiro encerrou a resposta sem conteúdo visível. Tente novamente.');
+        setStreaming('');
       } else {
         const histRes = await fetch(`/api/zetels/${zetelId}/chat${turnSessionId
           ? `?sessionId=${encodeURIComponent(turnSessionId)}` : ''}`);
@@ -792,17 +862,29 @@ export function ChatPanel({
           });
         }
         // D36: TTS automático apenas quando autoPlay=ON; seal fecha a fila e reinicia mic.
-        if (mode === 'voice' && accumulated.trim()) {
+        if (mode === 'voice' && accumulated.trim() && !turnCancelledRef.current) {
           willPlayAudio = true;
-          if (speechBuffer.trim()) tts.enqueue(stripFonteMarkers(speechBuffer).trim());
+          const { rest } = extractSentences(toSpeakable(speechRaw));
+          if (rest.trim()) tts.enqueue(rest.trim());
           tts.seal();
         }
+        if (!willPlayAudio && voiceStateRef.current === 'thinking') {
+          voiceStateRef.current = 'idle';
+          setVoiceState('idle');
+        }
       }
-    } catch {
+    } catch (err) {
+      if (!still()) return;
+      if (abort.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
+        if (mode === 'voice') abortVoiceTurn();
+        await loadInterruptedHistory();
+        return;
+      }
       if (mode === 'voice') abortVoiceTurn();
-      setError('Erro de rede ao conversar com o parceiro.');
-      setStreaming('');
+      fail('Erro de rede ao conversar com o parceiro.');
+      if (!(err instanceof Error && err.name === 'AbortError')) setStreaming('');
     } finally {
+      if (!still()) return;
       discussNextRef.current = false;
       discussNextMemoryRef.current = false;
       isLoadingRef.current = false;
@@ -815,6 +897,7 @@ export function ChatPanel({
         maybeRestartMic();
       }
       userCancelledTtsRef.current = false;
+      if (chatAbortRef.current === abort) chatAbortRef.current = null;
     }
   }
 
@@ -1202,21 +1285,26 @@ export function ChatPanel({
 
             <div className="grow" />
 
-            {/* Botão de parar TTS — visível apenas durante reprodução */}
-            {voiceState === 'speaking' && (
+            <span
+              className="voice-status"
+              role="status"
+              aria-live="polite"
+              data-testid="voice-status"
+              data-state={voiceState}
+            >
+              {VOICE_STATE_LABEL[voiceState]}
+            </span>
+
+            {(voiceState === 'thinking' || voiceState === 'speaking') && (
               <button
                 type="button"
-                className="mic-btn rec"
-                onClick={() => {
-                  userCancelledTtsRef.current = true;
-                  tts.cancel();
-                  // Durante o stream isLoading bloqueia o mic; o finally reinicia após o turno.
-                  if (!isLoadingRef.current) maybeRestartMic();
-                }}
-                title="Parar reprodução"
-                aria-label="Parar reprodução"
+                className="stop-turn-btn"
+                data-testid="stop-turn"
+                onClick={stopPartner}
+                title="Parar"
+                aria-label="Parar"
               >
-                {icStop}
+                ■ Parar
               </button>
             )}
 

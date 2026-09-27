@@ -16,6 +16,8 @@ export interface StreamChatParams {
   maxTokens?: number;
   /** Objeto mutável que recebe as contagens de tokens ao fim do stream (D8 / meta). */
   usageSink?: UsageSink;
+  /** Abort do cliente (Parar) encerra o fetch upstream. */
+  signal?: AbortSignal;
 }
 
 /** Env (dev/CI) → `~/.zetel/config` (canônico). */
@@ -64,9 +66,17 @@ function captureUsage(usage: unknown, sink: UsageSink | undefined, logTokens: bo
 }
 
 /** Stream de deltas de texto do OpenRouter (SSE). */
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) return;
+  const abortError = new Error('aborted');
+  abortError.name = 'AbortError';
+  throw abortError;
+}
+
 export async function* streamChat(params: StreamChatParams): AsyncIterable<string> {
-  const { apiKey, model, messages, maxTokens = 1024, usageSink } = params;
+  const { apiKey, model, messages, maxTokens = 1024, usageSink, signal } = params;
   const logTokens = process.env.ZETEL_LOG_TOKENS === '1';
+  throwIfAborted(signal);
 
   // Sempre pedimos usage: as contagens vão para `chat_messages.meta` (são números,
   // não conteúdo de usuário — regra #6 preservada). O log do arquivo continua opt-in.
@@ -86,6 +96,7 @@ export async function* streamChat(params: StreamChatParams): AsyncIterable<strin
       'HTTP-Referer': 'http://localhost',
     },
     body: JSON.stringify(body),
+    signal,
   });
 
   logger.info('openrouter stream start', { model, status: res.status });
@@ -104,8 +115,10 @@ export async function* streamChat(params: StreamChatParams): AsyncIterable<strin
 
   try {
     while (true) {
+      throwIfAborted(signal);
       const { done, value } = await reader.read();
       if (done) break;
+      throwIfAborted(signal);
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');

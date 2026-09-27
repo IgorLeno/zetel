@@ -42,6 +42,8 @@ export interface ChatMessageMeta {
    * para abrir o PDF. IDs ausentes daqui não viram link.
    */
   sources?: Record<string, CitedSource>;
+  /** Narrativa parcial gravada porque o cliente abortou o turno (Parar). */
+  interrupted?: boolean;
 }
 
 /** Destino seguro de uma citação. O texto da fonte não entra aqui. */
