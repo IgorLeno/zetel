@@ -1,5 +1,13 @@
 import type { ChatStarter } from '@/lib/chat-starters';
 
+export interface ConceptSuggestion {
+  nome: string;
+  aliases: string[];
+  formulacaoParceira: string;
+  formulacaoUsuario: string | null;
+  sourceId: string | null;
+}
+
 /** Metadados operacionais por mensagem (PRD §13.1; gravado em `chat_messages.meta`). */
 export interface ChatMessageMeta {
   /** Anchor da página validada no turno (de `zetel_pages`). */
@@ -37,6 +45,10 @@ export interface ChatMessageMeta {
   suggestedMemory?: boolean;
   /** Usuário rejeitou a sugestão de memória deste turno (Módulo 7). */
   memoryRejected?: boolean;
+  /** Sugestão validada no servidor; não é um conceito salvo. */
+  conceptSuggestion?: ConceptSuggestion;
+  conceptRejected?: boolean;
+  conceptSaved?: boolean;
   /** Há memória longa no contexto deste turno — UI sugere consolidar (Módulo 7). */
   memoryLong?: boolean;
   /**
@@ -56,6 +68,8 @@ export interface CitedSource {
   filename: string;
   pageNumber: number;
   type: 'foco' | 'selecao' | 'recuperado';
+  /** Hash da página no momento do turno; resolvido no servidor. */
+  contentHash?: string;
 }
 
 /** Mensagem persistida do chat por Zetel (Módulo 5). */

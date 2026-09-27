@@ -951,3 +951,13 @@ Rule: serializar as gravações de foco por painel; o último evento de navegaç
 [2026-09-27] Context: migration de sessões reconstrói foco PDF a partir de metadados legados do chat.
 Mistake: aceitar `focusFileId` e página só pelo formato do JSON podia restaurar um PDF apagado, alheio ou com página fora do limite.
 Rule: validar arquivo, ownership, tipo, estado de extração e `page_count` no backfill antes de persistir foco PDF; usar a posição Markdown disponível quando não houver PDF válido.
+
+## SPEC-001 Task 011 — cartão no painel flex (2026-09-27)
+
+[2026-09-27] Context: o `ConceptCard` estava no DOM, mas quase invisível quando o histórico ocupava o painel de chat.
+Mistake: adicionar um cartão alto como filho do contêiner flex sem impedir que ele encolhesse até zero.
+Rule: cartões de sugestão com campos editáveis devem manter `flex-shrink: 0` dentro de `.chat-messages`; o contêiner faz a rolagem para expor as ações.
+
+[2026-09-27] Context: no smoke live, o usuário pediu uma sugestão de conceito e a parceira perguntou se devia salvar, sem emitir a sentinela.
+Mistake: descrever o formato do bloco como opcional também para pedidos explícitos deixava o cartão dependente da interpretação do modelo.
+Rule: quando houver pedido explícito de sugestão ou cartão e contexto suficiente, exigir o bloco estruturado no prompt; a decisão de salvar continua no clique humano.

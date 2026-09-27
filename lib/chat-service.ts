@@ -50,6 +50,12 @@ export function listMessages(db: Database.Database, zetelId: string, sessionId?:
   return rows.map(rowToMessage);
 }
 
+export function getMessage(db: Database.Database, zetelId: string, messageId: string): ChatMessage | null {
+  const row = db.prepare('SELECT * FROM chat_messages WHERE id = ? AND zetel_id = ?')
+    .get(messageId, zetelId) as ChatMessageRow | undefined;
+  return row ? rowToMessage(row) : null;
+}
+
 /** Últimas N mensagens (para janela de contexto no OpenRouter). */
 export function listRecentMessages(
   db: Database.Database,

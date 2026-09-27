@@ -17,14 +17,17 @@ import {
   ensureParceiroPrompt,
   extractNoteSuggestion,
   extractMemorySuggestion,
+  extractConceptSuggestion,
   NOTE_MARK_START,
   MEMORY_MARK_START,
+  CONCEPT_MARK_START,
   type ReadingLocationContext,
   resolveChatModel,
   resolveHistoryWindow,
 } from '@/lib/chat-prompt';
 import { ensureSugestaoNotaPrompt, listNoteTitles } from '@/lib/notes-service';
 import { ensureSugestaoMemoriaPrompt } from '@/lib/memory-service';
+import { findConcept, listConcepts, relevantConceptNames } from '@/lib/concepts-service';
 import { assertZetelAtivo } from '@/lib/ingestao-service';
 import { compileTutorInstructions } from '@/lib/tutor-profiles';
 import { parseChatStarter, starterCanonical, starterInstruction } from '@/lib/chat-starters';
@@ -133,7 +136,8 @@ export async function PATCH(request: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'Sessão não encontrada.' }, { status: 404 });
   }
   const patch = body.rejected === true
-    ? body.kind === 'memory' ? { memoryRejected: true } : { noteRejected: true }
+    ? body.kind === 'memory' ? { memoryRejected: true }
+      : body.kind === 'concept' ? { conceptRejected: true } : { noteRejected: true }
     : {};
   if (!updateOwnedMessageMeta(db, id, messageId, patch, sessionId)) {
     return NextResponse.json({ error: 'Mensagem não encontrada.' }, { status: 404 });
@@ -386,12 +390,14 @@ export async function POST(request: Request, { params }: Ctx) {
   let noteRubric: string | undefined;
   let memoryRubric: string | undefined;
   let existingTitles: string[] | undefined;
+  let conceptEntries: ReturnType<typeof listConcepts> = [];
   if (vaultPath) {
     try {
       partnerPrompt = await ensureParceiroPrompt(vaultPath);
       noteRubric = ensureSugestaoNotaPrompt(vaultPath);
       memoryRubric = ensureSugestaoMemoriaPrompt(vaultPath);
       existingTitles = listNoteTitles(vaultPath, zetel.slug);
+      conceptEntries = listConcepts(vaultPath, zetel.slug);
     } catch (err) {
       logger.error('rubric/titles load failed', { zetelId, error: (err as Error).message });
     }
@@ -423,6 +429,7 @@ export async function POST(request: Request, { params }: Ctx) {
     noteRubric,
     memoryRubric,
     existingTitles,
+    conceptTitles: relevantConceptNames(conceptEntries, `${userMessage} ${selection?.text ?? ''}`),
     vaultPath: vaultPath ?? undefined,
     interactionMode,
     sources: turnSources?.promptSources,
@@ -478,8 +485,8 @@ export async function POST(request: Request, { params }: Ctx) {
 
   const encoder = new TextEncoder();
 
-  // Ambas as sentinelas (nota e memória) são retidas server-side (regra #9).
-  const MARKS = [NOTE_MARK_START, MEMORY_MARK_START];
+  // Toda sentinela estruturada é retida server-side, inclusive quando partida entre chunks.
+  const MARKS = [NOTE_MARK_START, MEMORY_MARK_START, CONCEPT_MARK_START];
   const HOLD = Math.max(...MARKS.map((m) => m.length)) - 1; // tail p/ marcador partido entre chunks
   /** Índice do marcador (nota OU memória) que aparece mais cedo, ou -1. */
   const earliestMark = (s: string): number => {
@@ -581,13 +588,23 @@ export async function POST(request: Request, { params }: Ctx) {
           emittedLen = fullContent.length;
         }
 
-        const { narrative, suggestion } = extractNoteSuggestion(fullContent);
-        const { suggestion: memorySuggestion } = extractMemorySuggestion(fullContent);
+        const firstMark = earliestMark(fullContent);
+        const selectedMark = MARKS.find((mark) => fullContent.indexOf(mark) === firstMark);
+        const { narrative, suggestion: parsedNote } = selectedMark === NOTE_MARK_START
+          ? extractNoteSuggestion(fullContent) : { narrative: fullContent.trim(), suggestion: null };
+        const { suggestion: parsedMemory } = selectedMark === MEMORY_MARK_START
+          ? extractMemorySuggestion(fullContent) : { suggestion: null };
+        const parsedConcept = selectedMark === CONCEPT_MARK_START
+          ? extractConceptSuggestion(fullContent, userMessage, Object.keys(turnSources?.sourceMap ?? {}))
+          : null;
+        const suggestion = parsedNote;
+        const memorySuggestion = parsedMemory;
+        const conceptSuggestion = parsedConcept;
         // Narrativa final: corta no marcador mais cedo (a memória pode preceder a
         // nota). extractNoteSuggestion já corta no NOTE_MARK, mas não na memória.
         const cut = earliestMark(fullContent);
         const finalNarrative = cut !== -1 ? fullContent.slice(0, cut).trim() : narrative;
-        const hasSuggestion = Boolean(suggestion || memorySuggestion);
+        const hasSuggestion = Boolean(suggestion || memorySuggestion || conceptSuggestion);
         const rawHadContent = fullContent.trim().length > 0;
         const assistantContent =
           finalNarrative ||
@@ -606,6 +623,7 @@ export async function POST(request: Request, { params }: Ctx) {
               markerFound: markerFound ? 1 : 0,
               suggestionParsed: suggestion ? 1 : 0,
               memorySuggestionParsed: memorySuggestion ? 1 : 0,
+              conceptSuggestionParsed: conceptSuggestion ? 1 : 0,
             });
             const fallback =
               readingMode === 'guia-estudo'
@@ -659,6 +677,7 @@ export async function POST(request: Request, { params }: Ctx) {
             suggestedNote: suggestion ? true : undefined,
             noteTipo: suggestion?.tipo,
             suggestedMemory: memorySuggestion ? true : undefined,
+            conceptSuggestion: conceptSuggestion ?? undefined,
             memoryLong: memoryWarnings.hasLongFile || undefined,
             ...locationMeta,
             ...(turnSources && Object.keys(turnSources.sourceMap).length > 0
@@ -677,6 +696,15 @@ export async function POST(request: Request, { params }: Ctx) {
           // Sem `justificativa`. messageId p/ o PATCH de rejeição de memória.
           const payload = JSON.stringify({ messageId: saved.id, model, ...memorySuggestion });
           controller.enqueue(encoder.encode(`data: [MEMORY_SUGGESTION] ${payload}\n\n`));
+        }
+        if (conceptSuggestion) {
+          const source = conceptSuggestion.sourceId
+            ? turnSources?.sourceMap[conceptSuggestion.sourceId] : null;
+          const existing = findConcept(conceptEntries, conceptSuggestion.nome);
+          const payload = JSON.stringify({ messageId: saved.id, ...conceptSuggestion,
+            sourceLabel: source ? `${source.filename} · p. ${source.pageNumber}` : null,
+            existing: existing ? { slug: existing.slug, nome: existing.nome } : null });
+          controller.enqueue(encoder.encode(`data: [CONCEPT_SUGGESTION] ${payload}\n\n`));
         }
         controller.close();
       } catch (err) {

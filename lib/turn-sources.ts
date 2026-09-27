@@ -53,7 +53,10 @@ export function collectTurnSources(
     const id = `S${next}`;
     next += 1;
     promptSources.push({ id, doc: filename, pagina: pageNumber, tipo, text });
-    sourceMap[id] = { fileId, filename, pageNumber, type: tipo };
+    const page = db.prepare('SELECT content_hash FROM pdf_pages WHERE file_id = ? AND page_number = ?')
+      .get(fileId, pageNumber) as { content_hash: string } | undefined;
+    sourceMap[id] = { fileId, filename, pageNumber, type: tipo,
+      contentHash: page?.content_hash };
   };
 
   if (input.selection) {

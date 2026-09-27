@@ -1928,6 +1928,9 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 .note-card-dicas ul { margin: 4px 0 0 16px; padding: 0; font-size: 12px; color: var(--text-3); line-height: 1.55; list-style: disc; }
 .note-card-dicas li { margin-bottom: 2px; }
 .sugg-card.mem { border-color: color-mix(in srgb, var(--memory) 34%, transparent); }
+.sugg-card.concept { flex-shrink: 0; }
+.sugg-card.concept label { display: block; margin: 0 14px 8px; font-size: 12px; color: var(--text-2); }
+.sugg-card.concept .sugg-card-edit { display: block; width: 100%; margin: 5px 0 0; box-sizing: border-box; }
 .sugg-top { display: flex; align-items: center; gap: 8px; padding: 11px 14px 9px; }
 .sugg-badge {
   display: inline-flex; align-items: center; gap: 5px;

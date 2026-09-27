@@ -9,6 +9,7 @@ import { starterCanonical, type ChatStarter } from '@/lib/chat-starters';
 import { FonteText } from './FonteText';
 import { NoteCard, type Suggestion, type SaveNotePayload } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
+import { ConceptCard, type ConceptSuggestionData } from './ConceptCard';
 import { TutorProfilePanel } from './TutorProfilePanel';
 import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
 
@@ -60,6 +61,7 @@ function parseSseChunk(text: string): {
   chunks: string[];
   suggestion: Suggestion | null;
   memorySuggestion: MemorySuggestionData | null;
+  conceptSuggestion: ConceptSuggestionData | null;
   sources: Record<string, CitedSource> | null;
   error: string | null;
   done: boolean;
@@ -67,6 +69,7 @@ function parseSseChunk(text: string): {
   const chunks: string[] = [];
   let suggestion: Suggestion | null = null;
   let memorySuggestion: MemorySuggestionData | null = null;
+  let conceptSuggestion: ConceptSuggestionData | null = null;
   let sources: Record<string, CitedSource> | null = null;
   let error: string | null = null;
   let done = false;
@@ -106,6 +109,16 @@ function parseSseChunk(text: string): {
       }
       continue;
     }
+    if (payload.startsWith('[CONCEPT_SUGGESTION]')) {
+      try {
+        conceptSuggestion = JSON.parse(
+          payload.slice('[CONCEPT_SUGGESTION]'.length).trim(),
+        ) as ConceptSuggestionData;
+      } catch {
+        /* sugestão malformada — ignora */
+      }
+      continue;
+    }
     if (payload.startsWith('[SUGGESTION]')) {
       try {
         suggestion = JSON.parse(payload.slice('[SUGGESTION]'.length).trim()) as Suggestion;
@@ -122,7 +135,7 @@ function parseSseChunk(text: string): {
     }
   }
 
-  return { chunks, suggestion, memorySuggestion, sources, error, done };
+  return { chunks, suggestion, memorySuggestion, conceptSuggestion, sources, error, done };
 }
 
 export function ChatPanel({
@@ -186,6 +199,8 @@ export function ChatPanel({
     data: MemorySuggestionData;
     canDiscuss: boolean;
   } | null>(null);
+  const [conceptSuggestion, setConceptSuggestion] = useState<ConceptSuggestionData | null>(null);
+  const [conceptBusy, setConceptBusy] = useState(false);
   const [noteBusy, setNoteBusy] = useState(false);
   const [memoryBusy, setMemoryBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -266,6 +281,24 @@ export function ChatPanel({
     if (el) el.scrollTop = el.scrollHeight;
   }, []);
 
+  async function restoreConceptCard(history: ChatMessage[], expectedSessionId: string) {
+    const pending = [...history].reverse().find((message) => message.role === 'assistant' &&
+      message.meta?.conceptSuggestion && !message.meta.conceptRejected && !message.meta.conceptSaved);
+    if (!pending?.meta?.conceptSuggestion) return;
+    const data = pending.meta.conceptSuggestion;
+    const source = data.sourceId ? pending.meta.sources?.[data.sourceId] : null;
+    try {
+      const res = await fetch(`/api/zetels/${zetelId}/concepts?name=${encodeURIComponent(data.nome)}`);
+      if (!res.ok || sessionIdRef.current !== expectedSessionId) return;
+      const result = await res.json() as { existing: ConceptSuggestionData['existing'] };
+      setConceptSuggestion({ messageId: pending.id, ...data,
+        sourceLabel: source ? `${source.filename} · p. ${source.pageNumber}` : null,
+        existing: result.existing });
+    } catch {
+      /* cartão pode voltar no próximo carregamento; histórico continua íntegro */
+    }
+  }
+
   // ── Sessão e histórico ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!active) return;
@@ -300,7 +333,10 @@ export function ChatPanel({
           const history = await fetch(`/api/zetels/${zetelId}/chat?sessionId=${encodeURIComponent(selected.id)}`);
           if (!history.ok) throw new Error('history');
           const result = await history.json() as { messages: ChatMessage[] };
-          if (!cancelled) setMessages(result.messages);
+          if (!cancelled) {
+            setMessages(result.messages);
+            void restoreConceptCard(result.messages, selected.id);
+          }
         } else {
           setMessages([]);
         }
@@ -354,10 +390,13 @@ export function ChatPanel({
         : s.status === 'active' ? { ...s, status: 'paused' } : s));
       setSuggestion(null);
       setMemorySuggestion(null);
+      setConceptSuggestion(null);
       onSessionChange?.(current);
       const history = await fetch(`/api/zetels/${zetelId}/chat?sessionId=${encodeURIComponent(current.id)}`);
       if (!history.ok) throw new Error('history');
-      setMessages((await history.json() as { messages: ChatMessage[] }).messages);
+      const historyMessages = (await history.json() as { messages: ChatMessage[] }).messages;
+      setMessages(historyMessages);
+      void restoreConceptCard(historyMessages, current.id);
       const url = new URL(window.location.href);
       url.searchParams.set('session', current.id);
       if (current.focus?.fileId) {
@@ -397,6 +436,7 @@ export function ChatPanel({
       setMessages([]);
       setSuggestion(null);
       setMemorySuggestion(null);
+      setConceptSuggestion(null);
       onSessionChange?.(created);
       const url = new URL(window.location.href);
       url.searchParams.set('session', created.id);
@@ -498,7 +538,7 @@ export function ChatPanel({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streaming, suggestion, memorySuggestion, pendingUser, isLoading, scrollToBottom]);
+  }, [messages, streaming, suggestion, memorySuggestion, conceptSuggestion, pendingUser, isLoading, scrollToBottom]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -663,6 +703,7 @@ export function ChatPanel({
         setStreaming('');
         setSuggestion(null);
         setMemorySuggestion(null);
+        setConceptSuggestion(null);
       } else {
         setError('Falha ao limpar o histórico.');
       }
@@ -703,6 +744,7 @@ export function ChatPanel({
     setStreaming('');
     setSuggestion(null);
     setMemorySuggestion(null);
+    setConceptSuggestion(null);
 
     let turnSessionId: string | null = sessionIdRef.current;
     const loadInterruptedHistory = async () => {
@@ -721,6 +763,7 @@ export function ChatPanel({
 
     let received: Suggestion | null = null;
     let receivedMemory: MemorySuggestionData | null = null;
+    let receivedConcept: ConceptSuggestionData | null = null;
     let willPlayAudio = false;
     let speechRaw = '';
     let spokenCount = 0;
@@ -807,6 +850,7 @@ export function ChatPanel({
         if (parsed.error) streamError = parsed.error;
         if (parsed.suggestion) received = parsed.suggestion;
         if (parsed.memorySuggestion) receivedMemory = parsed.memorySuggestion;
+        if (parsed.conceptSuggestion) receivedConcept = parsed.conceptSuggestion;
         if (parsed.sources) setTurnSources(parsed.sources);
         if (parsed.done) return;
         for (const c of parsed.chunks) {
@@ -838,7 +882,7 @@ export function ChatPanel({
         if (mode === 'voice') abortVoiceTurn();
         fail(streamError);
         await loadInterruptedHistory();
-      } else if (!accumulated.trim() && !received && !receivedMemory) {
+      } else if (!accumulated.trim() && !received && !receivedMemory && !receivedConcept) {
         if (mode === 'voice') abortVoiceTurn();
         fail('O parceiro encerrou a resposta sem conteúdo visível. Tente novamente.');
         setStreaming('');
@@ -865,6 +909,7 @@ export function ChatPanel({
             canDiscuss: !discussNextMemoryRef.current,
           });
         }
+        if (receivedConcept) setConceptSuggestion(receivedConcept);
         // D36: TTS automático apenas quando autoPlay=ON; seal fecha a fila e reinicia mic.
         if (mode === 'voice' && accumulated.trim() && !turnCancelledRef.current) {
           willPlayAudio = true;
@@ -1013,6 +1058,54 @@ export function ChatPanel({
     void sendMessage(
       `Sobre esta sugestão de memória ("${titulo}"): o que você acha de refiná-la? Rascunho atual:\n\n${corpo}`,
     );
+  }
+
+  async function saveConcept(edit: { name: string; userFormulation: string | null;
+    partnerFormulation: string; action: 'create' | 'append'; conceptSlug?: string }) {
+    if (!conceptSuggestion) return;
+    setConceptBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/zetels/${zetelId}/concepts`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId: conceptSuggestion.messageId, ...edit }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? 'Falha ao salvar conceito.');
+        return;
+      }
+      setConceptSuggestion(null);
+      showToast(edit.action === 'append' ? 'Formulação adicionada ao conceito.' : 'Conceito salvo.');
+    } catch {
+      setError('Erro de rede ao salvar conceito.');
+    } finally {
+      setConceptBusy(false);
+    }
+  }
+
+  function exploreConcept() {
+    if (!conceptSuggestion) return;
+    void sendMessage(`Quero explorar melhor o conceito de ${conceptSuggestion.nome} que você acabou de identificar.`);
+  }
+
+  async function ignoreConcept() {
+    if (!conceptSuggestion) return;
+    setConceptBusy(true);
+    try {
+      const res = await fetch(`/api/zetels/${zetelId}/chat`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId: conceptSuggestion.messageId,
+          sessionId: sessionIdRef.current, rejected: true, kind: 'concept' }),
+      });
+      if (!res.ok) throw new Error('ignore');
+      setConceptSuggestion(null);
+      showToast('Sugestão ignorada.');
+    } catch {
+      setError('Não foi possível ignorar a sugestão.');
+    } finally {
+      setConceptBusy(false);
+    }
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -1222,6 +1315,11 @@ export function ChatPanel({
             onDiscuss={discussMemory}
             onReject={() => void rejectMemory()}
           />
+        )}
+        {conceptSuggestion && (
+          <ConceptCard key={conceptSuggestion.messageId} suggestion={conceptSuggestion}
+            busy={conceptBusy || isLoading} onSave={(edit) => void saveConcept(edit)}
+            onExplore={exploreConcept} onIgnore={() => void ignoreConcept()} />
         )}
         {error && <p className="feedback err chat-inline-error">{error}</p>}
       </div>
