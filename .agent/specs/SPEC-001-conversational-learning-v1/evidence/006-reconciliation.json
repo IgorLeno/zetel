@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "kind": "post-merge-reconciliation",
+  "task_id": "006",
+  "spec_id": "SPEC-001-conversational-learning-v1",
+  "note": "Reconciliacao administrativa POS-MERGE, gerada fora do agentctl com autorizacao humana em chat. Existe apenas para alinhar o workflow ao estado real do repositorio (implementacao ja mergeada em main). NAO substitui nem altera evidence/006-validation.json, que permanece com validation_result PASS. Nao reexecuta gates. Nao registra PASS de review: as revisoes oficiais nao rodaram.",
+  "original_validation": {
+    "evidence": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/006-validation.json",
+    "preserved": true,
+    "converted_to_fail": false,
+    "fixed_point": "89e8b4e26b45f470860756298b447cb98e49625bc7e270042cd08e70be3724e4",
+    "git_head": "472cdd9d42aed3fb1df79df3dcbc37efc6b9a637",
+    "state_revision": 48,
+    "recorded_at": "2026-09-27T12:58:34.501Z",
+    "validation_result": "PASS",
+    "gates": [
+      {
+        "category": "focused",
+        "exit_code": 0,
+        "result": "PASS"
+      },
+      {
+        "category": "build",
+        "exit_code": 0,
+        "result": "PASS"
+      },
+      {
+        "category": "test-ci",
+        "exit_code": 0,
+        "result": "PASS"
+      },
+      {
+        "category": "coverage",
+        "exit_code": 0,
+        "result": "PASS"
+      },
+      {
+        "category": "typecheck",
+        "exit_code": 0,
+        "result": "PASS"
+      },
+      {
+        "category": "diff-check",
+        "exit_code": 0,
+        "result": "PASS"
+      }
+    ]
+  },
+  "publication_failure": {
+    "expected_revision": 48,
+    "found_revision": 49,
+    "cause": "A gravacao final VALIDATING->REVIEWING perdeu a corrida de revision (expected 48, found 49) depois de todos os gates PASS. O state.json commitado ficou VALIDATING/validation FAIL. A evidencia PASS nao foi reescrita."
+  },
+  "smoke": {
+    "result": "PASS",
+    "rerun": false,
+    "pdf": "/tmp/zetel-smoke-006/termo.pdf",
+    "display_name": "Smoke 006",
+    "zetel_id": "b15a5ab3-5ab4-42ef-9377-fec552ce7558",
+    "slug": "smoke-006",
+    "file_id": "900cf795-af8e-4bd0-bf48-4464f6513422",
+    "checks": [
+      "Na pagina 1, \"Relaciona isso com outra parte do documento.\" recuperou a pagina 3 como tipo=recuperado, a resposta citou a fonte, o chip Documento · p. 3 apareceu, Ir ate a pagina abriu a pagina 3 do mesmo PDF e nao disparou turno novo.",
+      "\"So dessa pagina.\" persistiu foco de pagina.",
+      "\"Relaciona com o comeco do documento.\" persistiu hint beginning."
+    ]
+  },
+  "human_decision": {
+    "by": "Igor Fernandes (chat)",
+    "decision": "Aceitar a evidencia oficial PASS. Nao reexecutar task validate, testes, build, coverage, typecheck nem diff-check. Nao gerar outro fixed point. Nao converter PASS em FAIL. Nao inventar review PASS. Registrar review_result NOT_RUN.",
+    "original_result_preserved": true,
+    "false_validation_pass": false,
+    "false_review_pass": false
+  },
+  "reviews": {
+    "requested": 2,
+    "official_on_delivered_fixed_point": 0,
+    "result": "NOT_RUN",
+    "delivered_fixed_point": "89e8b4e26b45f470860756298b447cb98e49625bc7e270042cd08e70be3724e4",
+    "reason": "Nao executado porque a publicacao VALIDATING->REVIEWING falhou por conflito de revision apos todos os gates PASS; implementacao posteriormente mergeada."
+  },
+  "delivery": {
+    "implementation_commit": "472cdd9d42aed3fb1df79df3dcbc37efc6b9a637",
+    "validation_record_commit": "21c3c1e7ce1ef285c106de0e72cec2d0e520e2c1",
+    "implementation_merge_commit": "4092173f39b87f1973ba97b9cbf7c1ad633dd574",
+    "merged_into": "origin/main",
+    "pull_requests": [
+      "IgorLeno/zetel#23"
+    ],
+    "merged_before_lifecycle_close": true,
+    "fixed_point_not_rewritten": true
+  },
+  "workflow_mechanism": {
+    "tool": "script descartavel no scratchpad",
+    "uses": [
+      "scripts/agentctl/infra/read-state.mjs loadSpecState",
+      "scripts/agentctl/domain/state-machine.mjs assertTransition + validateState",
+      "scripts/agentctl/infra/atomic-write.mjs writeJsonAtomic (expectedRevision)",
+      "scripts/agentctl/domain/task-frontmatter.mjs prepareOperationalFrontmatter + scripts/agentctl/infra/atomic-file.mjs writeTextAtomic"
+    ],
+    "edges": [
+      "VALIDATING->REVIEWING",
+      "REVIEWING->DONE",
+      "DONE->PUSHED",
+      "PUSHED->SESSION_CLOSED"
+    ],
+    "bypassed_command_guards": [
+      "task close: reviews agregadas do fixed point atual (reviews oficiais NOT_RUN)"
+    ],
+    "agentctl_modified": false,
+    "product_code_modified": false,
+    "validation_evidence_modified": false
+  }
+}

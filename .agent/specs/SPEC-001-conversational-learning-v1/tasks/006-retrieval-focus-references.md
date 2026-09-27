@@ -1,18 +1,18 @@
 ---
 id: "006"
 title: "Retrieval, foco por linguagem natural e referências"
-status: VALIDATING
+status: SESSION_CLOSED
 blocked_by: ["003", "005"]
 writer: null
 reviewer: null
-commit: null
-push: null
-review_result: pending
-handoff: null
+commit: 472cdd9d42aed3fb1df79df3dcbc37efc6b9a637
+push: "origin/main (PR #23 merge 4092173f39b87f1973ba97b9cbf7c1ad633dd574)"
+review_result: NOT_RUN
+handoff: .agent/specs/SPEC-001-conversational-learning-v1/handoffs/006-retrieval-focus-472cdd9.md
 execution_profile: FULL
 profile_justification: "Nova tabela FTS5 derivada, mudança no contrato de prompt/SSE e mitigação de prompt injection."
-validation: FAIL
-validated_at: "2026-09-27T12:54:04.177Z"
+validation: PASS
+validated_at: "2026-09-27T12:58:34.501Z"
 ---
 
 ## Objetivo
