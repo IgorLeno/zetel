@@ -27,6 +27,7 @@ import { ensureSugestaoNotaPrompt, listNoteTitles } from '@/lib/notes-service';
 import { ensureSugestaoMemoriaPrompt } from '@/lib/memory-service';
 import { assertZetelAtivo } from '@/lib/ingestao-service';
 import { compileTutorInstructions } from '@/lib/tutor-profiles';
+import { parseChatStarter, starterCanonical, starterInstruction } from '@/lib/chat-starters';
 import { resolveSessionTutorProfile } from '@/lib/tutor-profile-service';
 import { readApiKey, streamChat, type UsageSink } from '@/lib/openrouter';
 import { getOpenRouterModel } from '@/lib/config';
@@ -182,6 +183,7 @@ export async function POST(request: Request, { params }: Ctx) {
     interactionMode?: unknown;
     focus?: unknown;
     sessionId?: unknown;
+    starter?: unknown;
   };
   try {
     body = await request.json();
@@ -192,14 +194,31 @@ export async function POST(request: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 });
   }
 
-  const userMessage =
+  const starter = parseChatStarter(body.starter);
+  if (starter === 'invalid') {
+    return NextResponse.json({ error: 'Starter inválido.' }, { status: 400 });
+  }
+  const typedMessage =
     typeof body.userMessage === 'string' ? body.userMessage.trim() : '';
-  if (!userMessage || userMessage.length > 4000) {
+  if (typedMessage.length > 4000) {
     return NextResponse.json(
       { error: 'Mensagem inválida (vazia ou acima de 4000 caracteres).' },
       { status: 400 },
     );
   }
+  if (typedMessage && starter) {
+    return NextResponse.json(
+      { error: 'Envie uma mensagem ou um starter, não os dois.' },
+      { status: 400 },
+    );
+  }
+  if (!typedMessage && !starter) {
+    return NextResponse.json(
+      { error: 'Mensagem inválida (vazia ou acima de 4000 caracteres).' },
+      { status: 400 },
+    );
+  }
+  const userMessage = starter ? starterCanonical(starter) : typedMessage;
   if (body.sessionId !== undefined &&
       (typeof body.sessionId !== 'string' || !body.sessionId)) {
     return NextResponse.json({ error: 'sessionId inválido.' }, { status: 400 });
@@ -408,6 +427,7 @@ export async function POST(request: Request, { params }: Ctx) {
     interactionMode,
     sources: turnSources?.promptSources,
     tutorInstructions: compileTutorInstructions(tutorProfile),
+    starterInstruction: starter ? starterInstruction(starter) : undefined,
   });
   if (memoryWarnings.truncatedCount > 0) {
     // Regra #6: só contagem, nunca conteúdo.
@@ -450,6 +470,7 @@ export async function POST(request: Request, { params }: Ctx) {
     meta: {
       pageAnchor,
       pageHashMatch,
+      ...(starter ? { starter } : {}),
       ...locationMeta,
     },
   });

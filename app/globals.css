@@ -1799,6 +1799,23 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   display: block;
 }
 
+/* ── Ativar professora (tarefa 009) ── */
+.teacher-launch {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 8px 12px 0;
+}
+.teacher-starters { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.teacher-starters button {
+  padding: 6px 10px; border-radius: 99px;
+  border: 1px solid var(--border-soft); background: var(--surface-2);
+  font-size: 12.5px; color: var(--text-2);
+}
+.teacher-starters button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--text); background: var(--accent-tint2);
+}
+.teacher-starters button:disabled { opacity: .5; cursor: not-allowed; }
+
 /* ── Composer bar (inside .composer-box) ── */
 .composer { padding: 10px 12px 12px; border-top: 1px solid var(--border-soft); flex-shrink: 0; }
 .composer-bar {

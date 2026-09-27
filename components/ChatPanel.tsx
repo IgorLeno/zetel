@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { ChatMessage, CitedSource } from '@/types/chat-message';
 import type { StudySession } from '@/types/study-session';
 import { toSpeakable } from '@/lib/speech-text';
+import { starterCanonical, type ChatStarter } from '@/lib/chat-starters';
 import { FonteText } from './FonteText';
 import { NoteCard, type Suggestion, type SaveNotePayload } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
@@ -190,6 +191,7 @@ export function ChatPanel({
   const [toast, setToast] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
   const [pendingUser, setPendingUser] = useState<string | null>(null);
+  const [teacherOpen, setTeacherOpen] = useState(false);
 
   // ── Voice UI state ───────────────────────────────────────────────────────────
   // Default false para evitar mismatch SSR; localStorage é lido no useEffect.
@@ -673,9 +675,9 @@ export function ChatPanel({
 
   // textOverride: passado diretamente do fluxo de voz e de "Discutir" para evitar
   // race condition com setInput assíncrono (não lê o estado input nesses caminhos).
-  async function sendMessage(textOverride?: string) {
-    const text = (textOverride ?? input).trim();
-    if (!text || isLoading) return;
+  async function sendMessage(textOverride?: string, starter?: ChatStarter) {
+    const text = starter ? starterCanonical(starter) : (textOverride ?? input).trim();
+    if (isLoading || !text) return;
 
     // D36: interactionMode derivado de autoPlay — estilo oral no backend quando autoPlay=ON
     const mode: 'text' | 'voice' = autoPlayRef.current ? 'voice' : 'text';
@@ -691,7 +693,8 @@ export function ChatPanel({
 
     setPendingUser(text); // bolha otimista — limpa no finally após histórico atualizado
     setTurnSources(null);
-    if (textOverride === undefined) setInput('');
+    if (!starter && textOverride === undefined) setInput('');
+    if (starter) setTeacherOpen(false);
     setError(null);
     isLoadingRef.current = true;
     setIsLoading(true);
@@ -745,7 +748,7 @@ export function ChatPanel({
           pdfFocusRef.current
             ? {
                 ...(sessionIdRef.current ? { sessionId: sessionIdRef.current } : {}),
-                userMessage: text,
+                ...(starter ? { starter } : { userMessage: text }),
                 focus: {
                   fileId: pdfFocusRef.current.fileId,
                   pageNumber: pdfFocusRef.current.pageNumber,
@@ -757,7 +760,7 @@ export function ChatPanel({
               }
             : {
                 ...(sessionIdRef.current ? { sessionId: sessionIdRef.current } : {}),
-                userMessage: text,
+                ...(starter ? { starter } : { userMessage: text }),
                 pageIndex: currentPageIndex,
                 readingMode: currentReadingMode,
                 guideBlockId: currentGuideBlockId,
@@ -834,7 +837,7 @@ export function ChatPanel({
       } else if (streamError) {
         if (mode === 'voice') abortVoiceTurn();
         fail(streamError);
-        setStreaming('');
+        await loadInterruptedHistory();
       } else if (!accumulated.trim() && !received && !receivedMemory) {
         if (mode === 'voice') abortVoiceTurn();
         fail('O parceiro encerrou a resposta sem conteúdo visível. Tente novamente.');
@@ -845,6 +848,7 @@ export function ChatPanel({
         const histData = await histRes.json();
         if (histRes.ok) {
           setMessages(histData.messages ?? []);
+          setStreaming('');
           if (!sessionIdRef.current && turnSessionId) {
             sessionIdRef.current = turnSessionId;
             setSessionId(turnSessionId);
@@ -1049,6 +1053,13 @@ export function ChatPanel({
     </svg>
   );
 
+  const TEACHER_STARTERS: { id: ChatStarter; label: string }[] = [
+    { id: 'contextualize', label: 'Contextualize' },
+    { id: 'explain', label: 'Explique' },
+    { id: 'ask-question', label: 'Me faça uma pergunta' },
+    { id: 'discuss', label: 'Vamos conversar' },
+  ];
+
   const SUGGESTED = [
     'Resuma esta seção como uma nota',
     'Explique com uma analogia',
@@ -1216,6 +1227,34 @@ export function ChatPanel({
       </div>
 
       {toast && <div className="chat-toast">{toast}</div>}
+
+      <div className="teacher-launch">
+        <button
+          type="button"
+          className="mini-btn"
+          data-testid="activate-teacher"
+          aria-expanded={teacherOpen}
+          disabled={isLoading}
+          onClick={() => setTeacherOpen((open) => !open)}
+        >
+          Ativar professora
+        </button>
+        {teacherOpen && (
+          <div className="teacher-starters" role="group" aria-label="Como a professora começa">
+            {TEACHER_STARTERS.map((choice) => (
+              <button
+                key={choice.id}
+                type="button"
+                data-testid={`starter-${choice.id}`}
+                disabled={isLoading}
+                onClick={() => void sendMessage(undefined, choice.id)}
+              >
+                {choice.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Composer */}
       <div className="composer">

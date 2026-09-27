@@ -263,11 +263,16 @@ export function buildOpenRouterMessages(opts: {
   sources?: SourceBlockInput[];
   /** Instruções compiladas do perfil (tarefa 007). Só texto gerado de inteiros validados. */
   tutorInstructions?: string;
+  /** Intenção do starter (tarefa 009). O perfil pedagógico continua no bloco anterior. */
+  starterInstruction?: string;
 }): { messages: OpenRouterMessage[]; memoryWarnings: MemoryWarnings } {
   const basePrompt = opts.partnerPrompt ?? PARCEIRO_PROMPT;
   let systemContent = `${basePrompt}\n\nZetel atual: "${opts.displayName}".`;
   if (opts.tutorInstructions) {
     systemContent += `\n\nPerfil pedagógico desta sessão:\n${opts.tutorInstructions}`;
+  }
+  if (opts.starterInstruction) {
+    systemContent += `\n\nPedido explícito deste turno:\n${opts.starterInstruction}\nMantenha o perfil pedagógico da sessão e use só o foco já fornecido.`;
   }
   const sources = opts.sources ?? [];
 

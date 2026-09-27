@@ -1,3 +1,5 @@
+import type { ChatStarter } from '@/lib/chat-starters';
+
 /** Metadados operacionais por mensagem (PRD §13.1; gravado em `chat_messages.meta`). */
 export interface ChatMessageMeta {
   /** Anchor da página validada no turno (de `zetel_pages`). */
@@ -44,6 +46,8 @@ export interface ChatMessageMeta {
   sources?: Record<string, CitedSource>;
   /** Narrativa parcial gravada porque o cliente abortou o turno (Parar). */
   interrupted?: boolean;
+  /** Starter enumerado que originou a mensagem canônica do usuário. */
+  starter?: ChatStarter;
 }
 
 /** Destino seguro de uma citação. O texto da fonte não entra aqui. */
