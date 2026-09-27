@@ -1,14 +1,14 @@
 ---
 id: "005"
 title: "Study sessions e continuidade"
-status: VALIDATING
+status: SESSION_CLOSED
 blocked_by: ["001"]
 writer: null
 reviewer: null
-commit: null
-push: null
-review_result: pending
-handoff: null
+commit: e94866f1b9a44944ac0e5b879f3c21cc20680a12
+push: "origin/main (PR #20 merge d49495c1eb29a2a79975bff662e0d231a56419de; PR #21 merge 7a1a8f2af38b84c359c4bcde1c7c9ef5fb124139)"
+review_result: NOT_RUN
+handoff: .agent/specs/SPEC-001-conversational-learning-v1/handoffs/005-study-sessions-e94866f.md
 execution_profile: FULL
 profile_justification: "migration com backfill em chat_messages + mudança do contrato de persistência e escopo do chat/sessões"
 validation: FAIL
