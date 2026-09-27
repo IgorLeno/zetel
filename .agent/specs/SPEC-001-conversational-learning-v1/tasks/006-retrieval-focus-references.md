@@ -1,7 +1,7 @@
 ---
 id: "006"
 title: "Retrieval, foco por linguagem natural e referências"
-status: READY
+status: IN_PROGRESS
 blocked_by: ["003", "005"]
 writer: null
 reviewer: null
@@ -9,6 +9,8 @@ commit: null
 push: null
 review_result: pending
 handoff: null
+execution_profile: FULL
+profile_justification: "Nova tabela FTS5 derivada, mudança no contrato de prompt/SSE e mitigação de prompt injection."
 ---
 
 ## Objetivo

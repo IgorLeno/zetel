@@ -49,6 +49,7 @@ export function PdfReader({
   onPageChange,
   onUserPageChange,
   onAskAboutSelection,
+  goToRequest = null,
 }: {
   zetelId: string;
   fileId: string;
@@ -58,6 +59,8 @@ export function PdfReader({
   onUserPageChange?: (pageNumber: number) => void;
   /** "Conversar sobre isto" (tarefa 004): texto candidato; o servidor verifica. */
   onAskAboutSelection?: (selection: PdfSelection) => void;
+  /** Pedido externo (citação). `token` muda a cada clique, mesmo na mesma página. */
+  goToRequest?: { page: number; token: number } | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
@@ -65,6 +68,7 @@ export function PdfReader({
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [pageNumber, setPageNumber] = useState(initialPageNumber);
   const [pageInput, setPageInput] = useState(String(initialPageNumber));
+  const appliedGoTo = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedText, setSelectedText] = useState('');
@@ -191,6 +195,18 @@ export function PdfReader({
   useEffect(() => {
     setSelectedText('');
   }, [pageNumber, fileId]);
+
+  useEffect(() => {
+    if (!goToRequest || goToRequest.token === appliedGoTo.current) return;
+    appliedGoTo.current = goToRequest.token;
+    const totalPages = doc?.numPages ?? null;
+    const next = totalPages
+      ? Math.min(totalPages, Math.max(1, goToRequest.page))
+      : Math.max(1, goToRequest.page);
+    setPageNumber(next);
+    setPageInput(String(next));
+    onUserPageChange?.(next);
+  }, [goToRequest, doc, onUserPageChange]);
 
   const selectionTooLong = selectedText.length > SELECTION_MAX_CHARS;
 

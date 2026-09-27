@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 46,
+  "revision": 47,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -8,7 +8,7 @@
     "approved_by": "Igor Fernandes",
     "approved_at": "2026-09-26T11:14:06.443Z"
   },
-  "active_task": null,
+  "active_task": "006",
   "tasks": [
     {
       "id": "001",
@@ -93,11 +93,14 @@
     {
       "id": "006",
       "title": "Retrieval, foco por linguagem natural e referências",
-      "status": "READY",
+      "status": "IN_PROGRESS",
       "blocked_by": [
         "003",
         "005"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "Nova tabela FTS5 derivada, mudança no contrato de prompt/SSE e mitigação de prompt injection.",
+      "reviews_requested": 2
     },
     {
       "id": "007",
@@ -164,85 +167,14 @@
     }
   ],
   "session": {
-    "id": "task-005-20260927",
-    "agent": "codex",
-    "task_id": "005",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-09-27T08:31:46.656Z",
+    "id": "task-006-20260927",
+    "agent": "cursor",
+    "task_id": "006",
+    "status": "IN_PROGRESS",
+    "started_at": "2026-09-27T12:22:47.490Z",
     "execution_profile": "FULL",
-    "profile_justification": "migration com backfill em chat_messages + mudança do contrato de persistência e escopo do chat/sessões",
-    "reviews_requested": 2,
-    "validating_at": "2026-09-27T09:32:50.659Z",
-    "validation_result": "FAIL",
-    "fixed_point": "de2a099c1f3bc2eadb14efad584004e5e71a642daf9d5afd7a348e469d1932e3",
-    "review_aggregate": null,
-    "aggregated_at": null,
-    "review_result": {
-      "spec-compliance": "NOT_RUN",
-      "engineering-quality": "NOT_RUN"
-    },
-    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/005-validation.json",
-    "gates_plan": [
-      {
-        "category": "focused",
-        "argv": [
-          "pnpm",
-          "exec",
-          "vitest",
-          "run",
-          "tests/unit/study-session-title.test.ts",
-          "tests/integration/study-sessions.test.ts",
-          "tests/integration/pdf/pdf-focus-chat.test.ts",
-          "tests/unit/focus/verify-selection.test.ts",
-          "tests/unit/design-system/module-14-3-contract.test.ts"
-        ]
-      },
-      {
-        "category": "build",
-        "argv": [
-          "pnpm",
-          "build"
-        ]
-      },
-      {
-        "category": "test-ci",
-        "argv": [
-          "pnpm",
-          "test:ci"
-        ]
-      },
-      {
-        "category": "coverage",
-        "argv": [
-          "pnpm",
-          "test:coverage"
-        ]
-      },
-      {
-        "category": "typecheck",
-        "argv": [
-          "pnpm",
-          "typecheck"
-        ]
-      },
-      {
-        "category": "diff-check",
-        "argv": [
-          "git",
-          "diff",
-          "--check"
-        ]
-      }
-    ],
-    "reviewing_at": "2026-09-27T09:25:21.373Z",
-    "done_at": "2026-09-27T11:50:15.359Z",
-    "active_task_cleared": true,
-    "external_checks": "pending-not-waited",
-    "reconciliation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/005-reconciliation.json",
-    "delivery_commit": "e94866f1b9a44944ac0e5b879f3c21cc20680a12",
-    "push": "origin/main (PR #20 merge d49495c1eb29a2a79975bff662e0d231a56419de; PR #21 merge 7a1a8f2af38b84c359c4bcde1c7c9ef5fb124139)",
-    "closed_at": "2026-09-27T11:50:15.390Z",
-    "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/005-study-sessions-e94866f.md"
+    "profile_justification": "Nova tabela FTS5 derivada, mudança no contrato de prompt/SSE e mitigação de prompt injection.",
+    "reviews_requested": 2
   },
   "approval": {
     "spec": true,

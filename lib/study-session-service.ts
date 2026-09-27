@@ -79,12 +79,16 @@ export function validateSessionFocus(
     throw new SessionValidationError('Foco inválido.');
   }
   const input = raw as Record<string, unknown>;
-  if (Object.keys(input).some((key) => !['scope', 'fileId', 'pageNumber'].includes(key))) {
+  if (Object.keys(input).some((key) => !['scope', 'fileId', 'pageNumber', 'hint'].includes(key))) {
     throw new SessionValidationError('Foco inválido.');
   }
   const scope = input.scope;
   const fileId = input.fileId;
   const pageNumber = input.pageNumber;
+  const hint = input.hint;
+  if (hint !== undefined && hint !== null && hint !== 'beginning' && hint !== 'end') {
+    throw new SessionValidationError('Foco inválido.');
+  }
   if (!['selection', 'page', 'section', 'document', 'zetel'].includes(String(scope)) ||
       (fileId !== null && (typeof fileId !== 'string' || !fileId || fileId.length > 120)) ||
       (pageNumber !== null && (!Number.isInteger(pageNumber) || (pageNumber as number) < 0))) {
@@ -115,8 +119,12 @@ export function validateSessionFocus(
   ).get(zetelId, pageNumber)) {
     throw new SessionValidationError('Página Markdown não encontrada neste Zetel.');
   }
-  return { scope: scope as FocusState['scope'], fileId: fileId as string | null,
-    pageNumber: pageNumber as number | null };
+  return {
+    scope: scope as FocusState['scope'],
+    fileId: fileId as string | null,
+    pageNumber: pageNumber as number | null,
+    ...(hint === 'beginning' || hint === 'end' ? { hint } : {}),
+  };
 }
 
 function validateTitle(value: unknown): string {

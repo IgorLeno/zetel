@@ -37,6 +37,19 @@ export interface ChatMessageMeta {
   memoryRejected?: boolean;
   /** Há memória longa no contexto deste turno — UI sugere consolidar (Módulo 7). */
   memoryLong?: boolean;
+  /**
+   * Mapa `[fonte:Sn]` do turno (tarefa 006). Sem texto da fonte: só o destino
+   * para abrir o PDF. IDs ausentes daqui não viram link.
+   */
+  sources?: Record<string, CitedSource>;
+}
+
+/** Destino seguro de uma citação. O texto da fonte não entra aqui. */
+export interface CitedSource {
+  fileId: string | null;
+  filename: string;
+  pageNumber: number;
+  type: 'foco' | 'selecao' | 'recuperado';
 }
 
 /** Mensagem persistida do chat por Zetel (Módulo 5). */
