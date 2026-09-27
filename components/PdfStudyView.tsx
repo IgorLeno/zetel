@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
 import type { ZetelFile } from '@/types/zetel-file';
 import { ChatPanel } from './ChatPanel';
+import type { PdfSelection } from './PdfReader';
 
 // Só no cliente: no SSR o servidor carregaria o build de navegador do pdf.js
 // (`pdfjs-dist` é externo no servidor por causa da extração da tarefa 002).
@@ -22,6 +23,8 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
   const [file, setFile] = useState<ZetelFile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
+  // Seleção anexada ao próximo turno (tarefa 004). Vale só para a página dela.
+  const [selection, setSelection] = useState<PdfSelection | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +51,11 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
     };
   }, [zetelId, fileId]);
 
-  const onPageChange = useCallback((n: number) => setPageNumber(n), []);
+  const onPageChange = useCallback((n: number) => {
+    setPageNumber(n);
+    setSelection((cur) => (cur && cur.pageNumber !== n ? null : cur));
+  }, []);
+  const onClearSelection = useCallback(() => setSelection(null), []);
 
   if (error) return <p className="feedback err">{error}</p>;
   if (!file) return <div className="empty-state">Carregando…</div>;
@@ -68,6 +75,7 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
           fileId={file.id}
           filename={file.filename}
           onPageChange={onPageChange}
+          onAskAboutSelection={setSelection}
         />
         <div style={{ width: CHAT_WIDTH, minWidth: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ChatPanel
@@ -79,7 +87,12 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
             currentGuideBlockTitle={null}
             currentGuideBlockIndex={null}
             currentGuideBlockTotal={null}
-            pdfFocus={{ fileId: file.id, pageNumber }}
+            pdfFocus={{
+              fileId: file.id,
+              pageNumber,
+              selectionText: selection?.pageNumber === pageNumber ? selection.text : undefined,
+            }}
+            onClearPdfSelection={onClearSelection}
           />
         </div>
       </div>

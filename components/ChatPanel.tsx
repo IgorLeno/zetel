@@ -107,6 +107,7 @@ export function ChatPanel({
   currentGuideBlockIndex,
   currentGuideBlockTotal,
   pdfFocus = null,
+  onClearPdfSelection,
 }: {
   zetelId: string;
   currentReadingMode: ReadingMode;
@@ -116,8 +117,13 @@ export function ChatPanel({
   currentGuideBlockTitle: string | null;
   currentGuideBlockIndex: number | null;
   currentGuideBlockTotal: number | null;
-  /** Página do leitor PDF (tarefa 003). Só IDs: o texto vem do servidor. */
-  pdfFocus?: { fileId: string; pageNumber: number } | null;
+  /**
+   * Página do leitor PDF (tarefa 003). Só IDs: o texto vem do servidor.
+   * `selectionText` (tarefa 004) é candidato; o servidor verifica e usa o próprio recorte.
+   */
+  pdfFocus?: { fileId: string; pageNumber: number; selectionText?: string } | null;
+  /** Descarta a seleção anexada (✕ no chip ou após o turno aceito). */
+  onClearPdfSelection?: () => void;
 }) {
   // Ref: o fluxo de voz chama sendMessage por closures antigas; a página enviada
   // precisa ser a atual. Mudar de página só atualiza a ref (não dispara turno).
@@ -169,6 +175,14 @@ export function ChatPanel({
   const discussNextMemoryRef = useRef(false);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // "Conversar sobre isto" (tarefa 004): nova seleção sugere uma pergunta e foca o input.
+  const pdfSelectionText = pdfFocus?.selectionText;
+  useEffect(() => {
+    if (!pdfSelectionText) return;
+    setInput((cur) => (cur.trim() ? cur : 'Explique este trecho.'));
+    inputRef.current?.focus();
+  }, [pdfSelectionText]);
 
   // ── TTS streaming queue ──────────────────────────────────────────────────────
   const tts = useTtsQueue({
@@ -491,6 +505,9 @@ export function ChatPanel({
                 focus: {
                   fileId: pdfFocusRef.current.fileId,
                   pageNumber: pdfFocusRef.current.pageNumber,
+                  ...(pdfFocusRef.current.selectionText
+                    ? { selectionText: pdfFocusRef.current.selectionText }
+                    : {}),
                 },
                 interactionMode: mode,
               }
@@ -516,6 +533,9 @@ export function ChatPanel({
         setIsLoading(false);
         return;
       }
+
+      // Seleção vale para um turno só (tarefa 004).
+      if (pdfFocusRef.current?.selectionText) onClearPdfSelection?.();
 
       if (!res.body) {
         setError('Resposta sem stream.');
@@ -890,6 +910,25 @@ export function ChatPanel({
 
       {/* Composer */}
       <div className="composer">
+        {pdfSelectionText && (
+          <div className="composer-selection" data-testid="pdf-selection-chip">
+            <span className="composer-selection-label">
+              Trecho selecionado (p. {pdfFocus?.pageNumber}):
+            </span>
+            <span className="composer-selection-text" title={pdfSelectionText}>
+              {pdfSelectionText}
+            </span>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => onClearPdfSelection?.()}
+              disabled={isLoading}
+              aria-label="Remover trecho selecionado"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <div className="composer-box">
           <textarea
             ref={inputRef}

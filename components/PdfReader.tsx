@@ -28,6 +28,14 @@ function loadPdfJs(): Promise<PdfJs> {
 
 const RENDER_SCALE = 1.4;
 
+/** Mesmo teto do servidor (`SELECTION_MAX_CHARS`); o servidor revalida. */
+const SELECTION_MAX_CHARS = 2000;
+
+export interface PdfSelection {
+  pageNumber: number;
+  text: string;
+}
+
 /**
  * Leitor PDF da visão de estudo (tarefa 003): canvas + camada de texto, uma
  * página por vez. Informa a página atual ao pai; mudar de página não dispara
@@ -38,11 +46,14 @@ export function PdfReader({
   fileId,
   filename,
   onPageChange,
+  onAskAboutSelection,
 }: {
   zetelId: string;
   fileId: string;
   filename: string;
   onPageChange: (pageNumber: number) => void;
+  /** "Conversar sobre isto" (tarefa 004): texto candidato; o servidor verifica. */
+  onAskAboutSelection?: (selection: PdfSelection) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
@@ -52,6 +63,7 @@ export function PdfReader({
   const [pageInput, setPageInput] = useState('1');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedText, setSelectedText] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -140,6 +152,30 @@ export function PdfReader({
     };
   }, [doc, pageNumber]);
 
+  // Só conta seleção inteiramente dentro da camada de texto da página.
+  useEffect(() => {
+    function onSelectionChange() {
+      const sel = document.getSelection();
+      const layer = textLayerRef.current;
+      if (!sel || sel.isCollapsed || !layer || sel.rangeCount === 0) {
+        setSelectedText('');
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      const inside =
+        layer.contains(range.startContainer) && layer.contains(range.endContainer);
+      setSelectedText(inside ? sel.toString().trim() : '');
+    }
+    document.addEventListener('selectionchange', onSelectionChange);
+    return () => document.removeEventListener('selectionchange', onSelectionChange);
+  }, []);
+
+  useEffect(() => {
+    setSelectedText('');
+  }, [pageNumber, fileId]);
+
+  const selectionTooLong = selectedText.length > SELECTION_MAX_CHARS;
+
   const total = doc?.numPages ?? null;
 
   const goTo = useCallback(
@@ -196,7 +232,29 @@ export function PdfReader({
         >
           ›
         </button>
+        {onAskAboutSelection && selectedText && (
+          <button
+            type="button"
+            className="btn primary"
+            // preventDefault: o clique não pode desfazer a seleção antes de lê-la.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onAskAboutSelection({ pageNumber, text: selectedText })}
+            disabled={selectionTooLong}
+            title={
+              selectionTooLong
+                ? `Seleção longa demais (máx. ${SELECTION_MAX_CHARS} caracteres)`
+                : 'Conversar com o parceiro sobre o trecho selecionado'
+            }
+          >
+            Conversar sobre isto
+          </button>
+        )}
       </div>
+      {selectionTooLong && (
+        <p className="feedback" role="status">
+          Seleção longa demais para conversar (máx. {SELECTION_MAX_CHARS} caracteres).
+        </p>
+      )}
       {error && <p className="feedback err">{error}</p>}
       {loading && !error && <div className="empty-state">Abrindo PDF…</div>}
       <div className="pdf-reader-scroll">

@@ -1700,6 +1700,9 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   padding: 6px 8px 8px 10px;
 }
 .composer-bar .grow { flex: 1; }
+.composer-selection { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; color: var(--text-2); }
+.composer-selection-label { flex-shrink: 0; font-weight: 600; }
+.composer-selection-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; }
 
 /* ── Mic / Send / Stop buttons (inside composer-bar) ── */
 .mic-btn {

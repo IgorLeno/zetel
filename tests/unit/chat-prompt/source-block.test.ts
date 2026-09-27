@@ -3,6 +3,7 @@ import {
   buildOpenRouterMessages,
   buildSourceBlock,
   FOCUS_PAGE_MAX_CHARS,
+  FOCUS_SELECTION_MAX_CHARS,
   MEMORY_MARK_START,
   NOTE_MARK_END,
   NOTE_MARK_START,
@@ -31,6 +32,22 @@ describe('sanitizeSourceText', () => {
     expect(sanitizeSourceText('<fo<fonte>nte>')).not.toMatch(/<\s*\/?\s*fonte/i);
     expect(sanitizeSourceText('<<<<<>>>>>')).toBe('');
     expect(sanitizeSourceText('<<\u0000<NOTA>>\u0007>')).not.toContain('<<<');
+  });
+
+  it('não trunca texto comum com "<" (regressão FONTE_TAG guloso)', () => {
+    const samples = [
+      'x < y e y > z',
+      'Se T < fonte quente, o calor flui de volta. Segunda frase.',
+      'pressão < limite de ruptura\nlinha seguinte',
+      'T < fonte quente\nfonte fria > T',
+    ];
+    for (const s of samples) expect(sanitizeSourceText(s), s).toBe(s);
+  });
+
+  it('continua removendo tags reais e prefixos colados sem ">"', () => {
+    expect(sanitizeSourceText('a <fonte id="S9" b')).not.toMatch(/<\s*\/?\s*fonte/i);
+    expect(sanitizeSourceText('a </FONTE b')).not.toMatch(/<\s*\/?\s*fonte/i);
+    expect(sanitizeSourceText('antes < Fonte tipo="x" > depois')).toBe('antes  depois');
   });
 
   it('remove caracteres de controle e preserva quebras de linha e tabs', () => {
@@ -73,6 +90,24 @@ describe('buildOpenRouterMessages com fontes', () => {
     expect(block?.role).toBe('user');
     expect(block?.content).toContain('pagina="2"');
     expect(messages.at(-1)).toEqual({ role: 'user', content: 'pergunta' });
+  });
+
+  it('seleção verificada entra antes da página, com teto próprio e regra de foco', () => {
+    const { messages } = buildOpenRouterMessages({
+      ...base,
+      sources: [
+        { id: 'S1', doc: 'a.pdf', pagina: 2, tipo: 'selecao', text: 'y'.repeat(FOCUS_SELECTION_MAX_CHARS + 50) },
+        { id: 'S2', doc: 'a.pdf', pagina: 2, tipo: 'foco', text: 'Página inteira.' },
+      ],
+    });
+    expect(messages[0].content).toContain('tipo="selecao"');
+    const block = messages.find((m) => m.content.startsWith('DADOS DE FONTE'))!.content;
+    const sel = block.indexOf('<fonte id="S1" doc="a.pdf" pagina="2" tipo="selecao">');
+    const page = block.indexOf('<fonte id="S2" doc="a.pdf" pagina="2" tipo="foco">');
+    expect(sel).toBeGreaterThan(-1);
+    expect(page).toBeGreaterThan(sel);
+    expect(block).toContain(`${'y'.repeat(FOCUS_SELECTION_MAX_CHARS)}...`);
+    expect(block).not.toContain('y'.repeat(FOCUS_SELECTION_MAX_CHARS + 1));
   });
 
   it('sem fontes o prompt permanece como antes', () => {
