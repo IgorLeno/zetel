@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ChatMessage } from '@/types/chat-message';
+import type { ChatMessage, CitedSource } from '@/types/chat-message';
 import type { StudySession } from '@/types/study-session';
+import { stripFonteMarkers } from '@/lib/fonte-markers';
+import { FonteText } from './FonteText';
 import { NoteCard, type Suggestion, type SaveNotePayload } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
 import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
@@ -47,12 +49,14 @@ function parseSseChunk(text: string): {
   chunks: string[];
   suggestion: Suggestion | null;
   memorySuggestion: MemorySuggestionData | null;
+  sources: Record<string, CitedSource> | null;
   error: string | null;
   done: boolean;
 } {
   const chunks: string[] = [];
   let suggestion: Suggestion | null = null;
   let memorySuggestion: MemorySuggestionData | null = null;
+  let sources: Record<string, CitedSource> | null = null;
   let error: string | null = null;
   let done = false;
 
@@ -68,6 +72,17 @@ function parseSseChunk(text: string): {
     if (payload.startsWith('[ERROR]')) {
       error = payload.slice('[ERROR]'.length).trim();
       done = true;
+      continue;
+    }
+    if (payload.startsWith('[SOURCES]')) {
+      try {
+        const parsed = JSON.parse(payload.slice('[SOURCES]'.length).trim()) as unknown;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          sources = parsed as Record<string, CitedSource>;
+        }
+      } catch {
+        /* mapa malformado — citações ficam como texto */
+      }
       continue;
     }
     if (payload.startsWith('[MEMORY_SUGGESTION]')) {
@@ -96,7 +111,7 @@ function parseSseChunk(text: string): {
     }
   }
 
-  return { chunks, suggestion, memorySuggestion, error, done };
+  return { chunks, suggestion, memorySuggestion, sources, error, done };
 }
 
 export function ChatPanel({
@@ -110,6 +125,7 @@ export function ChatPanel({
   currentGuideBlockTotal,
   pdfFocus = null,
   onClearPdfSelection,
+  onOpenSource,
   onSessionChange,
   createSessionIfEmpty = false,
   active = true,
@@ -127,6 +143,8 @@ export function ChatPanel({
    * `selectionText` (tarefa 004) é candidato; o servidor verifica e usa o próprio recorte.
    */
   pdfFocus?: { fileId: string; pageNumber: number; selectionText?: string } | null;
+  /** Citação `[fonte:Sn]` com destino conhecido abre o PDF nessa página. */
+  onOpenSource?: (target: { fileId: string; pageNumber: number }) => void;
   /** Descarta a seleção anexada (✕ no chip ou após o turno aceito). */
   onClearPdfSelection?: () => void;
   onSessionChange?: (session: StudySession | null) => void;
@@ -145,6 +163,7 @@ export function ChatPanel({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const [streaming, setStreaming] = useState('');
+  const [turnSources, setTurnSources] = useState<Record<string, CitedSource> | null>(null);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -635,6 +654,7 @@ export function ChatPanel({
     if (mode === 'voice') tts.beginTurn();
 
     setPendingUser(text); // bolha otimista — limpa no finally após histórico atualizado
+    setTurnSources(null);
     if (textOverride === undefined) setInput('');
     setError(null);
     isLoadingRef.current = true;
@@ -714,6 +734,7 @@ export function ChatPanel({
         if (parsed.error) streamError = parsed.error;
         if (parsed.suggestion) received = parsed.suggestion;
         if (parsed.memorySuggestion) receivedMemory = parsed.memorySuggestion;
+        if (parsed.sources) setTurnSources(parsed.sources);
         if (parsed.done) return;
         for (const c of parsed.chunks) {
           accumulated += c;
@@ -721,7 +742,7 @@ export function ChatPanel({
           // TTS streaming: enfileira frases à medida que chegam (áudio começa mid-stream).
           if (mode === 'voice') {
             speechBuffer += c;
-            const { sentences, rest } = extractSentences(speechBuffer);
+            const { sentences, rest } = extractSentences(stripFonteMarkers(speechBuffer));
             speechBuffer = rest;
             sentences.forEach((s) => tts.enqueue(s));
           }
@@ -772,7 +793,7 @@ export function ChatPanel({
         // D36: TTS automático apenas quando autoPlay=ON; seal fecha a fila e reinicia mic.
         if (mode === 'voice' && accumulated.trim()) {
           willPlayAudio = true;
-          if (speechBuffer.trim()) tts.enqueue(speechBuffer.trim());
+          if (speechBuffer.trim()) tts.enqueue(stripFonteMarkers(speechBuffer).trim());
           tts.seal();
         }
       }
@@ -1043,7 +1064,9 @@ export function ChatPanel({
             <div className="msg-content-wrap">
               {m.role === 'assistant' && <span className="who">Parceiro</span>}
               <div className="msg-bubble" data-testid="msg-bubble" data-role={m.role}>
-                {m.content}
+                {m.role === 'assistant' ? (
+                  <FonteText text={m.content} sources={m.meta?.sources} onOpen={onOpenSource} />
+                ) : m.content}
               </div>
             </div>
           </div>
@@ -1070,7 +1093,7 @@ export function ChatPanel({
             <div className="msg-content-wrap">
               <span className="who">Parceiro</span>
               <div className="msg-bubble streaming" data-testid="msg-bubble" data-role="streaming">
-                {streaming}
+                <FonteText text={streaming} sources={turnSources} onOpen={onOpenSource} />
                 <span className="streaming-cursor" aria-hidden />
               </div>
             </div>

@@ -29,6 +29,7 @@ import {
   type ExtractionStatus,
   type PdfExtraction,
 } from './pdf-service';
+import { deleteFilePassages, rebuildZetelPassages } from './retrieval-service';
 import { getSetting, setSetting } from './settings';
 import { getZetelById, slugify } from './zetel-service';
 import type { ZetelFile } from '@/types/zetel-file';
@@ -345,6 +346,7 @@ export function removeFile(
     remaining.forEach((r, index) => update.run(index, r.id));
 
     markStale(db, zetelId);
+    deleteFilePassages(db, fileId);
   })();
 
   logger.info('zetel file removed', { fileId, zetelId });
@@ -662,6 +664,7 @@ export function processZetel(
 
     setSetting(`image_map_${zetelId}`, JSON.stringify(imageMap));
   })();
+  rebuildZetelPassages(db, zetelId);
 
   const result: ProcessResult = {
     pagesCount: pages.length,
@@ -829,6 +832,7 @@ export async function processPdfFiles(
       if (x.status === 'no_text') result.noText++;
     }
   })();
+  rebuildZetelPassages(db, zetelId);
 
   for (const o of persisted) {
     logger.info('pdf processed', {

@@ -86,6 +86,11 @@ describe('chat com foco de página PDF (tarefa 003)', () => {
     const sse = await res.text();
     const text = [...sse.matchAll(/^data: (".*")$/gm)].map((m) => JSON.parse(m[1]) as string).join('');
     expect(text).toBe('Resposta sobre a página.');
+    const sourcesLine = sse.split('\n').find((line) => line.startsWith('data: [SOURCES] '));
+    expect(sourcesLine).toBeDefined();
+    const sources = JSON.parse(sourcesLine!.slice('data: [SOURCES] '.length)) as Record<string, { type: string; pageNumber: number }>;
+    expect(sources.S1).toMatchObject({ type: 'foco', pageNumber: 2 });
+    expect(sourcesLine).not.toContain('entalpia');
 
     expect(captured).toHaveLength(1);
     const all = captured[0].messages.map((m) => m.content).join('\n');

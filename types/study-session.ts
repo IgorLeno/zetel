@@ -5,6 +5,8 @@ export interface FocusState {
   scope: FocusScope;
   fileId: string | null;
   pageNumber: number | null;
+  /** "começo" / "final": restringe o retrieval, sem parser livre. */
+  hint?: 'beginning' | 'end' | null;
 }
 
 export type StudySessionStatus = 'active' | 'paused' | 'archived';

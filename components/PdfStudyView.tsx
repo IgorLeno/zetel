@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ZetelFile } from '@/types/zetel-file';
 import type { StudySession } from '@/types/study-session';
@@ -34,6 +34,9 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
   const focusWrite = useRef<Promise<void>>(Promise.resolve());
   // Seleção anexada ao próximo turno (tarefa 004). Vale só para a página dela.
   const [selection, setSelection] = useState<PdfSelection | null>(null);
+  const [goToRequest, setGoToRequest] = useState<{ page: number; token: number } | null>(null);
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +73,17 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
     setSelection((cur) => (cur && cur.pageNumber !== n ? null : cur));
   }, []);
   const onClearSelection = useCallback(() => setSelection(null), []);
+  const onOpenSource = useCallback((target: { fileId: string; pageNumber: number }) => {
+    if (target.fileId !== fileId) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('view', 'pdf');
+      params.set('file', target.fileId);
+      params.set('page', String(target.pageNumber));
+      router.push(`${pathname}?${params.toString()}`);
+      return;
+    }
+    setGoToRequest({ page: target.pageNumber, token: Date.now() });
+  }, [fileId, pathname, router, searchParams]);
   const onSessionChange = useCallback((session: StudySession | null) => {
     setActiveSessionId(session?.id ?? null);
   }, []);
@@ -110,6 +124,7 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
           onPageChange={onPageChange}
           onUserPageChange={onUserPageChange}
           onAskAboutSelection={setSelection}
+          goToRequest={goToRequest}
         />
         <div style={{ width: CHAT_WIDTH, minWidth: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ChatPanel
@@ -127,6 +142,7 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
               selectionText: selection?.pageNumber === pageNumber ? selection.text : undefined,
             }}
             onClearPdfSelection={onClearSelection}
+            onOpenSource={onOpenSource}
             onSessionChange={onSessionChange}
             createSessionIfEmpty={file.extractionStatus === 'ok' || file.extractionStatus === 'no_text'}
           />

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { realpathSync, statSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import type Database from 'better-sqlite3';
+import type { FocusState } from '@/types/study-session';
 import { zetelArquivosDir } from './paths';
 import { isPdfFilename } from './pdf-service';
 
@@ -214,4 +215,104 @@ export function resolvePdfFile(
     return null;
   }
   return { fileId: file.id, filename: file.filename, path: realPath, sizeBytes: size };
+}
+
+export interface FocusCommand {
+  onlyThisPage: boolean;
+  scope: 'section' | 'document' | null;
+  hint: 'beginning' | 'end' | null;
+}
+
+const EMPTY_COMMAND: FocusCommand = { onlyThisPage: false, scope: null, hint: null };
+
+function foldFocusText(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+/**
+ * Regras PT-BR fechadas do PLAN. Não é um parser de intenção: só estes
+ * enunciados mudam o foco. Vários matches: página vence seção, seção vence
+ * documento; o hint de começo/fim é independente, exceto em "só dessa página".
+ */
+export function parseFocusCommand(message: string): FocusCommand {
+  const text = foldFocusText(message);
+  const onlyThisPage = /\bso dessa pagina\b/.test(text);
+  const section = /\b(?:capitulo|secao) inteir[oa]\b/.test(text);
+  const document = /\b(?:documento|livro|artigo) inteir[oa]\b/.test(text);
+  let hint: FocusCommand['hint'] = null;
+  if (/\b(?:comeco|primeira parte)\b/.test(text)) hint = 'beginning';
+  else if (/\b(?:final|ultima parte)\b/.test(text)) hint = 'end';
+  if (onlyThisPage) return { onlyThisPage: true, scope: null, hint: null };
+  if (section) return { onlyThisPage: false, scope: 'section', hint };
+  if (document) return { onlyThisPage: false, scope: 'document', hint };
+  if (hint) return { onlyThisPage: false, scope: null, hint };
+  return EMPTY_COMMAND;
+}
+
+function withHint(focus: FocusState, hint: FocusCommand['hint']): FocusState {
+  const base: FocusState = {
+    scope: focus.scope,
+    fileId: focus.fileId,
+    pageNumber: focus.pageNumber,
+  };
+  if (hint === 'beginning' || hint === 'end') return { ...base, hint };
+  return base;
+}
+
+/**
+ * Próximo `FocusState` da sessão. A página visível no leitor atualiza
+ * `page`/`section`; documento e Zetel permanecem até um comando ou uma
+ * troca explícita de página na UI (essa troca manda `scope: page`).
+ */
+export function nextSessionFocus(input: {
+  current: FocusState | null;
+  command: FocusCommand;
+  pdf: { fileId: string; pageNumber: number } | null;
+  markdownPage: number | null;
+}): FocusState {
+  const { current, command, pdf, markdownPage } = input;
+  if (command.onlyThisPage) {
+    if (pdf) return { scope: 'page', fileId: pdf.fileId, pageNumber: pdf.pageNumber };
+    if (markdownPage !== null) return { scope: 'page', fileId: null, pageNumber: markdownPage };
+  }
+  if (command.scope === 'section' && pdf) {
+    return withHint(
+      { scope: 'section', fileId: pdf.fileId, pageNumber: pdf.pageNumber },
+      command.hint,
+    );
+  }
+  if (command.scope === 'document') {
+    const fileId = pdf?.fileId ?? current?.fileId ?? null;
+    if (fileId) return withHint({ scope: 'document', fileId, pageNumber: null }, command.hint);
+  }
+  if (command.hint && current?.scope === 'document' && current.fileId) {
+    return { scope: 'document', fileId: current.fileId, pageNumber: null, hint: command.hint };
+  }
+  if (command.hint && current?.scope === 'zetel') {
+    return { scope: 'zetel', fileId: null, pageNumber: null, hint: command.hint };
+  }
+  if (command.hint && pdf) {
+    const scope = current?.scope === 'section' && current.fileId === pdf.fileId ? 'section' : 'page';
+    return { scope, fileId: pdf.fileId, pageNumber: pdf.pageNumber, hint: command.hint };
+  }
+  if (current?.scope === 'document' && current.fileId) {
+    return withHint({ scope: 'document', fileId: current.fileId, pageNumber: null }, current.hint ?? null);
+  }
+  if (current?.scope === 'zetel') {
+    return withHint({ scope: 'zetel', fileId: null, pageNumber: null }, current.hint ?? null);
+  }
+  if (current?.scope === 'section' && pdf && current.fileId === pdf.fileId) {
+    return withHint(
+      { scope: 'section', fileId: pdf.fileId, pageNumber: pdf.pageNumber },
+      current.hint ?? null,
+    );
+  }
+  if (pdf) {
+    return withHint(
+      { scope: 'page', fileId: pdf.fileId, pageNumber: pdf.pageNumber },
+      current?.hint ?? null,
+    );
+  }
+  if (markdownPage !== null) return { scope: 'page', fileId: null, pageNumber: markdownPage };
+  return current ?? { scope: 'zetel', fileId: null, pageNumber: null };
 }

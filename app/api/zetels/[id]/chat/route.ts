@@ -31,12 +31,15 @@ import { getOpenRouterModel } from '@/lib/config';
 import { getSetting } from '@/lib/settings';
 import { getZetelById } from '@/lib/zetel-service';
 import {
+  nextSessionFocus,
+  parseFocusCommand,
   parsePdfPageFocus,
   resolvePdfPageFocus,
   verifyPdfSelection,
   type ResolvedPdfPageFocus,
   type VerifiedSelection,
 } from '@/lib/focus';
+import { collectTurnSources } from '@/lib/turn-sources';
 import type { ChatMessageMeta } from '@/types/chat-message';
 import { logger } from '@/lib/logger';
 import {
@@ -323,12 +326,24 @@ export async function POST(request: Request, { params }: Ctx) {
           ? { scope: 'page', fileId: null, pageNumber: pageIndex }
           : null,
     });
-  const sessionFocus = pdfFocus
-    ? { scope: 'page' as const, fileId: pdfFocus.fileId, pageNumber: pdfFocus.pageNumber }
-    : pageIndex !== null
-      ? { scope: 'page' as const, fileId: null, pageNumber: pageIndex }
-      : { scope: 'zetel' as const, fileId: null, pageNumber: null };
+  const focusCommand = parseFocusCommand(userMessage);
+  const sessionFocus = nextSessionFocus({
+    current: session.focus,
+    command: focusCommand,
+    pdf: pdfFocus ? { fileId: pdfFocus.fileId, pageNumber: pdfFocus.pageNumber } : null,
+    markdownPage: pageIndex,
+  });
   updateStudySession(db, zetelId, session.id, { focus: sessionFocus, status: 'active' });
+  const turnSources = pdfFocus
+    ? collectTurnSources(db, {
+        zetelId,
+        userMessage,
+        pdfFocus,
+        selection,
+        focus: sessionFocus,
+        allowRetrieval: !focusCommand.onlyThisPage,
+      })
+    : null;
 
   const model = resolveChatModel(
     typeof body.model === 'string' ? body.model : undefined,
@@ -383,28 +398,7 @@ export async function POST(request: Request, { params }: Ctx) {
     existingTitles,
     vaultPath: vaultPath ?? undefined,
     interactionMode,
-    sources: pdfFocus
-      ? [
-          ...(selection
-            ? [
-                {
-                  id: 'S1',
-                  doc: pdfFocus.filename,
-                  pagina: pdfFocus.pageNumber,
-                  tipo: 'selecao' as const,
-                  text: selection.text,
-                },
-              ]
-            : []),
-          {
-            id: selection ? 'S2' : 'S1',
-            doc: pdfFocus.filename,
-            pagina: pdfFocus.pageNumber,
-            tipo: 'foco' as const,
-            text: pdfFocus.contentText,
-          },
-        ]
-      : undefined,
+    sources: turnSources?.promptSources,
   });
   if (memoryWarnings.truncatedCount > 0) {
     // Regra #6: só contagem, nunca conteúdo.
@@ -479,6 +473,11 @@ export async function POST(request: Request, { params }: Ctx) {
       };
 
       try {
+        if (turnSources && Object.keys(turnSources.sourceMap).length > 0) {
+          controller.enqueue(
+            encoder.encode(`data: [SOURCES] ${JSON.stringify(turnSources.sourceMap)}\n\n`),
+          );
+        }
         for await (const chunk of streamChat({
           apiKey,
           model,
@@ -590,6 +589,9 @@ export async function POST(request: Request, { params }: Ctx) {
             suggestedMemory: memorySuggestion ? true : undefined,
             memoryLong: memoryWarnings.hasLongFile || undefined,
             ...locationMeta,
+            ...(turnSources && Object.keys(turnSources.sourceMap).length > 0
+              ? { sources: turnSources.sourceMap }
+              : {}),
           },
         });
 

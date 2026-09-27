@@ -760,6 +760,26 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   box-shadow: var(--shadow);
 }
 
+.fonte-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 2px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  vertical-align: baseline;
+}
+.fonte-chip-go {
+  border: 0;
+  background: transparent;
+  color: var(--accent, #1d4ed8);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
 .msg-bubble.streaming .streaming-cursor {
   display: inline-block;
   width: 2px;
