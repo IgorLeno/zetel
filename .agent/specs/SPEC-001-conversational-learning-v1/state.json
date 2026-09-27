@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 41,
+  "revision": 42,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -169,7 +169,7 @@
     "reviews_requested": 2,
     "validating_at": "2026-09-27T09:32:50.659Z",
     "validation_result": "FAIL",
-    "fixed_point": "798f1d795e68ee253592484a391db78a21af34961d77f5e778b2144976ea46bf",
+    "fixed_point": "de2a099c1f3bc2eadb14efad584004e5e71a642daf9d5afd7a348e469d1932e3",
     "review_aggregate": null,
     "aggregated_at": null,
     "review_result": null,

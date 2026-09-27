@@ -12,7 +12,7 @@ handoff: null
 execution_profile: FULL
 profile_justification: "migration com backfill em chat_messages + mudança do contrato de persistência e escopo do chat/sessões"
 validation: FAIL
-validated_at: "2026-09-27T09:54:42.044Z"
+validated_at: "2026-09-27T11:17:18.503Z"
 ---
 
 ## Objetivo

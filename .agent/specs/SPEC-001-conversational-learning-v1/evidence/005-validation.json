@@ -2,15 +2,15 @@
   "schema_version": 1,
   "task_id": "005",
   "execution_profile": "FULL",
-  "state_revision": 40,
-  "git_head": "d51fdd2011db5be6d11d2af584ff3034e1992631",
-  "tree_fingerprint": "1a1218e3c96867c89e4e07a516e42f490542b31f63a3ce61ee413fa2c8392134",
-  "tracked_diff_sha256": "7477b202996088ba885f4347057bf8adc3f5a61ebf29ba168381e58890312db4",
+  "state_revision": 41,
+  "git_head": "13975e207df802d05c94a8f9d76fa14edab402bf",
+  "tree_fingerprint": "b0ec58fcb0284f849c2738d15de4887c0a9b55d99d8325f4a3942fe91707a880",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "untracked_sha256": "d36b1d37dc067bc264ef1af28e21b4fc6b0612828db886d5e7ed7a89199cc38d",
+  "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "task_fingerprint": "ba0cb11878df8f6ae9d114d89ea0c81dc598147c0e29684635d5bf6a47ae8ba1",
   "plan_fingerprint": "1e4342ef2dd71d8827ee195360513d50789da687eb99068db579c976cb8724cc",
-  "fixed_point": "798f1d795e68ee253592484a391db78a21af34961d77f5e778b2144976ea46bf",
+  "fixed_point": "de2a099c1f3bc2eadb14efad584004e5e71a642daf9d5afd7a348e469d1932e3",
   "commands": [
     {
       "category": "focused",
@@ -25,17 +25,17 @@
         "tests/unit/focus/verify-selection.test.ts",
         "tests/unit/design-system/module-14-3-contract.test.ts"
       ],
-      "started_at": "2026-09-27T09:46:31.134Z",
-      "completed_at": "2026-09-27T09:46:45.550Z",
-      "duration_ms": 14407,
+      "started_at": "2026-09-27T11:12:04.408Z",
+      "completed_at": "2026-09-27T11:12:11.076Z",
+      "duration_ms": 6663,
       "exit_code": 0,
       "result": "PASS",
       "output": {
-        "stdout_sha256": "2930478a11bc90ceca299272b8a92a9a646a572e40fcfc4b7352f8a25aa6adaf",
+        "stdout_sha256": "1d893bcf4ad4aad41e341497124d85c7b571e8851fdfa18c9807f7e3569c775e",
         "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "stdout_bytes": 692,
+        "stdout_bytes": 691,
         "stderr_bytes": 0,
-        "stdout_preview": "   Duration  10.31s (transform 1.03s, setup 0ms, collect 2.82s, tests 1.83s, environment 5ms, prepare 1.19s)",
+        "stdout_preview": "   Duration  4.11s (transform 1.55s, setup 0ms, collect 3.68s, tests 1.47s, environment 6ms, prepare 1.82s)",
         "stderr_preview": ""
       }
     },
@@ -45,15 +45,15 @@
         "pnpm",
         "build"
       ],
-      "started_at": "2026-09-27T09:46:45.550Z",
-      "completed_at": "2026-09-27T09:50:38.372Z",
-      "duration_ms": 232819,
+      "started_at": "2026-09-27T11:12:11.076Z",
+      "completed_at": "2026-09-27T11:15:00.112Z",
+      "duration_ms": 169034,
       "exit_code": 0,
       "result": "PASS",
       "output": {
-        "stdout_sha256": "201f9ad7a62633f13e77e06a7047f29419eda5b929f0b428504ed6a1c4e2e1da",
+        "stdout_sha256": "6d05174e9c300c5e258a59e4177f85db5e5bc7eb180acc01623986749d794cb1",
         "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "stdout_bytes": 3358,
+        "stdout_bytes": 3356,
         "stderr_bytes": 0,
         "stdout_preview": "ƒ  (Dynamic)  server-rendered on demand",
         "stderr_preview": ""
@@ -65,22 +65,42 @@
         "pnpm",
         "test:ci"
       ],
-      "started_at": "2026-09-27T09:50:38.372Z",
-      "completed_at": "2026-09-27T09:54:41.940Z",
-      "duration_ms": 243566,
+      "started_at": "2026-09-27T11:15:00.112Z",
+      "completed_at": "2026-09-27T11:16:12.548Z",
+      "duration_ms": 72434,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "a06109a3339f604e43098687a17bbfa325ea1bbe55cc5face63b65659cc5695e",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 61139,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  6.03s (transform 3.09s, setup 0ms, collect 14.58s, tests 5.80s, environment 9ms, prepare 3.33s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "coverage",
+      "argv": [
+        "pnpm",
+        "test:coverage"
+      ],
+      "started_at": "2026-09-27T11:16:12.548Z",
+      "completed_at": "2026-09-27T11:17:18.437Z",
+      "duration_ms": 65888,
       "exit_code": 1,
       "result": "FAIL",
       "output": {
-        "stdout_sha256": "83b10132e83c29125613fa8bff6f6aab92904556e8d3168d9c5122411dd01742",
-        "stderr_sha256": "2765b0fe8f1fe66cc2690f4b1cbe9315b1542182087f06b5b991db2495e92316",
-        "stdout_bytes": 52323,
-        "stderr_bytes": 716,
+        "stdout_sha256": "a7f6c6ccf7faa34bbf16b47530ea1b3263f6461c9a45aa040438f4a918f256c6",
+        "stderr_sha256": "1d5294f6b136ae33bd88f6b946cf63c499fd8b4e20cec3096030791540567c1a",
+        "stdout_bytes": 13821,
+        "stderr_bytes": 696,
         "stdout_preview": " ELIFECYCLE  Command failed with exit code 1.",
         "stderr_preview": "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯"
       }
     }
   ],
   "waivers": [],
-  "recorded_at": "2026-09-27T09:54:42.017Z",
+  "recorded_at": "2026-09-27T11:17:18.483Z",
   "validation_result": "FAIL"
 }
