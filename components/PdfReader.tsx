@@ -45,13 +45,17 @@ export function PdfReader({
   zetelId,
   fileId,
   filename,
+  initialPageNumber = 1,
   onPageChange,
+  onUserPageChange,
   onAskAboutSelection,
 }: {
   zetelId: string;
   fileId: string;
   filename: string;
+  initialPageNumber?: number;
   onPageChange: (pageNumber: number) => void;
+  onUserPageChange?: (pageNumber: number) => void;
   /** "Conversar sobre isto" (tarefa 004): texto candidato; o servidor verifica. */
   onAskAboutSelection?: (selection: PdfSelection) => void;
 }) {
@@ -59,8 +63,8 @@ export function PdfReader({
   const textLayerRef = useRef<HTMLDivElement>(null);
   const pageBoxRef = useRef<HTMLDivElement>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageInput, setPageInput] = useState('1');
+  const [pageNumber, setPageNumber] = useState(initialPageNumber);
+  const [pageInput, setPageInput] = useState(String(initialPageNumber));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedText, setSelectedText] = useState('');
@@ -71,8 +75,8 @@ export function PdfReader({
     setLoading(true);
     setError(null);
     setDoc(null);
-    setPageNumber(1);
-    setPageInput('1');
+    setPageNumber(initialPageNumber);
+    setPageInput(String(initialPageNumber));
     (async () => {
       try {
         const pdfjs = await loadPdfJs();
@@ -84,7 +88,12 @@ export function PdfReader({
           verbosity: pdfjs.VerbosityLevel.ERRORS,
         });
         const loaded = await task.promise;
-        if (!cancelled) setDoc(loaded);
+        if (!cancelled) {
+          const initial = Math.min(loaded.numPages, Math.max(1, initialPageNumber));
+          setPageNumber(initial);
+          setPageInput(String(initial));
+          setDoc(loaded);
+        }
       } catch {
         if (!cancelled) setError('Não foi possível abrir o PDF. Verifique o arquivo na aba Arquivos.');
       } finally {
@@ -96,7 +105,16 @@ export function PdfReader({
       // Libera documento e requisições; o worker compartilhado continua vivo.
       if (task) void task.destroy();
     };
+    // A página inicial é aplicada novamente abaixo sem reabrir o documento.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zetelId, fileId]);
+
+  useEffect(() => {
+    if (!doc) return;
+    const next = Math.min(doc.numPages, Math.max(1, initialPageNumber));
+    setPageNumber(next);
+    setPageInput(String(next));
+  }, [doc, initialPageNumber]);
 
   useEffect(() => {
     onPageChange(pageNumber);
@@ -182,10 +200,12 @@ export function PdfReader({
     (n: number) => {
       if (!total) return;
       const next = Math.min(total, Math.max(1, n));
+      if (next === pageNumber) return;
       setPageNumber(next);
       setPageInput(String(next));
+      onUserPageChange?.(next);
     },
-    [total],
+    [total, pageNumber, onUserPageChange],
   );
 
   function onPageInputCommit() {

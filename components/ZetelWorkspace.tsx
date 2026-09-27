@@ -43,6 +43,7 @@ function WorkspaceView({
           readingStale={readingStale}
           lastBuiltAt={lastBuiltAt}
           selectedMode={selectedMode}
+          chatActive={isReadingView(view)}
         />
       </div>
       {view === 'arquivos' && <ArquivosPanel zetelId={zetelId} />}

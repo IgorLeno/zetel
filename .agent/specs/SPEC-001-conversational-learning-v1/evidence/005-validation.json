@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "task_id": "005",
+  "execution_profile": "FULL",
+  "state_revision": 40,
+  "git_head": "d51fdd2011db5be6d11d2af584ff3034e1992631",
+  "tree_fingerprint": "1a1218e3c96867c89e4e07a516e42f490542b31f63a3ce61ee413fa2c8392134",
+  "tracked_diff_sha256": "7477b202996088ba885f4347057bf8adc3f5a61ebf29ba168381e58890312db4",
+  "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked_sha256": "d36b1d37dc067bc264ef1af28e21b4fc6b0612828db886d5e7ed7a89199cc38d",
+  "task_fingerprint": "ba0cb11878df8f6ae9d114d89ea0c81dc598147c0e29684635d5bf6a47ae8ba1",
+  "plan_fingerprint": "1e4342ef2dd71d8827ee195360513d50789da687eb99068db579c976cb8724cc",
+  "fixed_point": "798f1d795e68ee253592484a391db78a21af34961d77f5e778b2144976ea46bf",
+  "commands": [
+    {
+      "category": "focused",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/unit/study-session-title.test.ts",
+        "tests/integration/study-sessions.test.ts",
+        "tests/integration/pdf/pdf-focus-chat.test.ts",
+        "tests/unit/focus/verify-selection.test.ts",
+        "tests/unit/design-system/module-14-3-contract.test.ts"
+      ],
+      "started_at": "2026-09-27T09:46:31.134Z",
+      "completed_at": "2026-09-27T09:46:45.550Z",
+      "duration_ms": 14407,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "2930478a11bc90ceca299272b8a92a9a646a572e40fcfc4b7352f8a25aa6adaf",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 692,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  10.31s (transform 1.03s, setup 0ms, collect 2.82s, tests 1.83s, environment 5ms, prepare 1.19s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "build",
+      "argv": [
+        "pnpm",
+        "build"
+      ],
+      "started_at": "2026-09-27T09:46:45.550Z",
+      "completed_at": "2026-09-27T09:50:38.372Z",
+      "duration_ms": 232819,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "201f9ad7a62633f13e77e06a7047f29419eda5b929f0b428504ed6a1c4e2e1da",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 3358,
+        "stderr_bytes": 0,
+        "stdout_preview": "ƒ  (Dynamic)  server-rendered on demand",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "test-ci",
+      "argv": [
+        "pnpm",
+        "test:ci"
+      ],
+      "started_at": "2026-09-27T09:50:38.372Z",
+      "completed_at": "2026-09-27T09:54:41.940Z",
+      "duration_ms": 243566,
+      "exit_code": 1,
+      "result": "FAIL",
+      "output": {
+        "stdout_sha256": "83b10132e83c29125613fa8bff6f6aab92904556e8d3168d9c5122411dd01742",
+        "stderr_sha256": "2765b0fe8f1fe66cc2690f4b1cbe9315b1542182087f06b5b991db2495e92316",
+        "stdout_bytes": 52323,
+        "stderr_bytes": 716,
+        "stdout_preview": " ELIFECYCLE  Command failed with exit code 1.",
+        "stderr_preview": "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯"
+      }
+    }
+  ],
+  "waivers": [],
+  "recorded_at": "2026-09-27T09:54:42.017Z",
+  "validation_result": "FAIL"
+}

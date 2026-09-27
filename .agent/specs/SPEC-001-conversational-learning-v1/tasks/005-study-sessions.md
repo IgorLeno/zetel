@@ -1,7 +1,7 @@
 ---
 id: "005"
 title: "Study sessions e continuidade"
-status: READY
+status: VALIDATING
 blocked_by: ["001"]
 writer: null
 reviewer: null
@@ -9,6 +9,10 @@ commit: null
 push: null
 review_result: pending
 handoff: null
+execution_profile: FULL
+profile_justification: "migration com backfill em chat_messages + mudança do contrato de persistência e escopo do chat/sessões"
+validation: FAIL
+validated_at: "2026-09-27T09:54:42.044Z"
 ---
 
 ## Objetivo

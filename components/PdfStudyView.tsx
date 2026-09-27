@@ -1,8 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ZetelFile } from '@/types/zetel-file';
+import type { StudySession } from '@/types/study-session';
 import { ChatPanel } from './ChatPanel';
 import type { PdfSelection } from './PdfReader';
 
@@ -20,9 +22,16 @@ const CHAT_WIDTH = 360;
  * O chat recebe só `fileId` + página; o servidor resolve o texto em `pdf_pages`.
  */
 export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: string }) {
+  const searchParams = useSearchParams();
+  const requestedPage = Number(searchParams.get('page'));
+  const initialPageNumber = Number.isInteger(requestedPage) && requestedPage >= 1
+    ? requestedPage : 1;
   const [file, setFile] = useState<ZetelFile | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
+  const [pageNumber, setPageNumber] = useState(initialPageNumber);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [focusError, setFocusError] = useState<string | null>(null);
+  const focusWrite = useRef<Promise<void>>(Promise.resolve());
   // Seleção anexada ao próximo turno (tarefa 004). Vale só para a página dela.
   const [selection, setSelection] = useState<PdfSelection | null>(null);
 
@@ -40,7 +49,10 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
               (f) => f.id === fileId && f.filename.toLowerCase().endsWith('.pdf'),
             )
           : undefined;
-        if (found) setFile(found);
+        if (found) {
+          setPageNumber(Math.min(found.pageCount ?? 1, initialPageNumber));
+          setFile(found);
+        }
         else setError('PDF não encontrado neste Zetel.');
       } catch {
         if (!cancelled) setError('Erro de rede ao carregar o PDF.');
@@ -49,6 +61,8 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
     return () => {
       cancelled = true;
     };
+    // A página da URL é usada só ao abrir outro arquivo; a navegação subsequente é local.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zetelId, fileId]);
 
   const onPageChange = useCallback((n: number) => {
@@ -56,6 +70,23 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
     setSelection((cur) => (cur && cur.pageNumber !== n ? null : cur));
   }, []);
   const onClearSelection = useCallback(() => setSelection(null), []);
+  const onSessionChange = useCallback((session: StudySession | null) => {
+    setActiveSessionId(session?.id ?? null);
+  }, []);
+  const onUserPageChange = useCallback((next: number) => {
+    if (!activeSessionId) return;
+    setFocusError(null);
+    // Serializar evita que um PATCH antigo termine depois da página mais recente.
+    focusWrite.current = focusWrite.current.then(async () => {
+      const res = await fetch(`/api/zetels/${zetelId}/sessions`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: activeSessionId,
+          focus: { scope: 'page', fileId, pageNumber: next } }),
+      });
+      if (!res.ok) throw new Error('focus');
+      setFocusError(null);
+    }).catch(() => setFocusError('Não foi possível guardar a página.'));
+  }, [activeSessionId, fileId, zetelId]);
 
   if (error) return <p className="feedback err">{error}</p>;
   if (!file) return <div className="empty-state">Carregando…</div>;
@@ -69,12 +100,15 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
             : 'O texto deste PDF ainda não foi extraído. Processe os arquivos na aba Arquivos para conversar sobre ele.'}
         </p>
       )}
+      {focusError && <p className="feedback err">{focusError}</p>}
       <div className="leitura-body leitura-with-chat">
         <PdfReader
           zetelId={zetelId}
           fileId={file.id}
           filename={file.filename}
+          initialPageNumber={Math.min(file.pageCount ?? 1, initialPageNumber)}
           onPageChange={onPageChange}
+          onUserPageChange={onUserPageChange}
           onAskAboutSelection={setSelection}
         />
         <div style={{ width: CHAT_WIDTH, minWidth: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -93,6 +127,8 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
               selectionText: selection?.pageNumber === pageNumber ? selection.text : undefined,
             }}
             onClearPdfSelection={onClearSelection}
+            onSessionChange={onSessionChange}
+            createSessionIfEmpty={file.extractionStatus === 'ok' || file.extractionStatus === 'no_text'}
           />
         </div>
       </div>

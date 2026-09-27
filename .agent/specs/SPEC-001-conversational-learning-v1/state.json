@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 33,
+  "revision": 41,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -8,7 +8,7 @@
     "approved_by": "Igor Fernandes",
     "approved_at": "2026-09-26T11:14:06.443Z"
   },
-  "active_task": null,
+  "active_task": "005",
   "tasks": [
     {
       "id": "001",
@@ -76,10 +76,14 @@
     {
       "id": "005",
       "title": "Study sessions e continuidade",
-      "status": "READY",
+      "status": "VALIDATING",
       "blocked_by": [
         "001"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "migration com backfill em chat_messages + mudança do contrato de persistência e escopo do chat/sessões",
+      "reviews_requested": 2,
+      "validation": "FAIL"
     },
     {
       "id": "006",
@@ -155,24 +159,21 @@
     }
   ],
   "session": {
-    "id": "task-004-20260927",
-    "agent": "claude",
-    "task_id": "004",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-09-27T05:48:34.526Z",
+    "id": "task-005-20260927",
+    "agent": "codex",
+    "task_id": "005",
+    "status": "VALIDATING",
+    "started_at": "2026-09-27T08:31:46.656Z",
     "execution_profile": "FULL",
-    "profile_justification": "Contrato de confiança cliente→servidor da seleção: texto do cliente só vale se for substring normalizada de pdf_pages.content_text; servidor usa o próprio recorte",
+    "profile_justification": "migration com backfill em chat_messages + mudança do contrato de persistência e escopo do chat/sessões",
     "reviews_requested": 2,
-    "validating_at": "2026-09-27T05:57:46.332Z",
+    "validating_at": "2026-09-27T09:32:50.659Z",
     "validation_result": "FAIL",
-    "fixed_point": "37d7b9646b71ccd1d3f4d4bc7a81b7c0e2f90a2daa001ad1972a296899172d2c",
+    "fixed_point": "798f1d795e68ee253592484a391db78a21af34961d77f5e778b2144976ea46bf",
     "review_aggregate": null,
     "aggregated_at": null,
-    "review_result": {
-      "spec-compliance": "NOT_RUN",
-      "engineering-quality": "NOT_RUN"
-    },
-    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/004-validation.json",
+    "review_result": null,
+    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/005-validation.json",
     "gates_plan": [
       {
         "category": "focused",
@@ -181,9 +182,11 @@
           "exec",
           "vitest",
           "run",
+          "tests/unit/study-session-title.test.ts",
+          "tests/integration/study-sessions.test.ts",
+          "tests/integration/pdf/pdf-focus-chat.test.ts",
           "tests/unit/focus/verify-selection.test.ts",
-          "tests/unit/chat-prompt/source-block.test.ts",
-          "tests/integration/pdf/pdf-focus-chat.test.ts"
+          "tests/unit/design-system/module-14-3-contract.test.ts"
         ]
       },
       {
@@ -223,15 +226,7 @@
         ]
       }
     ],
-    "reviewing_at": "2026-09-27T06:20:02.112Z",
-    "reconciliation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/004-reconciliation.json",
-    "done_at": "2026-09-27T06:20:02.157Z",
-    "active_task_cleared": true,
-    "external_checks": "pending-not-waited",
-    "delivery_commit": "fc2f9f3043365f4ae9fd4533fa8095a024c00761",
-    "push": "origin/main (merge 643283d33727d006a7269a897cc07e96fc243ec4, PR #17)",
-    "closed_at": "2026-09-27T06:20:02.190Z",
-    "handoff": ".agent/specs/SPEC-001-conversational-learning-v1/handoffs/004-verified-selection-fc2f9f3.md"
+    "reviewing_at": "2026-09-27T09:25:21.373Z"
   },
   "approval": {
     "spec": true,

@@ -6,6 +6,7 @@ function msg(role: ChatMessage['role'], content: string): ChatMessage {
   return {
     id: '1',
     zetelId: 'z1',
+    sessionId: 's1',
     role,
     content,
     pageIndex: null,
