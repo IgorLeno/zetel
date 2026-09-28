@@ -1168,80 +1168,56 @@ export function ChatPanel({
   ];
 
   const ttsUnavailable = voiceStatus !== null && !voiceStatus.tts;
+  const currentSession = sessions.find((item) => item.id === sessionId) ?? null;
 
   return (
     <aside className="chat-panel" ref={chatPanelRef}>
       <header className="chat-panel-header">
         <div className="chat-panel-title-group">
-          <span className="chat-avatar" aria-hidden>
-            <svg viewBox="0 0 16 16" focusable="false">
-              <path
-                d="M4 3.5h7.5A1.5 1.5 0 0 1 13 5v8.5H5.5A2.5 2.5 0 0 1 3 11V5.5A2 2 0 0 1 5 3.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M5.5 6.5h5M5.5 9h3.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            </svg>
+          <span className="chat-panel-title">Professora</span>
+          <TutorProfilePanel
+            zetelId={zetelId}
+            session={currentSession}
+            disabled={isLoading}
+            onSessionChange={(session) => {
+              setSessions((items) => items.map((item) => item.id === session.id ? session : item));
+            }}
+          />
+          <span className="chat-session-name" title={currentSession?.title ?? 'Nenhuma sessão'}>
+            {currentSession?.title ?? 'Nenhuma sessão'}
           </span>
-          <div className="ht">
-            <div className="chat-panel-title">Parceiro de estudos</div>
-          </div>
         </div>
-        <button
-          type="button"
-          className="mini-btn"
-          disabled={clearing}
-          onClick={() => void clearHistory()}
-          title="Limpar histórico"
-        >
-          {icTrash}
-          {clearing ? 'Limpando…' : 'Limpar'}
-        </button>
+        <details className="chat-more">
+          <summary aria-label="Mais opções da conversa" title="Mais opções">•••</summary>
+          <div className="chat-more-menu">
+            <label className="chat-more-label" htmlFor="study-session-select">Sessão atual</label>
+            <select id="study-session-select" aria-label="Sessão de estudo"
+              value={sessionId ?? ''} disabled={isLoading}
+              onChange={(e) => {
+                const selected = sessions.find((s) => s.id === e.target.value);
+                if (selected) void chooseSession(selected);
+              }}>
+              {!sessionId && <option value="">Nenhuma sessão</option>}
+              {sessions.filter((s) => s.status !== 'archived').map((s) => (
+                <option key={s.id} value={s.id}>{s.title}</option>
+              ))}
+            </select>
+            <button type="button" disabled={!sessionId || isLoading} onClick={() => {
+              if (currentSession) void chooseSession(currentSession);
+            }}>Continuar sessão</button>
+            <button type="button" disabled={isLoading} onClick={() => void newSession()}>Nova sessão</button>
+            <button type="button" disabled={!sessionId || isLoading} onClick={() => void renameSession()}>Renomear sessão</button>
+            <div className="chat-more-divider" />
+            <button type="button" data-testid="autoplay-toggle" disabled={ttsUnavailable}
+              aria-pressed={autoPlay} onClick={toggleAutoPlay}>
+              {icSpeaker} {autoPlay ? 'Desligar voz automática' : 'Ligar voz automática'}
+            </button>
+            <button type="button" disabled={clearing || !sessionId} onClick={() => void clearHistory()}>
+              {icTrash} {clearing ? 'Limpando…' : 'Limpar histórico'}
+            </button>
+          </div>
+        </details>
       </header>
-
-      <div className="chat-session-controls" aria-label="Sessões de estudo">
-        <select
-          aria-label="Sessão de estudo"
-          value={sessionId ?? ''}
-          disabled={isLoading}
-          onChange={(e) => {
-            const selected = sessions.find((s) => s.id === e.target.value);
-            if (selected) void chooseSession(selected);
-          }}
-        >
-          {!sessionId && <option value="">Nenhuma sessão</option>}
-          {sessions.filter((s) => s.status !== 'archived').map((s) => (
-            <option key={s.id} value={s.id}>{s.title}</option>
-          ))}
-        </select>
-        <button type="button" className="mini-btn" disabled={!sessionId || isLoading}
-          onClick={() => {
-            const selected = sessions.find((s) => s.id === sessionId);
-            if (selected) void chooseSession(selected);
-          }}>Continuar sessão</button>
-        <button type="button" className="mini-btn" disabled={isLoading}
-          onClick={() => void newSession()}>Nova sessão</button>
-        <button type="button" className="mini-btn" disabled={!sessionId || isLoading}
-          onClick={() => void renameSession()}>Renomear</button>
-      </div>
-
-      <TutorProfilePanel
-        zetelId={zetelId}
-        session={sessions.find((item) => item.id === sessionId) ?? null}
-        disabled={isLoading}
-        onSessionChange={(session) => {
-          setSessions((items) => items.map((item) => item.id === session.id ? session : item));
-        }}
-      />
 
       <div className="chat-messages" ref={messagesRef} data-testid="chat-messages">
         {!loaded && <p className="chat-placeholder">Carregando histórico…</p>}
@@ -1267,7 +1243,7 @@ export function ChatPanel({
         {visibleMessages.map((m) => (
           <div key={m.id} className={`msg ${m.role === 'user' ? 'msg-user' : 'msg-assistant'}`}>
             <div className="msg-content-wrap">
-              {m.role === 'assistant' && <span className="who">Parceiro</span>}
+              {m.role === 'assistant' && <span className="who">Professora</span>}
               <div className="msg-bubble" data-testid="msg-bubble" data-role={m.role}>
                 {m.role === 'assistant' ? (
                   <FonteText text={m.content} sources={m.meta?.sources} onOpen={onOpenSource} />
@@ -1286,7 +1262,7 @@ export function ChatPanel({
         {isLoading && !streaming && (
           <div className="msg msg-assistant">
             <div className="msg-content-wrap">
-              <span className="who">Parceiro</span>
+              <span className="who">Professora</span>
               <div className="msg-bubble streaming" data-role="thinking">
                 <span className="streaming-cursor" aria-hidden />
               </div>
@@ -1296,7 +1272,7 @@ export function ChatPanel({
         {streaming && (
           <div className="msg msg-assistant">
             <div className="msg-content-wrap">
-              <span className="who">Parceiro</span>
+              <span className="who">Professora</span>
               <div className="msg-bubble streaming" data-testid="msg-bubble" data-role="streaming">
                 <FonteText text={streaming} sources={turnSources} onOpen={onOpenSource} />
                 <span className="streaming-cursor" aria-hidden />
@@ -1343,7 +1319,7 @@ export function ChatPanel({
           disabled={isLoading}
           onClick={() => setTeacherOpen((open) => !open)}
         >
-          Ativar professora
+          ✦ Ativar professora
         </button>
         {teacherOpen && (
           <div className="teacher-starters" role="group" aria-label="Como a professora começa">
@@ -1353,7 +1329,10 @@ export function ChatPanel({
                 type="button"
                 data-testid={`starter-${choice.id}`}
                 disabled={isLoading}
-                onClick={() => void sendMessage(undefined, choice.id)}
+                onClick={() => {
+                  setTeacherOpen(false);
+                  void sendMessage(undefined, choice.id);
+                }}
               >
                 {choice.label}
               </button>
@@ -1406,26 +1385,6 @@ export function ChatPanel({
               aria-pressed={micAtivo}
             >
               {voiceState === 'listening' ? icStop : icMic}
-            </button>
-
-            {/* Toggle AUTO-PLAY — sempre visível; disabled quando TTS indisponível */}
-            <button
-              type="button"
-              data-testid="autoplay-toggle"
-              className={`mic-btn${autoPlay ? ' active' : ''}`}
-              onClick={toggleAutoPlay}
-              disabled={ttsUnavailable}
-              title={
-                ttsUnavailable
-                  ? 'Auto-play indisponível — configure a chave TTS nas Configurações'
-                  : autoPlay
-                  ? 'Desligar auto-play de voz'
-                  : 'Ligar auto-play de voz'
-              }
-              aria-label={autoPlay ? 'Desligar auto-play de voz' : 'Ligar auto-play de voz'}
-              aria-pressed={autoPlay}
-            >
-              {icSpeaker}
             </button>
 
             <div className="grow" />

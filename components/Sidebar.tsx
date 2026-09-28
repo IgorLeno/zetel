@@ -139,11 +139,12 @@ function extractZetelSlug(pathname: string): string | null {
 function ZetelNav({ slug, collapsed }: { slug: string; collapsed: boolean }) {
   const searchParams = useSearchParams();
   const activeView = searchParams.get('view') ?? 'tecnico';
+  const [moreOpen, setMoreOpen] = useState(false);
 
   return (
     <nav className="sidebar-nav">
-      <div className="nav-section-label">Leitura</div>
-      {ZETEL_NAV.map((item) => {
+      <div className="nav-section-label">Estudo</div>
+      {ZETEL_NAV.slice(0, 3).map((item) => {
         const active = activeView === item.view;
         return (
           <Link
@@ -157,6 +158,21 @@ function ZetelNav({ slug, collapsed }: { slug: string; collapsed: boolean }) {
           </Link>
         );
       })}
+      <div className="sidebar-more-wrap">
+        <button type="button" className={`nav-item sidebar-more-trigger${ZETEL_NAV.slice(3).some((item) => item.view === activeView) ? ' active' : ''}`}
+          aria-label="Mais áreas do Zetel" aria-expanded={moreOpen} title={collapsed ? 'Mais áreas' : undefined}
+          onClick={() => setMoreOpen((open) => !open)}>
+          <svg viewBox="0 0 16 16" aria-hidden><circle cx="3" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="13" cy="8" r="1"/></svg>
+          <span className="nav-label">Mais áreas</span>
+        </button>
+        {moreOpen && <div className="sidebar-more-menu">
+          {ZETEL_NAV.slice(3).map((item) => (
+            <Link key={item.view} href={`/zetel/${slug}?view=${item.view}`}
+              className={`sidebar-more-link${activeView === item.view ? ' active' : ''}`}
+              onClick={() => setMoreOpen(false)}>{item.label}</Link>
+          ))}
+        </div>}
+      </div>
     </nav>
   );
 }
@@ -164,13 +180,17 @@ function ZetelNav({ slug, collapsed }: { slug: string; collapsed: boolean }) {
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const zetelSlug = extractZetelSlug(pathname);
+  const isZetelPage = zetelSlug !== null;
+  const [collapsed, setCollapsed] = useState(isZetelPage);
 
   useEffect(() => {
-    const initialCollapsed = document.documentElement.dataset.sidebarCollapsed === 'true';
+    let savedCollapsed = false;
+    try { savedCollapsed = localStorage.getItem('zetel_sidebar_collapsed') === 'true'; } catch (_) {}
+    const initialCollapsed = isZetelPage || savedCollapsed;
     setCollapsed(initialCollapsed);
     syncRailAttribute(initialCollapsed);
-  }, []);
+  }, [isZetelPage]);
 
   function toggleCollapsed() {
     const next = !collapsed;
@@ -186,11 +206,8 @@ export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
     syncRailAttribute(next);
   }
 
-  const zetelSlug = extractZetelSlug(pathname);
-  const isZetelPage = zetelSlug !== null;
-
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isZetelPage ? ' sidebar--zetel' : ''}`}>
       <div className="sidebar-logo">
         <Link href="/zetel" className="logo-mark logo-mark--link" aria-label="Zetel — início">
           <span className="logo-z">Z</span>

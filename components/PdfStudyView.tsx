@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ZetelFile } from '@/types/zetel-file';
 import type { StudySession } from '@/types/study-session';
 import { ChatPanel } from './ChatPanel';
+import { StudyShell, type StudyMode } from './StudyShell';
 import type { PdfSelection } from './PdfReader';
 
 // Só no cliente: no SSR o servidor carregaria o build de navegador do pdf.js
@@ -14,8 +15,6 @@ const PdfReader = dynamic(() => import('./PdfReader').then((m) => m.PdfReader), 
   ssr: false,
   loading: () => <div className="empty-state">Abrindo PDF…</div>,
 });
-
-const CHAT_WIDTH = 360;
 
 /**
  * Visão de estudo de PDF (tarefa 003): leitor à esquerda, parceiro à direita.
@@ -35,6 +34,7 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
   // Seleção anexada ao próximo turno (tarefa 004). Vale só para a página dela.
   const [selection, setSelection] = useState<PdfSelection | null>(null);
   const [goToRequest, setGoToRequest] = useState<{ page: number; token: number } | null>(null);
+  const [studyMode, setStudyMode] = useState<StudyMode>('reading');
   const pathname = usePathname();
   const router = useRouter();
 
@@ -115,8 +115,8 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
         </p>
       )}
       {focusError && <p className="feedback err">{focusError}</p>}
-      <div className="leitura-body leitura-with-chat">
-        <PdfReader
+      <StudyShell mode={studyMode} onModeChange={setStudyMode} readingLabel="PDF"
+        reader={<PdfReader
           zetelId={zetelId}
           fileId={file.id}
           filename={file.filename}
@@ -125,9 +125,8 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
           onUserPageChange={onUserPageChange}
           onAskAboutSelection={setSelection}
           goToRequest={goToRequest}
-        />
-        <div style={{ width: CHAT_WIDTH, minWidth: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <ChatPanel
+        />}
+        chat={<ChatPanel
             zetelId={zetelId}
             currentReadingMode="tecnico"
             currentPageIndex={null}
@@ -145,9 +144,8 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
             onOpenSource={onOpenSource}
             onSessionChange={onSessionChange}
             createSessionIfEmpty={file.extractionStatus === 'ok' || file.extractionStatus === 'no_text'}
-          />
-        </div>
-      </div>
+          />}
+      />
     </div>
   );
 }

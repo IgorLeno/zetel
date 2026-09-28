@@ -180,8 +180,10 @@ export function TutorProfilePanel({
   if (!draft) {
     return (
       <details className="tutor-profile">
-        <summary>Perfil do tutor</summary>
-        <p className="tutor-profile-note">{error ?? 'Carregando perfis…'}</p>
+        <summary aria-label="Perfil do tutor">Perfil ▾</summary>
+        <div className="tutor-profile-popover">
+          <p className="tutor-profile-note">{error ?? 'Carregando perfis…'}</p>
+        </div>
       </details>
     );
   }
@@ -190,86 +192,93 @@ export function TutorProfilePanel({
 
   return (
     <details className="tutor-profile">
-      <summary>Perfil do tutor</summary>
-      <label className="tutor-profile-field">
-        Perfil
-        <select
-          aria-label="Perfil do tutor"
-          value={selectedId}
-          disabled={disabled || busy}
-          onChange={(event) => choose(event.target.value)}
-        >
-          {profiles.map((profile) => (
-            <option key={profile.id} value={profile.id}>
-              {profile.name}{profile.builtin ? '' : ' (personalizado)'}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="tutor-profile-body">
-        <div>
-          <fieldset disabled={disabled || busy}>
-            <legend>Eixos</legend>
-            {AXES.map((axis) => (
-              <label key={axis} className="tutor-axis">
-                <span>{AXIS_LABELS[axis]}</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={4}
-                  step={1}
-                  value={draft.axes[axis]}
-                  aria-valuetext={`${draft.axes[axis]} de 4`}
-                  onChange={(event) => setAxis(axis, Number(event.target.value))}
-                />
-                <span>{draft.axes[axis]}</span>
-              </label>
+      <summary aria-label="Perfil do tutor">{profiles.find((profile) => profile.id === session?.profileId)?.name ?? 'Conversa livre'} ▾</summary>
+      <div className="tutor-profile-popover">
+        <label className="tutor-profile-field">
+          Perfil
+          <select
+            aria-label="Perfil do tutor"
+            value={selectedId}
+            disabled={disabled || busy}
+            onChange={(event) => choose(event.target.value)}
+          >
+            {profiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name}{profile.builtin ? '' : ' (personalizado)'}
+              </option>
             ))}
-          </fieldset>
-          <fieldset disabled={disabled || busy}>
-            <legend>Tom</legend>
-            {TONE_KEYS.map((key) => (
-              <label key={key} className="tutor-axis">
-                <span>{TONE_LABELS[key]}</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={2}
-                  step={1}
-                  value={draft.tone[key]}
-                  aria-valuetext={`${draft.tone[key]} de 2`}
-                  onChange={(event) => setTone(key, Number(event.target.value))}
-                />
-                <span>{draft.tone[key]}</span>
-              </label>
-            ))}
-          </fieldset>
-        </div>
-        <ProfileRadar axes={draft.axes} label={radarLabel} />
+          </select>
+        </label>
+        <button type="button" className="mini-btn tutor-apply" disabled={!session || disabled || busy}
+          onClick={() => void applyToSession()}>Aplicar perfil</button>
+        <details className="tutor-advanced">
+          <summary>Personalizar</summary>
+          <div className="tutor-profile-body">
+            <div>
+              <fieldset disabled={disabled || busy}>
+                <legend>Eixos</legend>
+                {AXES.map((axis) => (
+                  <label key={axis} className="tutor-axis">
+                    <span>{AXIS_LABELS[axis]}</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={4}
+                      step={1}
+                      value={draft.axes[axis]}
+                      aria-valuetext={`${draft.axes[axis]} de 4`}
+                      onChange={(event) => setAxis(axis, Number(event.target.value))}
+                    />
+                    <span>{draft.axes[axis]}</span>
+                  </label>
+                ))}
+              </fieldset>
+              <fieldset disabled={disabled || busy}>
+                <legend>Tom</legend>
+                {TONE_KEYS.map((key) => (
+                  <label key={key} className="tutor-axis">
+                    <span>{TONE_LABELS[key]}</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={2}
+                      step={1}
+                      value={draft.tone[key]}
+                      aria-valuetext={`${draft.tone[key]} de 2`}
+                      onChange={(event) => setTone(key, Number(event.target.value))}
+                    />
+                    <span>{draft.tone[key]}</span>
+                  </label>
+                ))}
+              </fieldset>
+            </div>
+            <ProfileRadar axes={draft.axes} label={radarLabel} />
+          </div>
+          <div className="tutor-profile-actions">
+            <button type="button" className="mini-btn" disabled={!session || disabled || busy} onClick={() => void applyToSession()}>
+              Aplicar só nesta sessão
+            </button>
+            <button type="button" className="mini-btn" disabled={selected?.builtin !== false || disabled || busy} onClick={() => void saveCustom()}>
+              Salvar perfil
+            </button>
+          </div>
+          <div className="tutor-profile-actions">
+            <input
+              aria-label="Nome do novo perfil"
+              placeholder="Nome do novo perfil"
+              value={newName}
+              disabled={disabled || busy}
+              onChange={(event) => setNewName(event.target.value)}
+            />
+            <button type="button" className="mini-btn" disabled={disabled || busy} onClick={() => void saveAsNew()}>
+              Salvar como novo perfil
+            </button>
+          </div>
+          {selected?.builtin && <p className="tutor-profile-note">Perfis integrados não são alterados. O ajuste vale para esta sessão, ou vira um perfil novo.</p>}
+        </details>
+        {!session && <p className="tutor-profile-note">Abra uma sessão para aplicar o perfil.</p>}
+        {error && <p className="feedback err">{error}</p>}
       </div>
-      <div className="tutor-profile-actions">
-        <button type="button" className="mini-btn" disabled={!session || disabled || busy} onClick={() => void applyToSession()}>
-          Aplicar só nesta sessão
-        </button>
-        <button type="button" className="mini-btn" disabled={selected?.builtin !== false || disabled || busy} onClick={() => void saveCustom()}>
-          Salvar perfil
-        </button>
-      </div>
-      <div className="tutor-profile-actions">
-        <input
-          aria-label="Nome do novo perfil"
-          placeholder="Nome do novo perfil"
-          value={newName}
-          disabled={disabled || busy}
-          onChange={(event) => setNewName(event.target.value)}
-        />
-        <button type="button" className="mini-btn" disabled={disabled || busy} onClick={() => void saveAsNew()}>
-          Salvar como novo perfil
-        </button>
-      </div>
-      {selected?.builtin && <p className="tutor-profile-note">Perfis integrados não são alterados. O ajuste vale para esta sessão, ou vira um perfil novo.</p>}
-      {!session && <p className="tutor-profile-note">Abra uma sessão para aplicar o perfil.</p>}
-      {error && <p className="feedback err">{error}</p>}
     </details>
   );
 }

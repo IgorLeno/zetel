@@ -38,7 +38,7 @@ export default async function ZetelDetailPage({
         <header className="topbar">
           <Link className="crumb" href="/zetel">
             <ChevronLeftIcon />
-            Zetels
+            Voltar
           </Link>
         </header>
         <div className="page-body">
@@ -55,9 +55,8 @@ export default async function ZetelDetailPage({
       <header className="topbar">
         <Link className="crumb" href="/zetel">
           <ChevronLeftIcon />
-          Zetels
+          Voltar
         </Link>
-        <span className="crumb-sep">/</span>
         <span className="doc-title">{zetel.displayName}</span>
         <div className="topbar-spacer" />
         <ReadingProgress theme={theme} />
