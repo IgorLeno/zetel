@@ -3,7 +3,7 @@ import { basename } from 'node:path';
 import { getDb } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
 import { saveMemory, listMemories, MEMORY_FILE_WARN_BYTES } from '@/lib/memory-service';
-import { updateMessageMeta } from '@/lib/chat-service';
+import { getMessage, updateOwnedMessageMeta } from '@/lib/chat-service';
 import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
@@ -67,10 +67,18 @@ export async function POST(request: Request) {
   const messageId = typeof body.messageId === 'string' ? body.messageId : '';
 
   try {
+    const db = messageId ? getDb() : null;
+    const originMessage = db && zetelOrigem
+      ? getMessage(db, zetelOrigem, messageId)
+      : null;
+    if (messageId && (!originMessage || originMessage.role !== 'assistant')) {
+      return NextResponse.json({ error: 'Mensagem de origem não encontrada.' }, { status: 404 });
+    }
     const saved = saveMemory(vaultPath, { titulo, corpo, zetelOrigem, modelo });
     // Marca a mensagem de origem (só flag — regra #6).
-    if (messageId) {
-      updateMessageMeta(getDb(), messageId, { suggestedMemory: true });
+    if (db && originMessage && zetelOrigem) {
+      updateOwnedMessageMeta(db, zetelOrigem, messageId, { suggestedMemory: true },
+        originMessage.sessionId);
     }
     return NextResponse.json(saved);
   } catch (err) {

@@ -186,6 +186,7 @@ export function ChatPanel({
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const initialSessionPromise = useRef<Promise<StudySession> | null>(null);
   const [streaming, setStreaming] = useState('');
   const [turnSources, setTurnSources] = useState<Record<string, CitedSource> | null>(null);
   const [input, setInput] = useState('');
@@ -314,14 +315,21 @@ export function ChatPanel({
           available.find((s) => s.status === 'active') ??
           available.find((s) => s.status !== 'archived') ?? null;
         if (!selected && createSessionIfEmpty) {
-          const focus = pdfFocusRef.current;
-          const created = await fetch(`/api/zetels/${zetelId}/sessions`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ focus: focus
-              ? { scope: 'page', fileId: focus.fileId, pageNumber: focus.pageNumber } : null }),
-          });
-          if (!created.ok) throw new Error('create session');
-          selected = (await created.json() as { session: StudySession }).session;
+          // O efeito pode ser repetido antes do POST terminar (React Strict Mode).
+          // Compartilhar a promessa impede duas sessões para a mesma entrada.
+          if (!initialSessionPromise.current) {
+            const focus = pdfFocusRef.current;
+            initialSessionPromise.current = (async () => {
+              const created = await fetch(`/api/zetels/${zetelId}/sessions`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ focus: focus
+                  ? { scope: 'page', fileId: focus.fileId, pageNumber: focus.pageNumber } : null }),
+              });
+              if (!created.ok) throw new Error('create session');
+              return (await created.json() as { session: StudySession }).session;
+            })();
+          }
+          selected = await initialSessionPromise.current;
           available = [selected, ...available];
         }
         if (cancelled) return;

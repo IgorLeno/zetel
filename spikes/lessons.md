@@ -961,3 +961,17 @@ Rule: cartões de sugestão com campos editáveis devem manter `flex-shrink: 0` 
 [2026-09-27] Context: no smoke live, o usuário pediu uma sugestão de conceito e a parceira perguntou se devia salvar, sem emitir a sentinela.
 Mistake: descrever o formato do bloco como opcional também para pedidos explícitos deixava o cartão dependente da interpretação do modelo.
 Rule: quando houver pedido explícito de sugestão ou cartão e contexto suficiente, exigir o bloco estruturado no prompt; a decisão de salvar continua no clique humano.
+
+## SPEC-001 Task 012 — integração estrutural (2026-09-28)
+
+[2026-09-28] Context: a responsabilidade pela avaliação visual/interativa passou ao proprietário durante a Task 012.
+Mistake: continuar tratando smoke de navegador e polimento visual como gates do agente após a mudança de escopo.
+Rule: nesta task, validar contratos, persistência e testes focados; deixar a experiência visual para o teste humano posterior.
+
+[2026-09-28] Context: a abertura do PDF sem sessão podia iniciar dois POSTs de criação em efeitos repetidos pelo React.
+Mistake: a criação automática não compartilhava a operação em andamento entre execuções do efeito.
+Rule: reutilizar a promessa do primeiro POST até a seleção da sessão terminar, evitando duplicação durante o mesmo mount.
+
+[2026-09-28] Context: uma memória sugerida era guardada com um `messageId` enviado pelo cliente.
+Mistake: gravar o arquivo antes de conferir ownership e marcar o meta da mensagem apenas pelo ID permitia vincular uma memória a uma mensagem alheia.
+Rule: validar Zetel e papel da mensagem de origem antes da escrita no vault; atualizar o meta por Zetel, mensagem e sessão.
