@@ -6,7 +6,7 @@ import type { ZetelFile } from '@/types/zetel-file';
 import { formatRelative } from '@/lib/relative-time';
 import { formatBytes } from '@/lib/format-utils';
 
-export function ArquivosPanel({ zetelId }: { zetelId: string }) {
+export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string; onboarding?: boolean }) {
   const router = useRouter();
   const [files, setFiles] = useState<ZetelFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -151,8 +151,15 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
   if (loading) return <p className="field-hint">Carregando…</p>;
 
   return (
-    <div className="arquivos-panel">
-      <div className="list-toolbar">
+    <div className={`arquivos-panel${onboarding && files.length === 0 ? ' arquivos-panel--onboarding' : ''}`}>
+      {onboarding && files.length === 0 && (
+        <div className="source-acquisition-intro">
+          <p className="source-acquisition-step">Primeiro passo · Fontes</p>
+          <h1>Adicione fontes para começar</h1>
+          <p>Seu Zetel ganha contexto a partir das fontes que você adicionar.</p>
+        </div>
+      )}
+      <div className="list-toolbar source-acquisition-actions">
         <button
           className="btn primary"
           type="button"
@@ -161,14 +168,16 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
         >
           {uploading ? 'Adicionando…' : 'Adicionar arquivos'}
         </button>
-        <button
-          className="btn"
-          type="button"
-          onClick={processar}
-          disabled={processing || uploading || files.length === 0}
-        >
-          {processing ? 'Processando…' : 'Processar'}
-        </button>
+        {(!onboarding || files.length > 0) && (
+          <button
+            className="btn"
+            type="button"
+            onClick={processar}
+            disabled={processing || uploading || files.length === 0}
+          >
+            {processing ? 'Processando…' : 'Processar'}
+          </button>
+        )}
         <input
           ref={fileInput}
           type="file"
@@ -182,9 +191,9 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
       {error && <p className="feedback err">{error}</p>}
       {processMsg && <p className="feedback ok">{processMsg}</p>}
 
-      {files.length === 0 ? (
+      {files.length === 0 && !onboarding ? (
         <p className="field-hint">Nenhum arquivo ainda. Adicione um arquivo .md ou .pdf para começar.</p>
-      ) : (
+      ) : files.length > 0 ? (
         <ul className="file-list">
           {files.map((f, index) => (
             <li
@@ -255,6 +264,8 @@ export function ArquivosPanel({ zetelId }: { zetelId: string }) {
             </li>
           ))}
         </ul>
+      ) : (
+        <p className="field-hint">Adicione um arquivo .md ou .pdf para criar a primeira fonte.</p>
       )}
     </div>
   );

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 
 // ── Global nav (all routes except /zetel/[slug]) ─────────────────────────────
@@ -137,9 +137,30 @@ function extractZetelSlug(pathname: string): string | null {
 
 // ── Zetel context nav (needs useSearchParams → must be inside Suspense) ───────
 function ZetelNav({ slug, collapsed }: { slug: string; collapsed: boolean }) {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const query = searchParams.toString();
   const activeView = searchParams.get('view') ?? 'tecnico';
   const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setMoreOpen(false), [activeView, pathname, query, slug, collapsed]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!moreRef.current?.contains(event.target as Node)) setMoreOpen(false);
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setMoreOpen(false);
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [moreOpen]);
 
   return (
     <nav className="sidebar-nav">
@@ -152,13 +173,14 @@ function ZetelNav({ slug, collapsed }: { slug: string; collapsed: boolean }) {
             href={`/zetel/${slug}?view=${item.view}`}
             className={`nav-item${active ? ' active' : ''}`}
             title={collapsed ? item.label : undefined}
+            onClick={() => setMoreOpen(false)}
           >
             <svg viewBox="0 0 16 16">{item.icon}</svg>
             <span className="nav-label">{item.label}</span>
           </Link>
         );
       })}
-      <div className="sidebar-more-wrap">
+      <div className="sidebar-more-wrap" ref={moreRef}>
         <button type="button" className={`nav-item sidebar-more-trigger${ZETEL_NAV.slice(3).some((item) => item.view === activeView) ? ' active' : ''}`}
           aria-label="Mais áreas do Zetel" aria-expanded={moreOpen} title={collapsed ? 'Mais áreas' : undefined}
           onClick={() => setMoreOpen((open) => !open)}>
@@ -185,12 +207,19 @@ export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
   const [collapsed, setCollapsed] = useState(isZetelPage);
 
   useEffect(() => {
-    let savedCollapsed = false;
-    try { savedCollapsed = localStorage.getItem('zetel_sidebar_collapsed') === 'true'; } catch (_) {}
-    const initialCollapsed = isZetelPage || savedCollapsed;
+    let initialCollapsed = isZetelPage;
+    try {
+      const saved = localStorage.getItem('zetel_sidebar_collapsed');
+      if (saved !== null) initialCollapsed = saved === 'true';
+    } catch (_) {}
     setCollapsed(initialCollapsed);
+    if (initialCollapsed) {
+      document.documentElement.dataset.sidebarCollapsed = 'true';
+    } else {
+      delete document.documentElement.dataset.sidebarCollapsed;
+    }
     syncRailAttribute(initialCollapsed);
-  }, [isZetelPage]);
+  }, []);
 
   function toggleCollapsed() {
     const next = !collapsed;

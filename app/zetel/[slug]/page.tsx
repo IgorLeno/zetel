@@ -28,7 +28,8 @@ export default async function ZetelDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const zetel = getZetelBySlug(getDb(), slug);
+  const db = getDb();
+  const zetel = getZetelBySlug(db, slug);
   const store = await cookies();
   const theme = store.get('zetel-theme')?.value === 'dark' ? 'dark' : 'light';
 
@@ -50,6 +51,8 @@ export default async function ZetelDetailPage({
     );
   }
 
+  const hasSources = Boolean(db.prepare('SELECT 1 FROM zetel_files WHERE zetel_id = ? LIMIT 1').get(zetel.id));
+
   return (
     <>
       <header className="topbar">
@@ -64,6 +67,7 @@ export default async function ZetelDetailPage({
       <div className="page-body page-body--zetel">
         <ZetelWorkspace
           zetelId={zetel.id}
+          hasSources={hasSources}
           readingStale={zetel.readingStale}
           lastBuiltAt={zetel.lastBuiltAt}
         />

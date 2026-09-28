@@ -17,6 +17,7 @@ export function ZetelList({ initial }: { initial: Zetel[] }) {
   const [zetels, setZetels] = useState(initial);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Mantém a lista em sincronia quando o server component revalida (router.refresh).
   useEffect(() => setZetels(initial), [initial]);
@@ -24,16 +25,16 @@ export function ZetelList({ initial }: { initial: Zetel[] }) {
   // Fecha o menu de contexto ao clicar fora ou pressionar Escape.
   useEffect(() => {
     if (!menuId) return;
-    function onDown() {
-      setMenuId(null);
+    function onPointerDown(e: PointerEvent) {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuId(null);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setMenuId(null);
     }
-    document.addEventListener('mousedown', onDown);
+    document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKey);
     };
   }, [menuId]);
@@ -52,7 +53,7 @@ export function ZetelList({ initial }: { initial: Zetel[] }) {
           </button>
         </div>
         {dialog?.kind === 'create' && (
-          <CreateDialog onClose={() => setDialog(null)} onDone={refresh} />
+          <CreateDialog onClose={() => setDialog(null)} onCreated={(slug) => router.push(`/zetel/${slug}`)} />
         )}
       </>
     );
@@ -78,20 +79,18 @@ export function ZetelList({ initial }: { initial: Zetel[] }) {
               <span className="zetel-meta">{formatRelative(z.updatedAt)}</span>
             </button>
 
-            <div className="zetel-menu-wrap">
+            <div className="zetel-menu-wrap" ref={menuId === z.id ? menuRef : undefined}>
               <button
                 className="icon-btn"
                 type="button"
                 aria-label="Ações"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setMenuId(menuId === z.id ? null : z.id);
-                }}
+                aria-expanded={menuId === z.id}
+                onClick={() => setMenuId((current) => current === z.id ? null : z.id)}
               >
                 ⋯
               </button>
               {menuId === z.id && (
-                <div className="ctx-menu" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="ctx-menu">
                   <button
                     className="ctx-item"
                     type="button"
@@ -120,19 +119,22 @@ export function ZetelList({ initial }: { initial: Zetel[] }) {
       </ul>
 
       {dialog?.kind === 'create' && (
-        <CreateDialog onClose={() => setDialog(null)} onDone={refresh} />
+        <CreateDialog onClose={() => setDialog(null)} onCreated={(slug) => router.push(`/zetel/${slug}`)} />
       )}
       {dialog?.kind === 'rename' && (
         <RenameDialog zetel={dialog.zetel} onClose={() => setDialog(null)} onDone={refresh} />
       )}
       {dialog?.kind === 'trash' && (
-        <TrashDialog zetel={dialog.zetel} onClose={() => setDialog(null)} onDone={refresh} />
+        <TrashDialog zetel={dialog.zetel} onClose={() => setDialog(null)} onDone={() => {
+          setZetels((current) => current.filter((z) => z.id !== dialog.zetel.id));
+          refresh();
+        }} />
       )}
     </>
   );
 }
 
-function CreateDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (slug: string) => void }) {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -147,9 +149,9 @@ function CreateDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
         body: JSON.stringify({ displayName: name }),
       });
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && typeof data.zetel?.slug === 'string') {
         onClose();
-        onDone();
+        onCreated(data.zetel.slug);
       } else {
         setError(data.error ?? 'Falha ao criar o Zetel.');
       }

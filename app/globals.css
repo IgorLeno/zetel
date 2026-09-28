@@ -180,14 +180,6 @@ body {
 .logo-mark {
   width: 28px;
   height: 28px;
-  background: linear-gradient(
-    150deg,
-    color-mix(in srgb, var(--accent) 88%, #fff 6%),
-    var(--accent-strong)
-  );
-  box-shadow: 0 3px 14px color-mix(in srgb, var(--accent) 46%, transparent),
-              inset 0 1px 0 rgba(255,255,255,.3);
-  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -267,24 +259,23 @@ body {
 .sidebar-toggle {
   position: absolute;
   top: 50%;
-  right: -12px;
-  width: 12px;
-  height: 32px;
+  right: 0;
+  width: 28px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-sidebar, var(--surface));
-  border: 1px solid var(--border);
-  border-left: none;
+  background: transparent;
+  border: 0;
   color: var(--text-3);
   cursor: pointer;
   z-index: 2;
-  border-radius: 0 8px 8px 0;
+  border-radius: 8px 0 0 8px;
   transform: translateY(-50%);
-  transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+  transition: color var(--t-fast), background var(--t-fast);
 }
-.sidebar-toggle:hover { color: var(--text-2); border-color: var(--accent); }
-.sidebar-toggle svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+.sidebar-toggle:hover, .sidebar-toggle:focus-visible { color: var(--text); background: var(--hover); }
+.sidebar-toggle svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
 
 /* Collapsed state — .app drives runtime; html bridge prevents first-paint flash. */
 .app[data-rail="true"] .sidebar,
@@ -1964,6 +1955,27 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
   min-height: 0;
 }
 
+.arquivos-panel--onboarding {
+  width: min(100%, 560px);
+  margin: auto;
+  text-align: center;
+}
+.source-acquisition-intro h1 {
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 600;
+  margin: 6px 0 10px;
+}
+.source-acquisition-intro p { color: var(--text-2); }
+.source-acquisition-intro .source-acquisition-step {
+  color: var(--text-3);
+  font-size: 12px;
+}
+.arquivos-panel--onboarding .source-acquisition-actions {
+  justify-content: center;
+  margin-top: 24px;
+}
+
 /* ── Partner toggle button (floating over reading iframe) ── */
 .partner-toggle-btn {
   position: absolute;
@@ -2054,8 +2066,8 @@ html[data-sidebar-collapsed="true"] .app .theme-toggle:hover {
 }
 .logo-z {
   font-family: var(--font-read), Georgia, serif;
-  font-size: 18px; font-weight: 700;
-  color: #fff; line-height: 1;
+  font-size: 21px; font-weight: 500;
+  color: var(--text-2); line-height: 1;
   user-select: none;
 }
 

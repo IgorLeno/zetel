@@ -16,10 +16,12 @@ function isReadingView(view: ViewParam): view is 'tecnico' | 'guia-estudo' {
 
 function WorkspaceView({
   zetelId,
+  hasSources,
   readingStale,
   lastBuiltAt,
 }: {
   zetelId: string;
+  hasSources: boolean;
   readingStale: boolean;
   lastBuiltAt: string | null;
 }) {
@@ -33,6 +35,14 @@ function WorkspaceView({
 
   const selectedMode = isReadingView(view) ? view : 'tecnico';
   const pdfFileId = view === 'pdf' ? searchParams.get('file') : null;
+
+  if (!hasSources && isReadingView(view)) {
+    return (
+      <div className="zetel-workspace">
+        <ArquivosPanel zetelId={zetelId} onboarding />
+      </div>
+    );
+  }
 
   return (
     <div className="zetel-workspace">
@@ -80,16 +90,23 @@ function WorkspaceView({
 
 export function ZetelWorkspace({
   zetelId,
+  hasSources,
   readingStale,
   lastBuiltAt,
 }: {
   zetelId: string;
+  hasSources: boolean;
   readingStale: boolean;
   lastBuiltAt: string | null;
 }) {
   return (
     <Suspense fallback={null}>
-      <WorkspaceView zetelId={zetelId} readingStale={readingStale} lastBuiltAt={lastBuiltAt} />
+      <WorkspaceView
+        zetelId={zetelId}
+        hasSources={hasSources}
+        readingStale={readingStale}
+        lastBuiltAt={lastBuiltAt}
+      />
     </Suspense>
   );
 }

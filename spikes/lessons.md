@@ -979,3 +979,11 @@ Rule: validar Zetel e papel da mensagem de origem antes da escrita no vault; atu
 [2026-09-28] Context: `zetel_origem` da memória é um slug de vault, enquanto o chat endereça o Zetel por ID.
 Mistake: repassar o ID e o modelo do cliente diretamente ao frontmatter produzia proveniência divergente do contrato.
 Rule: após validar a mensagem de origem, resolver slug e modelo no servidor antes de persistir a memória.
+
+[2026-09-28] Context: menus de navegação e ações da lista falharam na primeira validação humana.
+Mistake: listeners globais fechavam menus sem verificar se o evento começou dentro deles; `onMouseDown` no trigger competia com o clique da ação.
+Rule: usar `onClick` para seleção e fechar no evento global somente quando o alvo estiver fora do menu; fechar também em Escape e mudança de rota.
+
+[2026-09-28] Context: um Zetel recém-criado abria leitura e chat sem nenhuma fonte.
+Mistake: a ausência de `view` selecionava Documento Técnico antes de verificar se o Zetel tinha material.
+Rule: resolver a presença de fontes no servidor e priorizar aquisição com o upload existente quando a área principal de leitura não tiver contexto.
