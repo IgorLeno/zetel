@@ -55,6 +55,6 @@ Perfil efetivo desta execução: `FULL` após a correção de ownership da memó
 ## Resultado estrutural
 
 - Contratos percorridos: ingestão/leitura PDF, foco e seleção, sessões/retomada, retrieval/fontes, perfil, voz/cancelamento, starters, conceitos, notas e memória.
-- Lacunas corrigidas: criação duplicada de sessão na montagem do chat e associação de memória a uma mensagem fora do Zetel de origem.
+- Lacunas corrigidas: criação duplicada de sessão na montagem do chat; associação de memória a uma mensagem fora do Zetel de origem; frontmatter de memória com ID/modelo fornecidos pelo cliente em vez do slug/modelo da origem validada.
 - Verificação: 15 arquivos de teste focado, 87 testes aprovados; `pnpm typecheck` e `git diff --check` aprovados.
 - Validação visual e interativa permanece com o proprietário; nenhum E2E de navegador foi criado.

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getMessage, saveMessage } from '@/lib/chat-service';
 import { listMemories } from '@/lib/memory-service';
@@ -48,9 +50,11 @@ describe('origem de memória sugerida', () => {
     expect(getMessage(db, first.id, assistant.id)?.meta?.suggestedMemory).toBeUndefined();
 
     const saved = await memoryRoute.POST(request({ ...base, zetelOrigem: first.id,
-      messageId: assistant.id }));
+      modelo: 'forjado', messageId: assistant.id }));
     expect(saved.status).toBe(200);
-    expect(listMemories(vaultPath)).toHaveLength(1);
+    expect(listMemories(vaultPath)).toMatchObject([{ zetelOrigem: first.slug }]);
+    const { path } = await saved.json() as { path: string };
+    expect(readFileSync(join(vaultPath, path), 'utf8')).toContain('modelo: test/model');
     expect(getMessage(db, first.id, assistant.id)?.meta?.suggestedMemory).toBe(true);
     expect(getMessage(db, first.id, user.id)?.meta?.suggestedMemory).toBeUndefined();
   });

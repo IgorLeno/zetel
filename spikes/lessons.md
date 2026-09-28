@@ -975,3 +975,7 @@ Rule: reutilizar a promessa do primeiro POST até a seleção da sessão termina
 [2026-09-28] Context: uma memória sugerida era guardada com um `messageId` enviado pelo cliente.
 Mistake: gravar o arquivo antes de conferir ownership e marcar o meta da mensagem apenas pelo ID permitia vincular uma memória a uma mensagem alheia.
 Rule: validar Zetel e papel da mensagem de origem antes da escrita no vault; atualizar o meta por Zetel, mensagem e sessão.
+
+[2026-09-28] Context: `zetel_origem` da memória é um slug de vault, enquanto o chat endereça o Zetel por ID.
+Mistake: repassar o ID e o modelo do cliente diretamente ao frontmatter produzia proveniência divergente do contrato.
+Rule: após validar a mensagem de origem, resolver slug e modelo no servidor antes de persistir a memória.
