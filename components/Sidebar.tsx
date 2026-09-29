@@ -2,304 +2,63 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 
-// ── Global nav (all routes except /zetel/[slug]) ─────────────────────────────
-const GLOBAL_NAV = [
+const NAV = [
   {
     href: '/zetel',
-    label: 'Zetel',
+    label: 'Estudos',
+    icon: <path d="M3 9.5 10 3.5l7 6V16a1 1 0 0 1-1 1h-3.5v-5h-5v5H4a1 1 0 0 1-1-1z" />,
+  },
+  {
+    href: '/parceiros',
+    label: 'Parceiros',
     icon: (
       <>
-        <rect x="2" y="2" width="12" height="12" rx="2" />
-        <path d="M5 6h6M5 9h4" />
+        <circle cx="10" cy="8" r="3.5" />
+        <path d="M3.5 17c1.3-3 3.6-4.5 6.5-4.5s5.2 1.5 6.5 4.5" />
       </>
     ),
   },
   {
     href: '/memoria',
     label: 'Memória',
-    icon: (
-      <>
-        <circle cx="8" cy="8" r="6" />
-        <path d="M8 5v3.5l2.5 1.5" />
-      </>
-    ),
+    icon: <path d="M10 2.8l2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7-3.4-3.3 4.7-.7z" />,
   },
   {
     href: '/configuracoes',
     label: 'Configurações',
     icon: (
       <>
-        <path d="M8 10a2 2 0 100-4 2 2 0 000 4z" />
-        <path d="M8 2v1M8 13v1M2 8H1m14 0h-1m-2.05-4.95-.7.7M4.75 11.25l-.7.7M11.25 11.25l.7.7M4.05 3.05l.7.7" />
+        <circle cx="10" cy="10" r="2.5" />
+        <path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" />
       </>
     ),
   },
 ];
 
-// ── Zetel reading nav ─────────────────────────────────────────────────────────
-const ZETEL_NAV = [
-  {
-    view: 'tecnico',
-    label: 'Documento Técnico',
-    icon: (
-      <>
-        <rect x="2" y="2" width="12" height="12" rx="2" />
-        <path d="M5 6h6M5 9h4" />
-      </>
-    ),
-  },
-  {
-    view: 'guia-estudo',
-    label: 'Guia de Estudo',
-    icon: (
-      <>
-        <path d="M3 3l10 0-8 10h8" strokeLinecap="round" strokeLinejoin="round" />
-      </>
-    ),
-  },
-  {
-    view: 'arquivos',
-    label: 'Arquivos',
-    icon: (
-      <>
-        <path d="M3 3h4l1.5 2H13a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" />
-      </>
-    ),
-  },
-  {
-    view: 'notas-rapidas',
-    label: 'Notas Rápidas',
-    icon: (
-      <>
-        <path d="M3 4h10M3 8h7M3 12h5" strokeLinecap="round" />
-      </>
-    ),
-  },
-  {
-    view: 'notas-literatura',
-    label: 'Notas de Literatura',
-    icon: (
-      <>
-        <path d="M4 2h8a1 1 0 011 1v11l-4-2-4 2V3a1 1 0 011-1z" />
-      </>
-    ),
-  },
-  {
-    view: 'notas-elaboradas',
-    label: 'Notas Elaboradas',
-    icon: (
-      <>
-        <path d="M3 4h10M3 8h10M3 12h6" strokeLinecap="round" />
-        <circle cx="13" cy="12" r="2" />
-      </>
-    ),
-  },
-  {
-    view: 'notas-do-usuario',
-    label: 'Minhas Notas',
-    icon: (
-      <>
-        <path d="M4 2h8a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" />
-        <path d="M6 6h4M6 9h2" strokeLinecap="round" />
-      </>
-    ),
-  },
-  {
-    view: 'artefatos',
-    label: 'Artefatos',
-    icon: (
-      <>
-        <circle cx="8" cy="8" r="5" />
-        <path d="M8 5v3l2 1" strokeLinecap="round" />
-      </>
-    ),
-  },
-] as const;
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function syncRailAttribute(collapsed: boolean) {
-  if (collapsed) {
-    document.querySelector<HTMLElement>('.app')?.setAttribute('data-rail', 'true');
-  } else {
-    document.querySelector<HTMLElement>('.app')?.removeAttribute('data-rail');
-  }
-}
-
-function extractZetelSlug(pathname: string): string | null {
-  const m = pathname.match(/^\/zetel\/([^/?#]+)/);
-  return m ? m[1] : null;
-}
-
-// ── Zetel context nav (needs useSearchParams → must be inside Suspense) ───────
-function ZetelNav({ slug, collapsed }: { slug: string; collapsed: boolean }) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const query = searchParams.toString();
-  const activeView = searchParams.get('view') ?? 'tecnico';
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => setMoreOpen(false), [activeView, pathname, query, slug, collapsed]);
-
-  useEffect(() => {
-    if (!moreOpen) return;
-    function onPointerDown(event: PointerEvent) {
-      if (!moreRef.current?.contains(event.target as Node)) setMoreOpen(false);
-    }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setMoreOpen(false);
-    }
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [moreOpen]);
-
-  return (
-    <nav className="sidebar-nav">
-      <div className="nav-section-label">Estudo</div>
-      {ZETEL_NAV.slice(0, 3).map((item) => {
-        const active = activeView === item.view;
-        return (
-          <Link
-            key={item.view}
-            href={`/zetel/${slug}?view=${item.view}`}
-            className={`nav-item${active ? ' active' : ''}`}
-            title={collapsed ? item.label : undefined}
-            onClick={() => setMoreOpen(false)}
-          >
-            <svg viewBox="0 0 16 16">{item.icon}</svg>
-            <span className="nav-label">{item.label}</span>
-          </Link>
-        );
-      })}
-      <div className="sidebar-more-wrap" ref={moreRef}>
-        <button type="button" className={`nav-item sidebar-more-trigger${ZETEL_NAV.slice(3).some((item) => item.view === activeView) ? ' active' : ''}`}
-          aria-label="Mais áreas do Zetel" aria-expanded={moreOpen} title={collapsed ? 'Mais áreas' : undefined}
-          onClick={() => setMoreOpen((open) => !open)}>
-          <svg viewBox="0 0 16 16" aria-hidden><circle cx="3" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="13" cy="8" r="1"/></svg>
-          <span className="nav-label">Mais áreas</span>
-        </button>
-        {moreOpen && <div className="sidebar-more-menu">
-          {ZETEL_NAV.slice(3).map((item) => (
-            <Link key={item.view} href={`/zetel/${slug}?view=${item.view}`}
-              className={`sidebar-more-link${activeView === item.view ? ' active' : ''}`}
-              onClick={() => setMoreOpen(false)}>{item.label}</Link>
-          ))}
-        </div>}
-      </div>
-    </nav>
-  );
-}
-
-// ── Sidebar ───────────────────────────────────────────────────────────────────
+/** Trilho fino de ícones: navegação global sempre igual, em qualquer tela. */
 export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
   const pathname = usePathname();
-  const zetelSlug = extractZetelSlug(pathname);
-  const isZetelPage = zetelSlug !== null;
-  const [collapsed, setCollapsed] = useState(isZetelPage);
-
-  useEffect(() => {
-    let initialCollapsed = isZetelPage;
-    try {
-      const saved = localStorage.getItem('zetel_sidebar_collapsed');
-      if (saved !== null) initialCollapsed = saved === 'true';
-    } catch (_) {}
-    setCollapsed(initialCollapsed);
-    if (initialCollapsed) {
-      document.documentElement.dataset.sidebarCollapsed = 'true';
-    } else {
-      delete document.documentElement.dataset.sidebarCollapsed;
-    }
-    syncRailAttribute(initialCollapsed);
-  }, []);
-
-  function toggleCollapsed() {
-    const next = !collapsed;
-    setCollapsed(next);
-    try {
-      localStorage.setItem('zetel_sidebar_collapsed', next ? 'true' : 'false');
-    } catch (_) {}
-    if (next) {
-      document.documentElement.dataset.sidebarCollapsed = 'true';
-    } else {
-      delete document.documentElement.dataset.sidebarCollapsed;
-    }
-    syncRailAttribute(next);
-  }
 
   return (
-    <aside className={`sidebar${isZetelPage ? ' sidebar--zetel' : ''}`}>
-      <div className="sidebar-logo">
-        <Link href="/zetel" className="logo-mark logo-mark--link" aria-label="Zetel — início">
-          <span className="logo-z">Z</span>
-        </Link>
-        {!isZetelPage && <span className="logo-text">Zetel</span>}
-      </div>
-
-      {isZetelPage ? (
-        <Suspense fallback={
-          <nav className="sidebar-nav">
-            <div className="nav-section-label">Leitura</div>
-          </nav>
-        }>
-          <ZetelNav slug={zetelSlug} collapsed={collapsed} />
-        </Suspense>
-      ) : (
-        <nav className="sidebar-nav">
-          <div className="nav-section-label">Menu</div>
-          {GLOBAL_NAV.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(item.href + '/');
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`nav-item${active ? ' active' : ''}`}
-              >
-                <svg viewBox="0 0 16 16">{item.icon}</svg>
-                <span className="nav-label">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
-
-      <div className="sidebar-footer">
-        {isZetelPage ? (
-          <Link href="/zetel" className="vault-selector" title="Voltar à lista de Zetels">
-            <svg viewBox="0 0 16 16" className="vault-icon">
-              <path d="M8 2L2 5v3c0 3 2.5 5.5 6 6.5C14 13.5 14 8 14 8V5L8 2z" />
-            </svg>
-            <span className="vault-name">{zetelSlug}</span>
-          </Link>
-        ) : (
-          <span className="footer-label">v0.1.0</span>
-        )}
+    <aside className="rail" aria-label="Navegação principal">
+      <Link href="/zetel" className="rail-logo" aria-label="Zetel — início">z</Link>
+      <nav className="rail-nav">
+        {NAV.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link key={item.href} href={item.href} className={`rail-item${active ? ' active' : ''}`}
+              aria-label={item.label} aria-current={active ? 'page' : undefined}>
+              <svg viewBox="0 0 20 20" aria-hidden>{item.icon}</svg>
+              <span className="rail-tip">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="rail-foot">
         <ThemeToggle initialTheme={theme} />
       </div>
-
-      <button
-        type="button"
-        className="sidebar-toggle"
-        aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
-        aria-expanded={!collapsed}
-        onClick={toggleCollapsed}
-      >
-        <svg viewBox="0 0 12 12">
-          {collapsed ? (
-            <path d="M4 10L8 6 4 2" strokeLinecap="round" strokeLinejoin="round" />
-          ) : (
-            <path d="M8 10L4 6 8 2" strokeLinecap="round" strokeLinejoin="round" />
-          )}
-        </svg>
-      </button>
     </aside>
   );
 }

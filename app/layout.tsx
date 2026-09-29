@@ -1,13 +1,20 @@
 import type { Metadata } from 'next';
-import { Hanken_Grotesk, Literata, JetBrains_Mono } from 'next/font/google';
+import { Fraunces, Nunito, Literata, JetBrains_Mono } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { Sidebar } from '@/components/Sidebar';
 import './globals.css';
 
-const hanken = Hanken_Grotesk({
+const nunito = Nunito({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  variable: '--font-hanken',
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-nunito',
+  display: 'swap',
+});
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-fraunces',
   display: 'swap',
 });
 
@@ -31,9 +38,6 @@ export const metadata: Metadata = {
   description: 'Parceiro de estudos local-first',
 };
 
-const SIDEBAR_ANTI_FLASH =
-  `(function(){try{if(localStorage.getItem('zetel_sidebar_collapsed')==='true'){document.documentElement.dataset.sidebarCollapsed='true';}}catch(_){}})();`;
-
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const store = await cookies();
   const theme = store.get('zetel-theme')?.value === 'dark' ? 'dark' : 'light';
@@ -42,15 +46,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang="pt-BR"
       data-theme={theme}
-      className={`${hanken.variable} ${literata.variable} ${jetbrainsMono.variable}`}
+      className={`${nunito.variable} ${fraunces.variable} ${literata.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
-      <head>
-        {/* anti-flash: restores sidebar collapsed state before first paint */}
-        <script dangerouslySetInnerHTML={{ __html: SIDEBAR_ANTI_FLASH }} />
-      </head>
       <body>
         <div className="app">
+          <div className="app-glow" aria-hidden />
           <Sidebar theme={theme} />
           <main className="main">{children}</main>
         </div>

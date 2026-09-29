@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { getDb } from '@/lib/db';
 import { getZetelBySlug } from '@/lib/zetel-service';
 import { ChevronLeftIcon } from '@/components/icons/ChevronLeftIcon';
 import { ZetelWorkspace } from '@/components/ZetelWorkspace';
 import { ReadingProgress } from '@/components/ReadingProgress';
+import { StudyDrawerButton } from '@/components/ZetelWorkspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,9 +30,6 @@ export default async function ZetelDetailPage({
   const { slug } = await params;
   const db = getDb();
   const zetel = getZetelBySlug(db, slug);
-  const store = await cookies();
-  const theme = store.get('zetel-theme')?.value === 'dark' ? 'dark' : 'light';
-
   if (!zetel || zetel.trashedAt) {
     return (
       <>
@@ -56,13 +53,13 @@ export default async function ZetelDetailPage({
   return (
     <>
       <header className="topbar">
-        <Link className="crumb" href="/zetel">
+        <Link className="crumb" href="/zetel" aria-label="Voltar aos estudos">
           <ChevronLeftIcon />
-          Voltar
         </Link>
         <span className="doc-title">{zetel.displayName}</span>
+        <ReadingProgress />
         <div className="topbar-spacer" />
-        <ReadingProgress theme={theme} />
+        {hasSources && <StudyDrawerButton />}
       </header>
       <div className="page-body page-body--zetel">
         <ZetelWorkspace

@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import type { PartnerColor } from '@/lib/partner-identity';
 import { ChatPanel } from './ChatPanel';
-import { StudyShell, type StudyMode } from './StudyShell';
+import { StudyShell } from './StudyShell';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
 
@@ -63,12 +65,14 @@ export function LeituraPanel({
   chatActive?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [partnerColor, setPartnerColor] = useState<PartnerColor | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [building, setBuilding] = useState(false);
   const [buildingMode, setBuildingMode] = useState<ReadingMode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<ArtifactsInfo | null>(null);
-  const [studyMode, setStudyMode] = useState<StudyMode>('reading');
   const [currentReadingMode, setCurrentReadingMode] = useState<ReadingMode>('tecnico');
   const [currentPageIndex, setCurrentPageIndex] = useState<number | null>(null);
   const [currentGuideBlockId, setCurrentGuideBlockId] = useState<string | null>(null);
@@ -81,7 +85,6 @@ export function LeituraPanel({
 
   const tecnicoBuilt = lastBuiltAt !== null || artifacts?.documentoTecnico.exists === true;
   const guiaBuilt = artifacts?.guiaEstudo.exists === true;
-  const anyBuilt = tecnicoBuilt || guiaBuilt;
 
   // O modo selecionado é, ao mesmo tempo, o alvo de geração e o artefato exibido
   // (a alternância entre Documento Técnico e Guia de Estudo é o próprio seletor).
@@ -94,10 +97,11 @@ export function LeituraPanel({
         ? 'tecnico'
         : null;
 
-  const showIframe = anyBuilt && !building && viewArtifact !== null;
-  useEffect(() => {
-    if (chatActive && artifacts && !showIframe) setStudyMode('chat');
-  }, [chatActive, artifacts, showIframe]);
+  function modeHref(mode: ReadingMode) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('view', mode);
+    return `${pathname}?${params.toString()}`;
+  }
 
   const iframeSrc = (() => {
     const params = new URLSearchParams();
@@ -208,26 +212,54 @@ export function LeituraPanel({
     }
   }
 
+  const modeLabel = selectedMode === 'guia-estudo' ? 'Guia de estudo' : 'Documento técnico';
+  const modeExists = selectedMode === 'guia-estudo' ? guiaBuilt : tecnicoBuilt;
+
   return (
     <div className="leitura-panel">
       {error && <p className="feedback err">{error}</p>}
 
-      {/* Both surfaces remain mounted when switching modes, including ongoing chat streams. */}
-      <StudyShell mode={studyMode} onModeChange={setStudyMode}
-        readingLabel={selectedMode === 'guia-estudo' ? 'Guia' : 'Leitura'}
-        reader={!anyBuilt && !building ? (
-          <div className="empty-state leitura-empty">Nenhuma leitura construída ainda.</div>
-        ) : building ? (
+      {/* Both surfaces remain mounted when the material is collapsed, including ongoing chat streams. */}
+      <StudyShell
+        materialLabel="Material"
+        partnerColor={partnerColor}
+        materialTabs={
+          <nav className="material-seg" aria-label="Material de leitura">
+            <Link href={modeHref('guia-estudo')} className={selectedMode === 'guia-estudo' ? 'on' : ''}
+              aria-current={selectedMode === 'guia-estudo' ? 'page' : undefined}>Guia de estudo</Link>
+            <Link href={modeHref('tecnico')} className={selectedMode === 'tecnico' ? 'on' : ''}
+              aria-current={selectedMode === 'tecnico' ? 'page' : undefined}>Documento</Link>
+            {readingStale && selectedMode === 'tecnico' && tecnicoBuilt && !building && (
+              <span className="pill warn" title="As fontes mudaram desde a última montagem">Fontes mudaram</span>
+            )}
+            {modeExists && !building && (
+              <button type="button" className="material-regen" onClick={() => void onBuild()}
+                title={`Gerar ${modeLabel.toLowerCase()} de novo`} aria-label={`Gerar ${modeLabel.toLowerCase()} de novo`}>
+                <svg viewBox="0 0 16 16" aria-hidden><path d="M13 4v3h-3" strokeLinecap="round" strokeLinejoin="round"/><path d="M12.6 7A5 5 0 1 0 13 10" strokeLinecap="round"/></svg>
+              </button>
+            )}
+          </nav>
+        }
+        reader={building ? (
           <div className="empty-state leitura-empty">
-            {buildingMode === 'guia-estudo'
-              ? 'Gerando guia de estudo com IA… isso pode levar até um minuto.'
-              : 'Gerando HTML de leitura…'}
+            <span className="material-spinner" aria-hidden />
+            <p>{buildingMode === 'guia-estudo'
+              ? 'Preparando seu guia de estudo… isso pode levar até um minuto.'
+              : 'Montando o documento de leitura…'}</p>
           </div>
         ) : viewArtifact === null ? (
           <div className="empty-state leitura-empty">
-            {selectedMode === 'guia-estudo'
-              ? 'Guia de Estudo ainda não gerado.'
-              : 'Documento Técnico ainda não construído.'}
+            <p className="leitura-empty-title">
+              {selectedMode === 'guia-estudo' ? 'Ainda não há guia de estudo' : 'Ainda não há documento de leitura'}
+            </p>
+            <p>
+              {selectedMode === 'guia-estudo'
+                ? 'Um roteiro com seções, glossário e perguntas, feito a partir das suas fontes.'
+                : 'Suas fontes organizadas em páginas para ler ao lado da conversa.'}
+            </p>
+            <button type="button" className="btn primary" onClick={() => void onBuild()}>
+              {selectedMode === 'guia-estudo' ? 'Gerar guia de estudo' : 'Montar documento'}
+            </button>
           </div>
         ) : (
           <iframe
@@ -249,6 +281,7 @@ export function LeituraPanel({
                 currentGuideBlockTitle={currentGuideBlockTitle}
                 currentGuideBlockIndex={currentGuideBlockIndex}
                 currentGuideBlockTotal={currentGuideBlockTotal}
+                onPartnerColorChange={setPartnerColor}
               />}
       />
     </div>

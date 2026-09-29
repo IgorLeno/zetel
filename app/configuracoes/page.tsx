@@ -43,12 +43,12 @@ export default function ConfiguracoesPage() {
   const memoryModelHistory = parseModelHistory(getSetting('memory_model_history'));
 
   return (
-    <>
-      <header className="page-header">
-        <span className="page-title">Configurações</span>
-      </header>
-      <div className="page-body">
-        <div className="content-narrow">
+    <div className="page-body">
+      <div className="content-narrow">
+        <header className="page-hero">
+          <h1 className="page-hero-title">Configurações</h1>
+          <p className="page-hero-sub">Onde seus estudos moram, quais modelos usar e como o parceiro fala.</p>
+        </header>
           <ConfiguracoesTabs
             initialVaultPath={vaultPath}
             credentialSource={credentialSource}
@@ -68,8 +68,7 @@ export default function ConfiguracoesPage() {
             initialNoteModelHistory={noteModelHistory}
             initialMemoryModelHistory={memoryModelHistory}
           />
-        </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ThemeToggle } from './ThemeToggle';
 
 const SIZE = 22;
 const STROKE = 2.5;
@@ -43,7 +41,7 @@ function ProgressRing({ percent }: { percent: number }) {
   );
 }
 
-export function ReadingProgress({ theme }: { theme: 'light' | 'dark' }) {
+export function ReadingProgress() {
   const [percent, setPercent] = useState(0);
   const [sectionTitle, setSectionTitle] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressPosition>(null);
@@ -90,6 +88,8 @@ export function ReadingProgress({ theme }: { theme: 'light' | 'dark' }) {
   }, []);
 
   const progressLabel = progress ? `${progress.current} / ${progress.total}` : null;
+  // Sem leitura aberta ainda: não mostra um "0%" solto no topo.
+  if (percent === 0 && !progress) return null;
 
   return (
     <div className="topbar-reading-progress">
@@ -106,19 +106,6 @@ export function ReadingProgress({ theme }: { theme: 'light' | 'dark' }) {
         <span>{percent}%</span>
         {progressLabel && <span className="topbar-progress-count">{progressLabel}</span>}
       </span>
-      <Link href="/memoria" className="topbar-icon-link" title="Memória" aria-label="Memória">
-        <svg viewBox="0 0 16 16">
-          <circle cx="8" cy="8" r="6" />
-          <path d="M8 5v3.5l2.5 1.5" />
-        </svg>
-      </Link>
-      <Link href="/configuracoes" className="topbar-icon-link" title="Configurações" aria-label="Configurações">
-        <svg viewBox="0 0 16 16">
-          <path d="M8 10a2 2 0 100-4 2 2 0 000 4z" />
-          <path d="M8 2v1M8 13v1M2 8H1m14 0h-1m-2.05-4.95-.7.7M4.75 11.25l-.7.7M11.25 11.25l.7.7M4.05 3.05l.7.7" />
-        </svg>
-      </Link>
-      <ThemeToggle initialTheme={theme} />
     </div>
   );
 }

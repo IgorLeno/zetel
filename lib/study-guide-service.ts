@@ -1122,11 +1122,11 @@ function renderZettelkasten(perguntas: ZkItem[], sourceMap: StudyGuideSourceMap,
   return `<section id="zettelkasten" data-nav-section="zettelkasten"><h2>Perguntas Zettelkasten</h2><ul class="zk">${items}</ul></section>`;
 }
 
-const GUIDE_DARK_VARS = `--bg:#0d0d11;--card:#15151b;--sub:#1b1b22;--border:rgba(255,255,255,.07);
-  --text:#e9e9ee;--muted:#9fa0ab;--accent:#7d7bff;--ok:#4ec98a;--ok-bg:rgba(78,201,138,.12);
+const GUIDE_DARK_VARS = `--bg:#1c1815;--card:#28221e;--sub:#2f2824;--border:rgba(255,240,225,.08);
+  --text:#f3ebe2;--muted:#c3b4a6;--accent:#f0a98f;--ok:#4ec98a;--ok-bg:rgba(78,201,138,.12);
   --ok-fg:#4ec98a;--bad:#ec6a5e;--bad-bg:rgba(236,106,94,.13);--warn:#e0a35a;--shadow:rgba(0,0,0,.40);`;
-const GUIDE_LIGHT_VARS = `--bg:#f4f4f1;--card:#ffffff;--sub:#f7f7f4;--border:rgba(20,20,30,.10);
-  --text:#1b1b1f;--muted:#5b5b62;--accent:#7d7bff;--ok:#1f9d57;--ok-bg:rgba(31,157,87,.11);
+const GUIDE_LIGHT_VARS = `--bg:#faf5ee;--card:#fffdf9;--sub:#fbf6ef;--border:rgba(90,55,25,.11);
+  --text:#2d2621;--muted:#6b5f55;--accent:#b8603f;--ok:#1f9d57;--ok-bg:rgba(31,157,87,.11);
   --ok-fg:#1f9d57;--bad:#cf4436;--bad-bg:rgba(207,68,54,.10);--warn:#b5740c;--shadow:rgba(20,20,40,.12);`;
 
 function guideCss(): string {

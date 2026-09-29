@@ -12,7 +12,26 @@ type Dialog =
   | { kind: 'trash'; zetel: Zetel }
   | null;
 
-export function ZetelList({ initial }: { initial: Zetel[] }) {
+export interface ZetelStats {
+  sources: number;
+  sessions: number;
+  lastActiveAt: string | null;
+}
+
+const COVERS = ['pessego', 'lavanda', 'mel', 'salvia', 'rosa', 'noite', 'ceu', 'terracota'] as const;
+
+/** Cor de capa estável por slug — o mesmo estudo sempre com a mesma cara. */
+function coverFor(slug: string) {
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) hash = (hash * 31 + slug.charCodeAt(i)) >>> 0;
+  return COVERS[hash % COVERS.length]!;
+}
+
+function plural(n: number, one: string, many: string) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+export function ZetelList({ initial, stats = {} }: { initial: Zetel[]; stats?: Record<string, ZetelStats> }) {
   const router = useRouter();
   const [zetels, setZetels] = useState(initial);
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -43,81 +62,8 @@ export function ZetelList({ initial }: { initial: Zetel[] }) {
     router.refresh();
   }
 
-  if (zetels.length === 0) {
-    return (
-      <>
-        <div className="empty-state">
-          <div>Nenhum Zetel ainda. Crie o primeiro para começar.</div>
-          <button className="btn primary" type="button" onClick={() => setDialog({ kind: 'create' })}>
-            Criar Zetel
-          </button>
-        </div>
-        {dialog?.kind === 'create' && (
-          <CreateDialog onClose={() => setDialog(null)} onCreated={(slug) => router.push(`/zetel/${slug}`)} />
-        )}
-      </>
-    );
-  }
-
-  return (
+  const dialogs = (
     <>
-      <div className="list-toolbar">
-        <button className="btn primary" type="button" onClick={() => setDialog({ kind: 'create' })}>
-          Criar Zetel
-        </button>
-      </div>
-
-      <ul className="zetel-list">
-        {zetels.map((z) => (
-          <li key={z.id} className="zetel-row">
-            <button
-              className="zetel-open"
-              type="button"
-              onClick={() => router.push(`/zetel/${z.slug}`)}
-            >
-              <span className="zetel-name">{z.displayName}</span>
-              <span className="zetel-meta">{formatRelative(z.updatedAt)}</span>
-            </button>
-
-            <div className="zetel-menu-wrap" ref={menuId === z.id ? menuRef : undefined}>
-              <button
-                className="icon-btn"
-                type="button"
-                aria-label="Ações"
-                aria-expanded={menuId === z.id}
-                onClick={() => setMenuId((current) => current === z.id ? null : z.id)}
-              >
-                ⋯
-              </button>
-              {menuId === z.id && (
-                <div className="ctx-menu">
-                  <button
-                    className="ctx-item"
-                    type="button"
-                    onClick={() => {
-                      setMenuId(null);
-                      setDialog({ kind: 'rename', zetel: z });
-                    }}
-                  >
-                    Renomear
-                  </button>
-                  <button
-                    className="ctx-item danger"
-                    type="button"
-                    onClick={() => {
-                      setMenuId(null);
-                      setDialog({ kind: 'trash', zetel: z });
-                    }}
-                  >
-                    Mover para lixeira
-                  </button>
-                </div>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-
       {dialog?.kind === 'create' && (
         <CreateDialog onClose={() => setDialog(null)} onCreated={(slug) => router.push(`/zetel/${slug}`)} />
       )}
@@ -131,6 +77,83 @@ export function ZetelList({ initial }: { initial: Zetel[] }) {
         }} />
       )}
     </>
+  );
+
+  return (
+    <section className="home-section" aria-labelledby="home-studies">
+      <div className="home-row">
+        <h2 id="home-studies">Seus estudos</h2>
+      </div>
+
+      <ul className="zetel-list">
+        {zetels.map((z) => {
+          const info = stats[z.id];
+          const when = info?.lastActiveAt ?? z.updatedAt;
+          return (
+            <li key={z.id} className="zetel-row" style={{ '--cc': `var(--partner-${coverFor(z.slug)})` } as React.CSSProperties}>
+              <button
+                className="zetel-open"
+                type="button"
+                onClick={() => router.push(`/zetel/${z.slug}`)}
+              >
+                <span className="zetel-cover" aria-hidden>
+                  <span>{z.displayName.trim().charAt(0).toUpperCase() || 'Z'}</span>
+                </span>
+                <span className="zetel-name">{z.displayName}</span>
+                <span className="zetel-meta">
+                  {info ? `${plural(info.sources, 'fonte', 'fontes')} · ` : ''}{formatRelative(when)}
+                </span>
+              </button>
+
+              <div className="zetel-menu-wrap" ref={menuId === z.id ? menuRef : undefined}>
+                <button
+                  className="icon-btn"
+                  type="button"
+                  aria-label={`Ações de ${z.displayName}`}
+                  aria-expanded={menuId === z.id}
+                  onClick={() => setMenuId((current) => current === z.id ? null : z.id)}
+                >
+                  ⋯
+                </button>
+                {menuId === z.id && (
+                  <div className="ctx-menu">
+                    <button
+                      className="ctx-item"
+                      type="button"
+                      onClick={() => {
+                        setMenuId(null);
+                        setDialog({ kind: 'rename', zetel: z });
+                      }}
+                    >
+                      Renomear
+                    </button>
+                    <button
+                      className="ctx-item danger"
+                      type="button"
+                      onClick={() => {
+                        setMenuId(null);
+                        setDialog({ kind: 'trash', zetel: z });
+                      }}
+                    >
+                      Mover para lixeira
+                    </button>
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+        <li className="zetel-row zetel-row--new">
+          <button className="zetel-open" type="button" onClick={() => setDialog({ kind: 'create' })}>
+            <span className="zetel-new-plus" aria-hidden>+</span>
+            <span className="zetel-name">Novo estudo</span>
+            <span className="zetel-meta">Dê um nome e traga suas fontes</span>
+          </button>
+        </li>
+      </ul>
+
+      {dialogs}
+    </section>
   );
 }
 
@@ -163,13 +186,14 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
   }
 
   return (
-    <Modal title="Novo Zetel" onClose={onClose}>
+    <Modal title="Novo estudo" onClose={onClose}>
       <div className="field">
         <label className="field-label" htmlFor="new-zetel-name">
-          Nome do Zetel
+          Sobre o que vamos estudar?
         </label>
         <input
           id="new-zetel-name"
+          placeholder="Ex.: Termodinâmica, Direito Civil, Kant…"
           className="input"
           type="text"
           value={name}

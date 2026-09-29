@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ChatMessage, CitedSource } from '@/types/chat-message';
 import type { StudySession } from '@/types/study-session';
@@ -10,7 +10,10 @@ import { FonteText } from './FonteText';
 import { NoteCard, type Suggestion, type SaveNotePayload } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
 import { ConceptCard, type ConceptSuggestionData } from './ConceptCard';
-import { TutorProfilePanel } from './TutorProfilePanel';
+import { PartnerOrb, type OrbState } from './PartnerOrb';
+import { PartnerSheet } from './PartnerSheet';
+import { PartnerStudio, resolvePartner, useTutorProfiles } from './PartnerStudio';
+import { partnerColorVar, partnerTagline, type PartnerColor } from '@/lib/partner-identity';
 import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
@@ -153,6 +156,7 @@ export function ChatPanel({
   onSessionChange,
   createSessionIfEmpty = false,
   active = true,
+  onPartnerColorChange,
 }: {
   zetelId: string;
   currentReadingMode: ReadingMode;
@@ -174,6 +178,8 @@ export function ChatPanel({
   onSessionChange?: (session: StudySession | null) => void;
   createSessionIfEmpty?: boolean;
   active?: boolean;
+  /** Cor do parceiro atual, para o resto da tela de estudo acompanhar. */
+  onPartnerColorChange?: (color: PartnerColor | null) => void;
 }) {
   const router = useRouter();
   // Ref: o fluxo de voz chama sendMessage por closures antigas; a página enviada
@@ -207,7 +213,9 @@ export function ChatPanel({
   const [toast, setToast] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
   const [pendingUser, setPendingUser] = useState<string | null>(null);
-  const [teacherOpen, setTeacherOpen] = useState(false);
+  const [partnerOpen, setPartnerOpen] = useState(false);
+  const moreRef = useRef<HTMLDetailsElement>(null);
+  const { profiles, setProfiles } = useTutorProfiles();
 
   // ── Voice UI state ───────────────────────────────────────────────────────────
   // Default false para evitar mismatch SSR; localStorage é lido no useEffect.
@@ -532,6 +540,23 @@ export function ChatPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Menu "mais": fecha ao clicar fora ou com Escape ──────────────────────────
+  useEffect(() => {
+    function onPointerDown(event: PointerEvent) {
+      const menu = moreRef.current;
+      if (menu?.open && !menu.contains(event.target as Node)) menu.removeAttribute('open');
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') moreRef.current?.removeAttribute('open');
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
+
   // ── Cleanup ao desmontar ─────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
@@ -743,7 +768,6 @@ export function ChatPanel({
     setPendingUser(text); // bolha otimista — limpa no finally após histórico atualizado
     setTurnSources(null);
     if (!starter && textOverride === undefined) setInput('');
-    if (starter) setTeacherOpen(false);
     setError(null);
     isLoadingRef.current = true;
     setIsLoading(true);
@@ -1148,6 +1172,18 @@ export function ChatPanel({
       <path d="M14 8L2 2l3 6-3 6 12-6z" strokeLinejoin="round"/>
     </svg>
   );
+  const icNote = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <path d="M4 2h6l3 3v9H4z" strokeLinejoin="round"/>
+      <path d="M6.5 8h4M6.5 10.5h3" strokeLinecap="round"/>
+    </svg>
+  );
+  const icRedo = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <path d="M13 4v3h-3" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12.6 7A5 5 0 1 0 13 10" strokeLinecap="round"/>
+    </svg>
+  );
   const icTrash = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <path d="M3 5h10M6 5V3h4v2M5 5l1 8h4l1-8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1161,34 +1197,59 @@ export function ChatPanel({
     { id: 'discuss', label: 'Vamos conversar' },
   ];
 
-  const SUGGESTED = [
-    'Resuma esta seção como uma nota',
-    'Explique com uma analogia',
+  const QUICK_PROMPTS = [
+    'Me dá uma analogia',
+    'Resuma como nota',
     'Quais são os conceitos-chave?',
   ];
 
   const ttsUnavailable = voiceStatus !== null && !voiceStatus.tts;
   const currentSession = sessions.find((item) => item.id === sessionId) ?? null;
+  const partner = resolvePartner(profiles, currentSession);
+  const partnerName = partner?.name ?? 'Parceiro';
+  const partnerStyle = partner ? ({ '--p': partnerColorVar(partner.color) } as CSSProperties) : undefined;
+  const orbState: OrbState = voiceState === 'listening' ? 'listening'
+    : voiceState === 'speaking' || (streaming && isLoading) ? 'speaking'
+      : isLoading || voiceState === 'thinking' ? 'thinking' : 'idle';
+  const lastAssistantId = [...visibleMessages].reverse().find((m) => m.role === 'assistant')?.id ?? null;
+
+  function speak(text: string) {
+    if (!voiceStatus?.tts) {
+      setError('Voz indisponível. Configure a chave TTS nas Configurações.');
+      return;
+    }
+    tts.beginTurn();
+    const { sentences, rest } = extractSentences(toSpeakable(text));
+    for (const sentence of sentences) tts.enqueue(sentence);
+    if (rest.trim()) tts.enqueue(rest.trim());
+    tts.seal();
+  }
+
+  const composerLocked = isLoading || !loaded;
+  const partnerColor = partner?.color ?? null;
+  useEffect(() => { onPartnerColorChange?.(partnerColor); }, [partnerColor, onPartnerColorChange]);
 
   return (
-    <aside className="chat-panel" ref={chatPanelRef}>
+    <section className="chat-panel" ref={chatPanelRef} style={partnerStyle} aria-label={`Conversa com ${partnerName}`}>
       <header className="chat-panel-header">
-        <div className="chat-panel-title-group">
-          <span className="chat-panel-title">Professora</span>
-          <TutorProfilePanel
-            zetelId={zetelId}
-            session={currentSession}
-            disabled={isLoading}
-            onSessionChange={(session) => {
-              setSessions((items) => items.map((item) => item.id === session.id ? session : item));
-            }}
-          />
-          <span className="chat-session-name" title={currentSession?.title ?? 'Nenhuma sessão'}>
-            {currentSession?.title ?? 'Nenhuma sessão'}
-          </span>
-        </div>
-        <details className="chat-more">
-          <summary aria-label="Mais opções da conversa" title="Mais opções">•••</summary>
+        <button type="button" className="partner-switch" disabled={!partner}
+          aria-label={`Parceiro: ${partnerName}. Trocar ou ajustar`} aria-haspopup="dialog"
+          onClick={() => setPartnerOpen(true)}>
+          <PartnerOrb color={partner?.color} size={26} face={false} state={orbState} />
+          <span className="partner-switch-name">{partnerName}</span>
+          <svg viewBox="0 0 16 16" aria-hidden><path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+        {currentSession && (
+          <span className="chat-session-name" title={currentSession.title}>{currentSession.title}</span>
+        )}
+        <details className="chat-more" ref={moreRef}
+          onClick={(event) => {
+            // Fecha o menu depois de qualquer ação (o <select> precisa continuar aberto).
+            if ((event.target as HTMLElement).closest('.chat-more-menu button')) moreRef.current?.removeAttribute('open');
+          }}>
+          <summary aria-label="Mais opções da conversa" title="Mais opções">
+            <svg viewBox="0 0 16 16" aria-hidden><circle cx="3.5" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12.5" cy="8" r="1.2"/></svg>
+          </summary>
           <div className="chat-more-menu">
             <label className="chat-more-label" htmlFor="study-session-select">Sessão atual</label>
             <select id="study-session-select" aria-label="Sessão de estudo"
@@ -1220,129 +1281,132 @@ export function ChatPanel({
       </header>
 
       <div className="chat-messages" ref={messagesRef} data-testid="chat-messages">
-        {!loaded && <p className="chat-placeholder">Carregando histórico…</p>}
-        {loaded && visibleMessages.length === 0 && !streaming && (
-          <div className="chat-empty">
-            <div className="ce-ic">
-              <svg viewBox="0 0 24 24" aria-hidden>
-                <path d="M12 2a8 8 0 0 1 8 8c0 5-5 10-8 12C9 20 4 17 4 10a8 8 0 0 1 8-8z" strokeLinejoin="round"/>
-                <path d="M12 7v5M12 15h.01" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <div className="ce-t">Pergunte sobre o que está lendo</div>
-            <div className="ce-s">O parceiro conhece a seção aberta. Peça resumos, analogias ou transforme ideias em notas.</div>
-            <div className="suggested">
-              {SUGGESTED.map((s) => (
-                <button key={s} type="button" onClick={() => void sendMessage(s)}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {visibleMessages.map((m) => (
-          <div key={m.id} className={`msg ${m.role === 'user' ? 'msg-user' : 'msg-assistant'}`}>
-            <div className="msg-content-wrap">
-              {m.role === 'assistant' && <span className="who">Professora</span>}
-              <div className="msg-bubble" data-testid="msg-bubble" data-role={m.role}>
-                {m.role === 'assistant' ? (
-                  <FonteText text={m.content} sources={m.meta?.sources} onOpen={onOpenSource} />
-                ) : m.content}
+        <div className="chat-stream">
+          {!loaded && <p className="chat-placeholder">Carregando conversa…</p>}
+          {loaded && visibleMessages.length === 0 && !streaming && !pendingUser && (
+            <div className="chat-empty">
+              <PartnerOrb color={partner?.color} size={104} state={orbState} />
+              <div className="ce-t">{partnerName}</div>
+              <div className="ce-s">
+                {partner ? partnerTagline(partner) : 'Seu parceiro de estudos'}. Eu conheço a parte que você está lendo —
+                escolha como começamos ou me pergunte qualquer coisa.
+              </div>
+              <div className="teacher-starters" role="group" aria-label={`Como ${partnerName} começa`}>
+                {TEACHER_STARTERS.map((choice) => (
+                  <button key={choice.id} type="button" data-testid={`starter-${choice.id}`}
+                    disabled={composerLocked} onClick={() => void sendMessage(undefined, choice.id)}>
+                    {choice.label}
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
-        ))}
-        {pendingUser && (
-          <div className="msg msg-user">
-            <div className="msg-content-wrap">
-              <div className="msg-bubble" data-role="user-pending">{pendingUser}</div>
-            </div>
-          </div>
-        )}
-        {isLoading && !streaming && (
-          <div className="msg msg-assistant">
-            <div className="msg-content-wrap">
-              <span className="who">Professora</span>
-              <div className="msg-bubble streaming" data-role="thinking">
-                <span className="streaming-cursor" aria-hidden />
+          )}
+          {visibleMessages.map((m) => (
+            <div key={m.id} className={`msg ${m.role === 'user' ? 'msg-user' : 'msg-assistant'}`}>
+              {m.role === 'assistant' && <PartnerOrb color={partner?.color} size={32} />}
+              <div className="msg-content-wrap">
+                <div className="msg-bubble" data-testid="msg-bubble" data-role={m.role}>
+                  {m.role === 'assistant' ? (
+                    <FonteText text={m.content} sources={m.meta?.sources} onOpen={onOpenSource} />
+                  ) : m.content}
+                </div>
+                {m.role === 'assistant' && (
+                  <div className="msg-actions">
+                    <button type="button" disabled={ttsUnavailable} title={ttsUnavailable ? 'Configure a voz nas Configurações' : undefined}
+                      onClick={() => speak(m.content)}>{icSpeaker} Ouvir</button>
+                    {m.id === lastAssistantId && (
+                      <>
+                        <button type="button" disabled={composerLocked}
+                          onClick={() => void sendMessage('Transforme sua última explicação em uma nota.')}>
+                          {icNote} Virar nota
+                        </button>
+                        <button type="button" disabled={composerLocked}
+                          onClick={() => void sendMessage('Explique isso de outro jeito, mais simples.')}>
+                          {icRedo} Outra explicação
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
-        {streaming && (
-          <div className="msg msg-assistant">
-            <div className="msg-content-wrap">
-              <span className="who">Professora</span>
-              <div className="msg-bubble streaming" data-testid="msg-bubble" data-role="streaming">
-                <FonteText text={streaming} sources={turnSources} onOpen={onOpenSource} />
-                <span className="streaming-cursor" aria-hidden />
+          ))}
+          {pendingUser && (
+            <div className="msg msg-user">
+              <div className="msg-content-wrap">
+                <div className="msg-bubble" data-role="user-pending">{pendingUser}</div>
               </div>
             </div>
-          </div>
-        )}
-        {suggestion && (
-          <NoteCard
-            suggestion={suggestion.data}
-            canDiscuss={suggestion.canDiscuss}
-            busy={noteBusy || isLoading}
-            onSave={(payload) => void saveNote(payload)}
-            onDiscuss={discussNote}
-            onReject={() => void rejectNote()}
-          />
-        )}
-        {memorySuggestion && (
-          <MemoryCard
-            suggestion={memorySuggestion.data}
-            canDiscuss={memorySuggestion.canDiscuss}
-            busy={memoryBusy || isLoading}
-            onSave={(titulo, corpo) => void saveMemory(titulo, corpo)}
-            onDiscuss={discussMemory}
-            onReject={() => void rejectMemory()}
-          />
-        )}
-        {conceptSuggestion && (
-          <ConceptCard key={conceptSuggestion.messageId} suggestion={conceptSuggestion}
-            busy={conceptBusy || isLoading} onSave={(edit) => void saveConcept(edit)}
-            onExplore={exploreConcept} onIgnore={() => void ignoreConcept()} />
-        )}
-        {error && <p className="feedback err chat-inline-error">{error}</p>}
+          )}
+          {isLoading && !streaming && (
+            <div className="msg msg-assistant">
+              <PartnerOrb color={partner?.color} size={32} state="thinking" />
+              <div className="msg-content-wrap">
+                <div className="msg-bubble streaming" data-role="thinking">
+                  <span className="typing-dots" aria-label={`${partnerName} está pensando`}><i /><i /><i /></span>
+                </div>
+              </div>
+            </div>
+          )}
+          {streaming && (
+            <div className="msg msg-assistant">
+              <PartnerOrb color={partner?.color} size={32} state="speaking" />
+              <div className="msg-content-wrap">
+                <div className="msg-bubble streaming" data-testid="msg-bubble" data-role="streaming">
+                  <FonteText text={streaming} sources={turnSources} onOpen={onOpenSource} />
+                  <span className="streaming-cursor" aria-hidden />
+                </div>
+              </div>
+            </div>
+          )}
+          {suggestion && (
+            <NoteCard
+              suggestion={suggestion.data}
+              canDiscuss={suggestion.canDiscuss}
+              busy={noteBusy || isLoading}
+              onSave={(payload) => void saveNote(payload)}
+              onDiscuss={discussNote}
+              onReject={() => void rejectNote()}
+            />
+          )}
+          {memorySuggestion && (
+            <MemoryCard
+              suggestion={memorySuggestion.data}
+              canDiscuss={memorySuggestion.canDiscuss}
+              busy={memoryBusy || isLoading}
+              onSave={(titulo, corpo) => void saveMemory(titulo, corpo)}
+              onDiscuss={discussMemory}
+              onReject={() => void rejectMemory()}
+            />
+          )}
+          {conceptSuggestion && (
+            <ConceptCard key={conceptSuggestion.messageId} suggestion={conceptSuggestion}
+              busy={conceptBusy || isLoading} onSave={(edit) => void saveConcept(edit)}
+              onExplore={exploreConcept} onIgnore={() => void ignoreConcept()} />
+          )}
+          {error && <p className="feedback err chat-inline-error" role="alert">{error}</p>}
+        </div>
       </div>
 
-      {toast && <div className="chat-toast">{toast}</div>}
+      {toast && <div className="chat-toast" role="status">{toast}</div>}
 
-      <div className="teacher-launch">
-        <button
-          type="button"
-          className="mini-btn"
-          data-testid="activate-teacher"
-          aria-expanded={teacherOpen}
-          disabled={isLoading}
-          onClick={() => setTeacherOpen((open) => !open)}
-        >
-          ✦ Ativar professora
-        </button>
-        {teacherOpen && (
-          <div className="teacher-starters" role="group" aria-label="Como a professora começa">
+      {/* Composer */}
+      <div className="composer">
+        {visibleMessages.length > 0 && (
+          <div className="quick-actions" role="group" aria-label="Atalhos da conversa">
             {TEACHER_STARTERS.map((choice) => (
-              <button
-                key={choice.id}
-                type="button"
-                data-testid={`starter-${choice.id}`}
-                disabled={isLoading}
-                onClick={() => {
-                  setTeacherOpen(false);
-                  void sendMessage(undefined, choice.id);
-                }}
-              >
+              <button key={choice.id} type="button" data-testid={`quick-starter-${choice.id}`}
+                disabled={composerLocked} onClick={() => void sendMessage(undefined, choice.id)}>
                 {choice.label}
+              </button>
+            ))}
+            {QUICK_PROMPTS.map((prompt) => (
+              <button key={prompt} type="button" disabled={composerLocked} onClick={() => void sendMessage(prompt)}>
+                {prompt}
               </button>
             ))}
           </div>
         )}
-      </div>
-
-      {/* Composer */}
-      <div className="composer">
         {pdfSelectionText && (
           <div className="composer-selection" data-testid="pdf-selection-chip">
             <span className="composer-selection-label">
@@ -1366,29 +1430,14 @@ export function ChatPanel({
           <textarea
             ref={inputRef}
             className="chat-input composer-input"
-            rows={2}
-            placeholder={micAtivo ? 'Ouvindo…' : 'Pergunte sobre esta página…'}
+            rows={1}
+            placeholder={micAtivo ? 'Estou ouvindo… pode falar' : `Fale ou escreva para ${partnerName}…`}
             value={input}
             disabled={isLoading}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
           />
           <div className="composer-bar">
-            {/* Toggle MIC — sempre visível */}
-            <button
-              type="button"
-              data-testid="mic-toggle"
-              className={`mic-btn${micAtivo ? ' active' : ''}${voiceState === 'listening' ? ' rec' : ''}`}
-              onClick={toggleMic}
-              title={micAtivo ? 'Desligar microfone' : 'Ligar microfone (Web Speech API)'}
-              aria-label={micAtivo ? 'Desligar microfone' : 'Ligar microfone'}
-              aria-pressed={micAtivo}
-            >
-              {voiceState === 'listening' ? icStop : icMic}
-            </button>
-
-            <div className="grow" />
-
             <span
               className="voice-status"
               role="status"
@@ -1408,22 +1457,51 @@ export function ChatPanel({
                 title="Parar"
                 aria-label="Parar"
               >
-                ■ Parar
+                {icStop} Parar
               </button>
             )}
 
             <button
               type="button"
               className="send-btn"
+              aria-label="Enviar"
               disabled={isLoading || !input.trim()}
               onClick={() => void sendMessage()}
             >
-              {isLoading ? <span className="streaming-cursor" aria-hidden /> : icSend}
-              {!isLoading && 'Enviar'}
+              {icSend}
+            </button>
+
+            {/* Toggle MIC — sempre visível */}
+            <button
+              type="button"
+              data-testid="mic-toggle"
+              className={`mic-btn${micAtivo ? ' active' : ''}${voiceState === 'listening' ? ' rec' : ''}`}
+              onClick={toggleMic}
+              title={micAtivo ? 'Desligar microfone' : 'Falar (microfone)'}
+              aria-label={micAtivo ? 'Desligar microfone' : 'Ligar microfone'}
+              aria-pressed={micAtivo}
+            >
+              {voiceState === 'listening' ? icStop : icMic}
             </button>
           </div>
         </div>
       </div>
-    </aside>
+
+      {partnerOpen && (
+        <PartnerSheet onClose={() => setPartnerOpen(false)} title="Com quem você quer estudar?">
+          <PartnerStudio
+            profiles={profiles}
+            setProfiles={setProfiles}
+            session={currentSession}
+            zetelId={zetelId}
+            disabled={isLoading}
+            onSessionChange={(session) => {
+              setSessions((items) => items.map((item) => item.id === session.id ? session : item));
+            }}
+          />
+          {!currentSession && <p className="field-hint">Mande a primeira mensagem para abrir uma sessão e escolher o parceiro dela.</p>}
+        </PartnerSheet>
+      )}
+    </section>
   );
 }

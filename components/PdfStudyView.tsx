@@ -6,7 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ZetelFile } from '@/types/zetel-file';
 import type { StudySession } from '@/types/study-session';
 import { ChatPanel } from './ChatPanel';
-import { StudyShell, type StudyMode } from './StudyShell';
+import type { PartnerColor } from '@/lib/partner-identity';
+import { StudyShell } from './StudyShell';
 import type { PdfSelection } from './PdfReader';
 
 // Só no cliente: no SSR o servidor carregaria o build de navegador do pdf.js
@@ -34,7 +35,7 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
   // Seleção anexada ao próximo turno (tarefa 004). Vale só para a página dela.
   const [selection, setSelection] = useState<PdfSelection | null>(null);
   const [goToRequest, setGoToRequest] = useState<{ page: number; token: number } | null>(null);
-  const [studyMode, setStudyMode] = useState<StudyMode>('reading');
+  const [partnerColor, setPartnerColor] = useState<PartnerColor | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -115,7 +116,8 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
         </p>
       )}
       {focusError && <p className="feedback err">{focusError}</p>}
-      <StudyShell mode={studyMode} onModeChange={setStudyMode} readingLabel="PDF"
+      <StudyShell materialLabel="PDF" partnerColor={partnerColor}
+        materialTabs={<span className="material-title" title={file.filename}>{file.filename}</span>}
         reader={<PdfReader
           zetelId={zetelId}
           fileId={file.id}
@@ -144,6 +146,7 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
             onOpenSource={onOpenSource}
             onSessionChange={onSessionChange}
             createSessionIfEmpty={file.extractionStatus === 'ok' || file.extractionStatus === 'no_text'}
+            onPartnerColorChange={setPartnerColor}
           />}
       />
     </div>

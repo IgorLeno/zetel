@@ -438,25 +438,25 @@ async function pageNodesToHtml(
 
 /** Vars do tema escuro, reusadas em :root e [data-theme="dark"]. */
 const DARK_VARS = `
-  --bg-page:#0d0d11; --bg-card:#15151b; --bg-subcard:#1b1b22;
-  --border:rgba(255,255,255,.07); --border-strong:rgba(255,255,255,.12);
-  --text:#e9e9ee; --text-secondary:#9fa0ab; --text-muted:#686974;
-  --accent:#7d7bff; --accent-soft:rgba(125,123,255,.16); --accent-hover:rgba(125,123,255,.10);
-  --code-bg:#131318; --quote-bg:rgba(125,123,255,.09); --math-bg:rgba(125,123,255,.08);
-  --math-border:rgba(125,123,255,.26); --table-zebra:rgba(255,255,255,.03);
-  --cover-mark-bg:#7d7bff; --cover-mark-fg:#ffffff;
-  --warning-bg:#2a2310; --warning-border:#6b5a10;`;
+  --bg-page:#1c1815; --bg-card:#28221e; --bg-subcard:#2f2824;
+  --border:rgba(255,240,225,.08); --border-strong:rgba(255,240,225,.14);
+  --text:#f3ebe2; --text-secondary:#c3b4a6; --text-muted:#8f8173;
+  --accent:#f0a98f; --accent-soft:rgba(240,169,143,.16); --accent-hover:rgba(240,169,143,.10);
+  --code-bg:#24201c; --quote-bg:rgba(240,169,143,.09); --math-bg:rgba(240,169,143,.08);
+  --math-border:rgba(240,169,143,.26); --table-zebra:rgba(255,240,225,.03);
+  --cover-mark-bg:#f2a488; --cover-mark-fg:#2d2621;
+  --warning-bg:#2d2414; --warning-border:#7a5b1c;`;
 
 /** Vars do tema claro, aplicadas via [data-theme="light"] e fallback prefers. */
 const LIGHT_VARS = `
-  --bg-page:#f4f4f1; --bg-card:#ffffff; --bg-subcard:#f7f7f4;
-  --border:rgba(20,20,30,.10); --border-strong:rgba(20,20,30,.16);
-  --text:#1b1b1f; --text-secondary:#5b5b62; --text-muted:#8c8c92;
-  --accent:#7d7bff; --accent-soft:rgba(125,123,255,.14); --accent-hover:rgba(125,123,255,.09);
-  --code-bg:#f7f7f4; --quote-bg:rgba(125,123,255,.07); --math-bg:rgba(125,123,255,.06);
-  --math-border:rgba(125,123,255,.22); --table-zebra:rgba(20,20,30,.028);
-  --cover-mark-bg:#7d7bff; --cover-mark-fg:#ffffff;
-  --warning-bg:#fefce8; --warning-border:#ca9f0c;`;
+  --bg-page:#faf5ee; --bg-card:#fffdf9; --bg-subcard:#fbf6ef;
+  --border:rgba(90,55,25,.11); --border-strong:rgba(90,55,25,.18);
+  --text:#2d2621; --text-secondary:#6b5f55; --text-muted:#9c8d7f;
+  --accent:#b8603f; --accent-soft:rgba(242,164,136,.20); --accent-hover:rgba(242,164,136,.12);
+  --code-bg:#fbf6ef; --quote-bg:rgba(242,164,136,.10); --math-bg:rgba(242,164,136,.08);
+  --math-border:rgba(184,96,63,.24); --table-zebra:rgba(90,55,25,.028);
+  --cover-mark-bg:#f2a488; --cover-mark-fg:#ffffff;
+  --warning-bg:#fdf3dc; --warning-border:#d9a441;`;
 
 function buildViewerCss(): string {
   return `

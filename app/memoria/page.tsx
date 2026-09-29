@@ -5,13 +5,12 @@ export const metadata: Metadata = { title: 'Memória' };
 
 export default function MemoriaPage() {
   return (
-    <>
-      <header className="page-header">
-        <span className="page-title">Memória</span>
+    <div className="page-body page-body--wide">
+      <header className="page-hero">
+        <h1 className="page-hero-title">Sua memória</h1>
+        <p className="page-hero-sub">O que você decidiu guardar das conversas — vale para todos os estudos.</p>
       </header>
-      <div className="page-body">
-        <MemoriaList />
-      </div>
-    </>
+      <MemoriaList />
+    </div>
   );
 }
