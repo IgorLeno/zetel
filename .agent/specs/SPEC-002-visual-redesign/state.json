@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "revision": 1,
+  "spec": {
+    "id": "SPEC-002-visual-redesign",
+    "kind": "mini",
+    "status": "READY_FOR_APPROVAL",
+    "approved_by": null,
+    "approved_at": null
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Entrega inicial",
+      "status": "DRAFT",
+      "blocked_by": []
+    }
+  ],
+  "session": {
+    "id": null,
+    "agent": null,
+    "task_id": null,
+    "status": null
+  },
+  "approval": {
+    "spec": false,
+    "plan": false,
+    "tasks": false,
+    "architecture_decisions": false
+  }
+}

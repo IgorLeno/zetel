@@ -23,11 +23,29 @@ export type TutorTone = Record<ToneKey, number>;
 /** Ajuste parcial da sessão. Chave desconhecida ou fora da escala é rejeitada na escrita. */
 export type ProfileOverrides = Partial<TutorAxes & TutorTone>;
 
+/**
+ * Paleta fechada de cores do parceiro. Chaves (não hex) para que o tema
+ * claro/escuro decida o tom final no CSS e para validar sem aceitar CSS arbitrário.
+ */
+export const PARTNER_COLORS = [
+  'pessego',
+  'lavanda',
+  'mel',
+  'salvia',
+  'rosa',
+  'noite',
+  'ceu',
+  'terracota',
+] as const;
+
+export type PartnerColor = (typeof PARTNER_COLORS)[number];
+
 export interface TutorProfile {
   id: string;
   name: string;
   builtin: boolean;
   baseProfileId: string | null;
+  color: PartnerColor;
   axes: TutorAxes;
   tone: TutorTone;
 }
@@ -137,6 +155,7 @@ export const BUILTIN_PROFILES: readonly TutorProfile[] = [
     name: 'Conversa Livre',
     builtin: true,
     baseProfileId: null,
+    color: 'pessego',
     axes: axes([2, 2, 1, 2, 2, 2]),
     tone: tone(1, 1, 1),
   },
@@ -145,6 +164,7 @@ export const BUILTIN_PROFILES: readonly TutorProfile[] = [
     name: 'Professor Socrático',
     builtin: true,
     baseProfileId: null,
+    color: 'lavanda',
     axes: axes([3, 4, 1, 3, 1, 2]),
     tone: tone(1, 0, 1),
   },
@@ -153,6 +173,7 @@ export const BUILTIN_PROFILES: readonly TutorProfile[] = [
     name: 'Explicador',
     builtin: true,
     baseProfileId: null,
+    color: 'mel',
     axes: axes([2, 1, 3, 3, 2, 4]),
     tone: tone(1, 1, 1),
   },
@@ -161,6 +182,7 @@ export const BUILTIN_PROFILES: readonly TutorProfile[] = [
     name: 'Resolver Comigo',
     builtin: true,
     baseProfileId: null,
+    color: 'salvia',
     axes: axes([3, 3, 4, 2, 2, 2]),
     tone: tone(1, 0, 1),
   },
@@ -169,6 +191,7 @@ export const BUILTIN_PROFILES: readonly TutorProfile[] = [
     name: 'Revisão Rápida',
     builtin: true,
     baseProfileId: null,
+    color: 'rosa',
     axes: axes([2, 1, 3, 1, 4, 1]),
     tone: tone(1, 0, 2),
   },
@@ -177,6 +200,7 @@ export const BUILTIN_PROFILES: readonly TutorProfile[] = [
     name: 'Professor Profundo',
     builtin: true,
     baseProfileId: null,
+    color: 'noite',
     axes: axes([2, 2, 2, 4, 0, 3]),
     tone: tone(0, 0, 0),
   },
@@ -297,6 +321,22 @@ export function compileTutorInstructions(profile: Pick<TutorProfile, 'axes' | 't
     ...TONE_KEYS.map((key) => TONE_LINES[key][profile.tone[key]]),
   ];
   return lines.join('\n');
+}
+
+export function isPartnerColor(value: unknown): value is PartnerColor {
+  return typeof value === 'string' && (PARTNER_COLORS as readonly string[]).includes(value);
+}
+
+export function parsePartnerColor(value: unknown): PartnerColor {
+  if (!isPartnerColor(value)) throw new TutorProfileError('Cor do parceiro inválida.');
+  return value;
+}
+
+/** Cor estável para perfis gravados antes da coluna existir. */
+export function fallbackPartnerColor(id: string): PartnerColor {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return PARTNER_COLORS[hash % PARTNER_COLORS.length]!;
 }
 
 export function validateProfileName(value: unknown): string {

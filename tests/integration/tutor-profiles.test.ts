@@ -99,6 +99,37 @@ describe('perfis do tutor na API e no prompt', () => {
     expect(still.name).toBe('Professor Socrático');
   });
 
+  it('persiste cor própria do parceiro, herda da base e rejeita cor fora da paleta', async () => {
+    const listed = (await (await profiles('GET')).json()) as { profiles: { id: string; color: string }[] };
+    const colors = listed.profiles.map((profile) => profile.color);
+    expect(new Set(colors).size).toBe(6);
+
+    const inherited = await profiles('POST', { name: 'Herdado', baseProfileId: 'explicador' });
+    expect(inherited.status).toBe(201);
+    const inheritedProfile = ((await inherited.json()) as { profile: { id: string; color: string } }).profile;
+    expect(inheritedProfile.color).toBe('mel');
+
+    const chosen = await profiles('POST', { name: 'Minha', baseProfileId: 'explicador', color: 'ceu' });
+    const chosenProfile = ((await chosen.json()) as { profile: { id: string; color: string } }).profile;
+    expect(chosenProfile.color).toBe('ceu');
+
+    const recolored = await profiles('PATCH', { color: 'terracota' }, chosenProfile.id);
+    expect(recolored.status).toBe(200);
+    expect(((await recolored.json()) as { profile: { color: string } }).profile.color).toBe('terracota');
+
+    expect((await profiles('PATCH', { color: '#ff0000' }, chosenProfile.id)).status).toBe(400);
+    expect((await profiles('POST', { name: 'X', baseProfileId: 'explicador', color: 'red;}' })).status).toBe(400);
+
+    // Linha legada sem cor recebe cor estável da paleta.
+    state.env!.db.prepare('UPDATE tutor_profiles SET color = NULL WHERE id = ?').run(inheritedProfile.id);
+    const again = (await (await profiles('GET')).json()) as { profiles: { id: string; color: string }[] };
+    const legacy = again.profiles.find((profile) => profile.id === inheritedProfile.id)!;
+    const legacyAgain = ((await (await profiles('GET')).json()) as { profiles: { id: string; color: string }[] })
+      .profiles.find((profile) => profile.id === inheritedProfile.id)!;
+    expect(legacy.color).toMatch(/^[a-z]+$/);
+    expect(legacyAgain.color).toBe(legacy.color);
+  });
+
   it('envia instruções distintas ao OpenRouter quando o questioning da sessão muda', async () => {
     const created = await sessionCall(zetelId, 'POST', {});
     const sessionId = ((await created.json()) as { session: { id: string } }).session.id;

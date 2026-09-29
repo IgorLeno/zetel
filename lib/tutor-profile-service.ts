@@ -3,9 +3,12 @@ import type Database from 'better-sqlite3';
 import {
   applyOverrides,
   cloneProfile,
+  fallbackPartnerColor,
   getBuiltinProfile,
+  isPartnerColor,
   isBuiltinProfileId,
   parseAxes,
+  parsePartnerColor,
   parseTone,
   TutorProfileError,
   validateProfileName,
@@ -20,6 +23,7 @@ interface ProfileRow {
   base_profile_id: string | null;
   axes: string;
   tone: string;
+  color: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +34,7 @@ function fromRow(row: ProfileRow): TutorProfile {
     name: row.name,
     builtin: false,
     baseProfileId: row.base_profile_id,
+    color: isPartnerColor(row.color) ? row.color : fallbackPartnerColor(row.id),
     axes: parseAxes(JSON.parse(row.axes)),
     tone: parseTone(JSON.parse(row.tone)),
   };
@@ -75,6 +80,7 @@ export interface CreateTutorProfileInput {
   baseProfileId?: unknown;
   axes?: unknown;
   tone?: unknown;
+  color?: unknown;
 }
 
 export function createTutorProfile(db: Database.Database, input: CreateTutorProfileInput): TutorProfile {
@@ -90,11 +96,12 @@ export function createTutorProfile(db: Database.Database, input: CreateTutorProf
   const tone = input.tone === undefined ? base?.tone : parseTone(input.tone);
   if (!axes || !tone) throw new TutorProfileError('Eixos e tom são obrigatórios.');
   const id = `c${randomUUID().replace(/-/g, '')}`;
+  const color = input.color === undefined ? base?.color ?? fallbackPartnerColor(id) : parsePartnerColor(input.color);
   const now = new Date().toISOString();
   db.prepare(
-    `INSERT INTO tutor_profiles (id, name, base_profile_id, axes, tone, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(id, name, baseId, JSON.stringify(axes), JSON.stringify(tone), now, now);
+    `INSERT INTO tutor_profiles (id, name, base_profile_id, axes, tone, color, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(id, name, baseId, JSON.stringify(axes), JSON.stringify(tone), color, now, now);
   return getTutorProfile(db, id)!;
 }
 
@@ -102,6 +109,7 @@ export interface UpdateTutorProfileInput {
   name?: unknown;
   axes?: unknown;
   tone?: unknown;
+  color?: unknown;
 }
 
 export function updateTutorProfile(
@@ -117,10 +125,11 @@ export function updateTutorProfile(
   const name = input.name === undefined ? current.name : validateProfileName(input.name);
   const axes = input.axes === undefined ? current.axes : parseAxes(input.axes);
   const tone = input.tone === undefined ? current.tone : parseTone(input.tone);
+  const color = input.color === undefined ? current.color : parsePartnerColor(input.color);
   const now = new Date().toISOString();
   db.prepare(
-    `UPDATE tutor_profiles SET name = ?, axes = ?, tone = ?, updated_at = ? WHERE id = ?`,
-  ).run(name, JSON.stringify(axes), JSON.stringify(tone), now, id);
+    `UPDATE tutor_profiles SET name = ?, axes = ?, tone = ?, color = ?, updated_at = ? WHERE id = ?`,
+  ).run(name, JSON.stringify(axes), JSON.stringify(tone), color, now, id);
   return getTutorProfile(db, id);
 }
 
