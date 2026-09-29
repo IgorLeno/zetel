@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { pingChat, readApiKey } from '@/lib/openrouter';
+import { OpenRouterHttpError, pingChat } from '@/lib/openrouter';
+import { resolveOpenRouterCredential } from '@/lib/config';
 import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
@@ -18,20 +19,19 @@ export async function POST(request: Request) {
   }
 
   const model = body.model.trim();
+  const credential = resolveOpenRouterCredential();
+  if (!credential.key) {
+    return NextResponse.json({ ok: false, error: 'Chave OpenRouter não configurada.' }, { status: 400 });
+  }
 
   try {
-    const apiKey = readApiKey();
-    await pingChat(apiKey, model);
+    await pingChat(credential.key, model);
     logger.info('openrouter test-model ok', { model });
-    return NextResponse.json({ ok: true, model });
+    return NextResponse.json({ ok: true, model, source: credential.source });
   } catch (err) {
-    const message =
-      err instanceof Error
-        ? err.message
-        : 'Não foi possível conectar ao OpenRouter. Verifique a chave e o modelo.';
-    logger.warn('openrouter test-model failed', {
-      error: err instanceof Error ? err.message : 'unknown',
-    });
+    const message = err instanceof OpenRouterHttpError
+      ? err.message : 'Não foi possível conectar ao OpenRouter.';
+    logger.warn('openrouter test-model failed', { model });
     return NextResponse.json({ ok: false, error: message }, { status: 400 });
   }
 }

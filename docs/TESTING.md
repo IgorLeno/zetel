@@ -80,7 +80,7 @@ Opt-in com ambiente isolado e setup programático:
 
 ## Regras dos testes padrão (unit + integration)
 
-1. **Nenhuma chamada real ao OpenRouter** — unit e integration não chamam OpenRouter de verdade. Imports de `lib/openrouter` são permitidos apenas quando o módulo é mockado com `vi.mock` no próprio teste. **Exceção:** E2E legado e E2E live usam OpenRouter real por design (fora do `pnpm test:ci`).
+1. **Nenhuma chamada real ao OpenRouter** — unit e integration não chamam OpenRouter de verdade. Em geral, `lib/openrouter` é mockado com `vi.mock`. O teste de persistência da credencial usa o módulo real e mocka somente o `fetch` externo para verificar o wiring entre arquivo, rota de teste e chat. **Exceção:** E2E legado e E2E live usam OpenRouter real por design (fora do `pnpm test:ci`).
 2. **Nunca usar vault real** — testes que precisam de arquivos usam `os.tmpdir()`.
 3. **Nunca tocar `~/.zetel` real** — nenhum teste acessa `DB_PATH`, `CONFIG_PATH` ou `LOG_FILE` do módulo `lib/paths.ts` para leitura/escrita.
 4. **Não importar `getDb()` nos testes unitários** — `lib/db.ts` inicializa SQLite em `~/.zetel/zetel.db`. Integration tests usam o harness `temp-env.ts` com banco injetado.

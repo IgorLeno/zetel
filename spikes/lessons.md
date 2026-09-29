@@ -987,3 +987,6 @@ Rule: usar `onClick` para seleção e fechar no evento global somente quando o a
 [2026-09-28] Context: um Zetel recém-criado abria leitura e chat sem nenhuma fonte.
 Mistake: a ausência de `view` selecionava Documento Técnico antes de verificar se o Zetel tinha material.
 Rule: resolver a presença de fontes no servidor e priorizar aquisição com o upload existente quando a área principal de leitura não tiver contexto.
+[2026-09-28] Context: persistência da credencial OpenRouter pelas Configurações.
+Mistake: a UI consultava o arquivo, mas chat e teste priorizavam a variável de ambiente; o save respondia sucesso sem reler o arquivo.
+Rule: resolver credenciais por uma função única (config > environment), verificar a leitura efetiva após salvar e cobrir a nova requisição com ZETEL_HOME temporário e fetch externo mockado.

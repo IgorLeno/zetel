@@ -1,4 +1,4 @@
-import { getOpenRouterKey } from './config';
+import { resolveOpenRouterCredential } from './config';
 import { logger } from './logger';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -20,28 +20,25 @@ export interface StreamChatParams {
   signal?: AbortSignal;
 }
 
-/** Env (dev/CI) → `~/.zetel/config` (canônico). */
+/** Credencial efetiva: arquivo local primeiro, ambiente como fallback. */
 export function readApiKey(): string {
-  const fromEnv = process.env.OPENROUTER_API_KEY?.trim();
-  if (fromEnv) return fromEnv;
-  const fromFile = getOpenRouterKey();
-  if (fromFile) return fromFile;
-  throw new Error(
-    'Chave OpenRouter não configurada. Defina OPENROUTER_API_KEY em ~/.zetel/config.',
-  );
+  const credential = resolveOpenRouterCredential();
+  if (credential.key) return credential.key;
+  throw new Error('Chave OpenRouter não configurada.');
 }
 
-/** Monta mensagem de erro HTTP a partir de `error.message` (sem logar body completo). */
-async function formatOpenRouterHttpError(res: Response): Promise<string> {
-  let detail: string | undefined;
-  try {
-    const data = (await res.json()) as { error?: { message?: unknown } };
-    const msg = data?.error?.message;
-    if (typeof msg === 'string' && msg.trim()) detail = msg.trim();
-  } catch {
-    /* body ausente ou não-JSON */
+/** Mensagens HTTP seguras: body remoto pode conter conteúdo sensível. */
+export class OpenRouterHttpError extends Error {
+  constructor(readonly status: number) {
+    super(status === 401 ? 'OpenRouter rejeitou a credencial (401).'
+      : status === 429 ? 'Limite de requisições do OpenRouter (429).'
+        : status === 400 || status === 404 ? `Modelo OpenRouter inválido ou indisponível (${status}).`
+          : `OpenRouter falhou (HTTP ${status}).`);
   }
-  return detail ? `OpenRouter: ${res.status} — ${detail}` : `OpenRouter: ${res.status}`;
+}
+
+export function openRouterHttpError(status: number): OpenRouterHttpError {
+  return new OpenRouterHttpError(status);
 }
 
 /** Extrai contagens de uso para o sink (e loga só se ZETEL_LOG_TOKENS=1). */
@@ -102,7 +99,7 @@ export async function* streamChat(params: StreamChatParams): AsyncIterable<strin
   logger.info('openrouter stream start', { model, status: res.status });
 
   if (!res.ok) {
-    throw new Error(`OpenRouter: ${res.status}`);
+    throw openRouterHttpError(res.status);
   }
 
   if (!res.body) {
@@ -231,7 +228,7 @@ export async function requestJson(params: RequestJsonParams): Promise<RequestJso
 
   if (!res.ok) {
     clearTimeout(timer);
-    throw new Error(await formatOpenRouterHttpError(res));
+    throw openRouterHttpError(res.status);
   }
 
   let data: {
@@ -293,6 +290,6 @@ export async function pingChat(apiKey: string, model: string): Promise<void> {
   }
 
   if (!res.ok) {
-    throw new Error(await formatOpenRouterHttpError(res));
+    throw openRouterHttpError(res.status);
   }
 }

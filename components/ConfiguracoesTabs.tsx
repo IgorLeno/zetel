@@ -8,7 +8,7 @@ type Tab = 'geral' | 'lixeira';
 
 export function ConfiguracoesTabs({
   initialVaultPath,
-  hasKey,
+  credentialSource,
   initialModel,
   initialStudyGuideModel,
   initialTechDocModel,
@@ -26,7 +26,7 @@ export function ConfiguracoesTabs({
   initialMemoryModelHistory,
 }: {
   initialVaultPath: string;
-  hasKey: boolean;
+  credentialSource: 'config' | 'environment' | null;
   initialModel: string;
   initialStudyGuideModel: string;
   initialTechDocModel: string;
@@ -67,7 +67,7 @@ export function ConfiguracoesTabs({
       {tab === 'geral' ? (
         <ConfiguracoesForm
           initialVaultPath={initialVaultPath}
-          hasKey={hasKey}
+          credentialSource={credentialSource}
           initialModel={initialModel}
           initialStudyGuideModel={initialStudyGuideModel}
           initialTechDocModel={initialTechDocModel}

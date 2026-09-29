@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getSetting } from '@/lib/settings';
-import { getOpenRouterKey, getOpenRouterModel } from '@/lib/config';
+import { getOpenRouterModel, resolveOpenRouterCredential } from '@/lib/config';
 import { parseModelHistory } from '@/lib/model-history';
 import {
   clampStudyGuideMaxTokens,
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: 'Configurações' };
 
 export default function ConfiguracoesPage() {
   const vaultPath = getSetting('vault_path') ?? '';
-  const hasKey = getOpenRouterKey() !== null;
+  const credentialSource = resolveOpenRouterCredential().source;
   const model = getSetting('default_model') ?? getOpenRouterModel();
   const studyGuideModel = getSetting('study_guide_model') ?? '';
   const rawWindow = getSetting('chat_history_window');
@@ -51,7 +51,7 @@ export default function ConfiguracoesPage() {
         <div className="content-narrow">
           <ConfiguracoesTabs
             initialVaultPath={vaultPath}
-            hasKey={hasKey}
+            credentialSource={credentialSource}
             initialModel={model}
             initialStudyGuideModel={studyGuideModel}
             initialTechDocModel={techDocModel}

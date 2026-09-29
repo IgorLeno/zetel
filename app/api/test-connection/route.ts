@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOpenRouterKey } from '@/lib/config';
+import { resolveOpenRouterCredential } from '@/lib/config';
 import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
  * `fetch` puro — o SDK OpenRouter entra só no Módulo 5/6 (chat SSE).
  */
 export async function GET() {
-  const key = getOpenRouterKey();
+  const { key, source } = resolveOpenRouterCredential();
   if (!key) {
     return NextResponse.json(
       { ok: false, error: 'Nenhuma chave OpenRouter configurada. Salve a chave primeiro.' },
@@ -35,9 +35,9 @@ export async function GET() {
     }
 
     logger.info('openrouter test ok');
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, source });
   } catch (err) {
-    logger.error('openrouter test error', { error: (err as Error).message });
+    logger.error('openrouter test error');
     return NextResponse.json(
       { ok: false, error: 'Não foi possível alcançar o OpenRouter. Verifique sua conexão.' },
       { status: 502 },

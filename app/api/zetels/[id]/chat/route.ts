@@ -32,7 +32,7 @@ import { assertZetelAtivo } from '@/lib/ingestao-service';
 import { compileTutorInstructions } from '@/lib/tutor-profiles';
 import { parseChatStarter, starterCanonical, starterInstruction } from '@/lib/chat-starters';
 import { resolveSessionTutorProfile } from '@/lib/tutor-profile-service';
-import { readApiKey, streamChat, type UsageSink } from '@/lib/openrouter';
+import { OpenRouterHttpError, readApiKey, streamChat, type UsageSink } from '@/lib/openrouter';
 import { getOpenRouterModel } from '@/lib/config';
 import { getSetting } from '@/lib/settings';
 import { getZetelById } from '@/lib/zetel-service';
@@ -58,8 +58,7 @@ export const runtime = 'nodejs';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-const KEY_ERROR =
-  'Chave OpenRouter não configurada. Defina OPENROUTER_API_KEY em ~/.zetel/config.';
+const KEY_ERROR = 'Chave OpenRouter não configurada.';
 
 function optionalShortString(value: unknown, maxLength: number): string | null {
   if (typeof value !== 'string') return null;
@@ -716,12 +715,10 @@ export async function POST(request: Request, { params }: Ctx) {
         logger.error('chat stream failed', {
           zetelId,
           model,
-          error: err instanceof Error ? err.message : 'unknown',
+          status: err instanceof OpenRouterHttpError ? err.status : 'unknown',
         });
-        const msg =
-          err instanceof Error && err.message.startsWith('OpenRouter:')
-            ? 'O OpenRouter recusou a requisição. Verifique o modelo e a chave.'
-            : 'Não foi possível obter resposta do parceiro. Tente novamente.';
+        const msg = err instanceof OpenRouterHttpError
+          ? err.message : 'Não foi possível obter resposta do parceiro. Tente novamente.';
         controller.enqueue(encoder.encode(`data: [ERROR] ${msg}\n\n`));
         controller.close();
       }

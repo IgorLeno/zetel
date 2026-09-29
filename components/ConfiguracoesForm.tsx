@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_OPENROUTER_MODEL } from '@/lib/openrouter-constants';
 import {
   STUDY_GUIDE_MAX_TOKENS_MAX,
@@ -206,7 +206,7 @@ function ModelField({
 
 export function ConfiguracoesForm({
   initialVaultPath,
-  hasKey,
+  credentialSource,
   initialModel,
   initialStudyGuideModel,
   initialTechDocModel,
@@ -224,7 +224,7 @@ export function ConfiguracoesForm({
   initialMemoryModelHistory,
 }: {
   initialVaultPath: string;
-  hasKey: boolean;
+  credentialSource: 'config' | 'environment' | null;
   initialModel: string;
   initialStudyGuideModel: string;
   initialTechDocModel: string;
@@ -248,9 +248,29 @@ export function ConfiguracoesForm({
 
   // ── Chave ──
   const [apiKey, setApiKey] = useState('');
-  const [keyStored, setKeyStored] = useState(hasKey);
+  const [keySource, setKeySource] = useState(credentialSource);
   const [keyFeedback, setKeyFeedback] = useState<Feedback>(null);
   const [savingKey, setSavingKey] = useState(false);
+  const statusRequest = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    statusRequest.current = controller;
+    fetch('/api/config', { cache: 'no-store', signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('status');
+        const data = await res.json();
+        if (data.source === 'config' || data.source === 'environment' || data.source === null) {
+          setKeySource(data.configured === true ? data.source : null);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setKeyFeedback({ kind: 'err', text: 'Não foi possível atualizar o estado da chave.' });
+        }
+      });
+    return () => controller.abort();
+  }, []);
 
   // ── Teste de conexão ──
   const [testFeedback, setTestFeedback] = useState<Feedback>(null);
@@ -357,6 +377,7 @@ export function ConfiguracoesForm({
       setKeyFeedback({ kind: 'err', text: 'Informe a chave antes de salvar.' });
       return;
     }
+    statusRequest.current?.abort();
     setSavingKey(true);
     setKeyFeedback(null);
     try {
@@ -366,10 +387,10 @@ export function ConfiguracoesForm({
         body: JSON.stringify({ apiKey }),
       });
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.configured === true && data.source === 'config') {
         setApiKey('');
-        setKeyStored(true);
-        setKeyFeedback({ kind: 'ok', text: 'Chave salva com segurança em ~/.zetel/config.' });
+        setKeySource('config');
+        setKeyFeedback({ kind: 'ok', text: 'Chave salva no arquivo de configuração local.' });
       } else {
         setKeyFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar a chave.' });
       }
@@ -389,7 +410,7 @@ export function ConfiguracoesForm({
       if (res.ok && data.ok) {
         setTestFeedback({
           kind: 'ok',
-          text: `✓ Conectado (modelo: ${data.model ?? model})`,
+          text: `✓ Conectado (modelo: ${data.model ?? model}; credencial: ${data.source === 'config' ? 'configuração local' : 'ambiente'})`,
         });
       } else {
         setTestFeedback({ kind: 'err', text: data.error ?? 'Falha na conexão.' });
@@ -423,7 +444,7 @@ export function ConfiguracoesForm({
       if (res.ok && data.ok) {
         setFeedback({
           kind: 'ok',
-          text: `✓ Conectado (modelo: ${data.model ?? trimmed})`,
+          text: `✓ Conectado (modelo: ${data.model ?? trimmed}; credencial: ${data.source === 'config' ? 'configuração local' : 'ambiente'})`,
         });
       } else {
         setFeedback({ kind: 'err', text: data.error ?? 'Falha na conexão.' });
@@ -658,7 +679,7 @@ export function ConfiguracoesForm({
             id="apikey"
             className="input"
             type="password"
-            placeholder={keyStored ? '•••••••••• (chave salva)' : 'sk-or-...'}
+            placeholder={keySource ? '•••••••••• (chave configurada)' : 'sk-or-...'}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             autoComplete="off"
@@ -667,9 +688,8 @@ export function ConfiguracoesForm({
             {savingKey ? 'Salvando…' : 'Salvar'}
           </button>
         </div>
-        <p className="field-hint">
-          Guardada apenas em ~/.zetel/config com permissão 600 — nunca no banco, no vault ou no git.
-        </p>
+        <p className="field-hint">A chave salva fica no arquivo de configuração local com permissão 600.</p>
+        {keySource && <p className="field-hint">Chave OpenRouter configurada ({keySource === 'config' ? 'configuração local' : 'ambiente'}).</p>}
         {keyFeedback && <p className={`feedback ${keyFeedback.kind}`}>{keyFeedback.text}</p>}
       </div>
 
