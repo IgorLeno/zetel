@@ -6,6 +6,7 @@ import type { ChatMessage, CitedSource } from '@/types/chat-message';
 import type { StudySession } from '@/types/study-session';
 import { toSpeakable } from '@/lib/speech-text';
 import { starterCanonical, type ChatStarter } from '@/lib/chat-starters';
+import { speechRecognitionErrorMessage } from '@/lib/speech-recognition-error';
 import { FonteText } from './FonteText';
 import { NoteCard, type Suggestion, type SaveNotePayload } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
@@ -623,16 +624,17 @@ export function ChatPanel({
       };
 
       rec.onerror = (event: SpeechRecognitionErrorEvent) => {
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          micAtivoRef.current = false;
-          setMicAtivo(false);
-          pendingMicStartRef.current = false;
-          saveVoicePrefs(false, autoPlayRef.current);
-          setError('Microfone não disponível. Verifique as permissões do navegador.');
-          voiceStateRef.current = 'error';
-          setVoiceState('error');
-        }
+        const message = speechRecognitionErrorMessage(event.error);
         // no-speech e aborted são benignos; onend trata o reinício
+        if (!message) return;
+        // Erro fatal desliga o mic; senão onend reiniciaria em laço contra o mesmo erro.
+        micAtivoRef.current = false;
+        setMicAtivo(false);
+        pendingMicStartRef.current = false;
+        saveVoicePrefs(false, autoPlayRef.current);
+        setError(message);
+        voiceStateRef.current = 'error';
+        setVoiceState('error');
       };
 
       rec.onend = () => {
@@ -648,7 +650,7 @@ export function ChatPanel({
       rec.start();
       voiceStateRef.current = 'listening';
       setVoiceState('listening');
-      setError(null);
+      // Sem setError(null): o reinício automático após um turno falho apagaria o erro do chat.
     } catch {
       // start() pode lançar se browser rejeitar (e.g., já está rodando)
       voiceStateRef.current = 'idle';
@@ -701,6 +703,7 @@ export function ChatPanel({
     pendingMicStartRef.current = false;
     saveVoicePrefs(next, autoPlayRef.current);
     if (next) {
+      setError(null); // religar pelo botão limpa o erro de mic anterior
       startListening();
     } else {
       stopListening();
