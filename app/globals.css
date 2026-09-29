@@ -347,6 +347,9 @@ svg { stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round
 .pill.ok   { color: var(--ok); background: var(--ok-tint); }
 .pill.warn { color: var(--warn); background: var(--warn-tint); }
 .pill.busy { color: var(--p-strong); background: var(--p-tint); }
+.pill.err  { color: var(--danger); background: var(--danger-tint); }
+.openrouter-status { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.openrouter-status .pill { height: auto; min-height: 26px; padding-block: 5px; white-space: normal; overflow-wrap: anywhere; }
 
 .page-body {
   flex: 1;

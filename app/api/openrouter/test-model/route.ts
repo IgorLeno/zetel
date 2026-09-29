@@ -31,7 +31,8 @@ export async function POST(request: Request) {
   } catch (err) {
     const message = err instanceof OpenRouterHttpError
       ? err.message : 'Não foi possível conectar ao OpenRouter.';
-    logger.warn('openrouter test-model failed', { model });
-    return NextResponse.json({ ok: false, error: message }, { status: 400 });
+    const kind = err instanceof OpenRouterHttpError ? err.kind : 'unknown';
+    logger.warn('openrouter test-model failed', { model, kind });
+    return NextResponse.json({ ok: false, kind, error: message }, { status: 400 });
   }
 }

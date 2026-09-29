@@ -10,6 +10,41 @@ import {
 } from '@/lib/study-guide-constants';
 
 type Feedback = { kind: 'ok' | 'err'; text: string } | null;
+
+/** Espelho de `OpenRouterDiagnostics` (lib/openrouter-diagnostics.ts). */
+type KeyStatus = {
+  authenticated: boolean | null;
+  httpStatus: number | null;
+  usage: number | null;
+  limit: number | null;
+  limitRemaining: number | null;
+  limitReset: string | null;
+  isFreeTier: boolean | null;
+  blockedBy: 'key-rate-limit' | null;
+};
+type Diagnostics = { configured: boolean; source: 'config' | 'environment' | null; model: string; key: KeyStatus | null };
+
+const LIMIT_RESET_LABEL: Record<string, string> = { daily: 'diário', weekly: 'semanal', monthly: 'mensal' };
+
+function usd(value: number): string {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+}
+
+function authPill(key: KeyStatus | null): { kind: 'ok' | 'warn' | 'err'; text: string } {
+  if (!key) return { kind: 'warn', text: 'Autenticação: sem chave' };
+  if (key.authenticated === true) return { kind: 'ok', text: 'Chave válida' };
+  if (key.authenticated === false) return { kind: 'err', text: 'Chave rejeitada (401)' };
+  return { kind: 'warn', text: key.httpStatus ? `Autenticação não verificada (HTTP ${key.httpStatus})` : 'Autenticação não verificada (sem rede)' };
+}
+
+function limitPill(key: KeyStatus | null): { kind: 'ok' | 'warn' | 'err'; text: string } | null {
+  if (!key || key.authenticated !== true) return null;
+  if (key.blockedBy === 'key-rate-limit') return { kind: 'err', text: 'Limite da chave atingido' };
+  if (key.limit === null) return { kind: 'ok', text: 'Chave sem limite de gasto' };
+  const reset = key.limitReset ? ` · reset ${LIMIT_RESET_LABEL[key.limitReset] ?? key.limitReset}` : '';
+  const remaining = key.limitRemaining === null ? '?' : usd(key.limitRemaining);
+  return { kind: 'ok', text: `Limite da chave: ${remaining} de ${usd(key.limit)} restantes${reset}` };
+}
 type HistoryKey =
   | 'model_history'
   | 'study_guide_model_history'
@@ -272,8 +307,30 @@ export function ConfiguracoesForm({
     return () => controller.abort();
   }, []);
 
+  // ── Diagnóstico (GET /api/v1/key, sem completion) ──
+  const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
+  const [diagnosticsError, setDiagnosticsError] = useState(false);
+
+  async function loadDiagnostics(signal?: AbortSignal) {
+    try {
+      const res = await fetch('/api/openrouter/diagnostics', { cache: 'no-store', signal });
+      if (!res.ok) throw new Error('diagnostics');
+      setDiagnostics(await res.json());
+      setDiagnosticsError(false);
+    } catch {
+      if (!signal?.aborted) setDiagnosticsError(true);
+    }
+  }
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadDiagnostics(controller.signal);
+    return () => controller.abort();
+  }, []);
+
   // ── Teste de conexão ──
   const [testFeedback, setTestFeedback] = useState<Feedback>(null);
+  const [testKeyFeedback, setTestKeyFeedback] = useState<Feedback>(null);
   const [testing, setTesting] = useState(false);
 
   // ── Modelo padrão ──
@@ -391,6 +448,7 @@ export function ConfiguracoesForm({
         setApiKey('');
         setKeySource('config');
         setKeyFeedback({ kind: 'ok', text: 'Chave salva no arquivo de configuração local.' });
+        void loadDiagnostics();
       } else {
         setKeyFeedback({ kind: 'err', text: data.error ?? 'Falha ao salvar a chave.' });
       }
@@ -404,14 +462,25 @@ export function ConfiguracoesForm({
   async function testConnection() {
     setTesting(true);
     setTestFeedback(null);
+    setTestKeyFeedback(null);
     try {
       const res = await fetch('/api/openrouter/test', { method: 'POST' });
       const data = await res.json();
+      const key: KeyStatus | undefined = data.key;
+      if (key) {
+        setDiagnostics((prev) => ({
+          configured: true, source: data.source ?? prev?.source ?? null, model: data.model ?? prev?.model ?? '', key,
+        }));
+        setTestKeyFeedback(key.authenticated === true
+          ? { kind: 'ok', text: '✓ Chave válida' }
+          : key.authenticated === false
+            ? { kind: 'err', text: 'Chave rejeitada pelo OpenRouter (401).' }
+            : { kind: 'err', text: 'Não foi possível verificar a chave agora.' });
+      }
       if (res.ok && data.ok) {
-        setTestFeedback({
-          kind: 'ok',
-          text: `✓ Conectado (modelo: ${data.model ?? model}; credencial: ${data.source === 'config' ? 'configuração local' : 'ambiente'})`,
-        });
+        setTestFeedback({ kind: 'ok', text: `✓ Completion disponível (modelo: ${data.model ?? model})` });
+      } else if (data.completion?.skipped) {
+        setTestFeedback({ kind: 'err', text: `Completion não testada: ${data.error ?? 'chave indisponível.'}` });
       } else {
         setTestFeedback({ kind: 'err', text: data.error ?? 'Falha na conexão.' });
       }
@@ -691,6 +760,7 @@ export function ConfiguracoesForm({
         <p className="field-hint">A chave salva fica no arquivo de configuração local com permissão 600.</p>
         {keySource && <p className="field-hint">Chave OpenRouter configurada ({keySource === 'config' ? 'configuração local' : 'ambiente'}).</p>}
         {keyFeedback && <p className={`feedback ${keyFeedback.kind}`}>{keyFeedback.text}</p>}
+        <OpenRouterStatus diagnostics={diagnostics} failed={diagnosticsError} />
       </div>
 
       <div className="field">
@@ -700,6 +770,8 @@ export function ConfiguracoesForm({
             {testing ? 'Testando…' : 'Testar conexão'}
           </button>
         </div>
+        <p className="field-hint">Verifica a chave e faz uma completion mínima (1 token) no modelo efetivo do chat, sem retry nem troca de modelo.</p>
+        {testKeyFeedback && <p className={`feedback ${testKeyFeedback.kind}`}>{testKeyFeedback.text}</p>}
         {testFeedback && <p className={`feedback ${testFeedback.kind}`}>{testFeedback.text}</p>}
       </div>
 
@@ -1027,6 +1099,23 @@ export function ConfiguracoesForm({
           <p className={`feedback ${timeoutFeedback.kind}`}>{timeoutFeedback.text}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function OpenRouterStatus({ diagnostics, failed }: { diagnostics: Diagnostics | null; failed: boolean }) {
+  if (failed && !diagnostics) {
+    return <p className="feedback err">Não foi possível carregar o estado do OpenRouter.</p>;
+  }
+  if (!diagnostics) return <p className="field-hint">Verificando estado da chave…</p>;
+  const auth = authPill(diagnostics.key);
+  const limit = limitPill(diagnostics.key);
+  return (
+    <div className="openrouter-status" aria-live="polite">
+      {/* Chave configurada + origem já aparecem acima (estado local, sem rede). */}
+      <span className={`pill ${auth.kind}`}><span className="dot" />{auth.text}</span>
+      {limit && <span className={`pill ${limit.kind}`}><span className="dot" />{limit.text}</span>}
+      <span className="pill"><span className="dot" />Modelo do chat: {diagnostics.model}</span>
     </div>
   );
 }

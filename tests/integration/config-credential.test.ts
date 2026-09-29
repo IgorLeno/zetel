@@ -75,8 +75,9 @@ describe('credencial OpenRouter persistida', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_model: 'chat/model' }),
     }))).status).toBe(200);
-    const externalFetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
+    const externalFetch = vi.fn(async (url: unknown, init?: RequestInit) => {
       expect(init?.headers).toMatchObject({ Authorization: 'Bearer local-key' });
+      if (String(url).endsWith('/api/v1/key')) return new Response('{"data":{}}', { status: 200 });
       expect(JSON.parse(String(init?.body))).toMatchObject({ model: 'chat/model' });
       return new Response('{}', { status: 200 });
     });
@@ -84,8 +85,11 @@ describe('credencial OpenRouter persistida', () => {
     const { POST: testConnection } = await import('@/app/api/openrouter/test/route');
     const response = await testConnection();
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, model: 'chat/model', source: 'config' });
-    expect(externalFetch).toHaveBeenCalledTimes(1);
+    expect(await response.json()).toMatchObject({
+      ok: true, model: 'chat/model', source: 'config',
+      key: { authenticated: true }, completion: { ok: true },
+    });
+    expect(externalFetch).toHaveBeenCalledTimes(2);
   });
 
   it('usa ambiente apenas sem chave no arquivo', async () => {

@@ -716,6 +716,7 @@ export async function POST(request: Request, { params }: Ctx) {
           zetelId,
           model,
           status: err instanceof OpenRouterHttpError ? err.status : 'unknown',
+          kind: err instanceof OpenRouterHttpError ? err.kind : 'unknown',
         });
         const msg = err instanceof OpenRouterHttpError
           ? err.message : 'Não foi possível obter resposta do parceiro. Tente novamente.';

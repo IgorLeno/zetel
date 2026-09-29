@@ -27,18 +27,97 @@ export function readApiKey(): string {
   throw new Error('Chave OpenRouter não configurada.');
 }
 
-/** Mensagens HTTP seguras: body remoto pode conter conteúdo sensível. */
-export class OpenRouterHttpError extends Error {
-  constructor(readonly status: number) {
-    super(status === 401 ? 'OpenRouter rejeitou a credencial (401).'
-      : status === 429 ? 'Limite de requisições do OpenRouter (429).'
-        : status === 400 || status === 404 ? `Modelo OpenRouter inválido ou indisponível (${status}).`
-          : `OpenRouter falhou (HTTP ${status}).`);
+export type OpenRouterErrorKind =
+  | 'auth'
+  | 'account-rate-limit'
+  | 'key-rate-limit'
+  | 'provider-rate-limit'
+  | 'credits'
+  | 'model-unavailable'
+  | 'rate-limit-unknown'
+  | 'unknown';
+
+/**
+ * Únicos campos lidos do body de erro remoto. `message` só alimenta a
+ * classificação e nunca sai do servidor; `providerName` é normalizado.
+ */
+export interface OpenRouterErrorInfo {
+  code: number | null;
+  message: string | null;
+  providerName: string | null;
+}
+
+function safeProviderName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return /^[\w .-]{1,40}$/.test(trimmed) ? trimmed : null;
+}
+
+/** Lê `{ error: { code, message, metadata.provider_name } }`; qualquer outra coisa é ignorada. */
+export async function readOpenRouterErrorInfo(res: Response): Promise<OpenRouterErrorInfo | null> {
+  try {
+    const data = (await res.json()) as { error?: { code?: unknown; message?: unknown; metadata?: unknown } };
+    const error = data?.error;
+    if (!error || typeof error !== 'object') return null;
+    const metadata = error.metadata && typeof error.metadata === 'object'
+      ? error.metadata as { provider_name?: unknown } : null;
+    return {
+      code: typeof error.code === 'number' ? error.code : null,
+      message: typeof error.message === 'string' ? error.message.slice(0, 500) : null,
+      providerName: safeProviderName(metadata?.provider_name),
+    };
+  } catch {
+    return null;
   }
 }
 
-export function openRouterHttpError(status: number): OpenRouterHttpError {
-  return new OpenRouterHttpError(status);
+/**
+ * Classifica só com evidência: erro de upstream traz `metadata.provider_name`
+ * (ou a mensagem padrão "Provider returned error"); limites de modelos free são
+ * por conta; "key limit" é explícito. Sem evidência, 429 fica `rate-limit-unknown`.
+ */
+export function classifyOpenRouterError(status: number, info: OpenRouterErrorInfo | null): OpenRouterErrorKind {
+  const message = info?.message ?? '';
+  if (status === 401) return 'auth';
+  if (/key limit/i.test(message)) return 'key-rate-limit';
+  if (status === 402) return 'credits';
+  if (status === 400 || status === 404) return 'model-unavailable';
+  if (status !== 429) return 'unknown';
+  if (info?.providerName || /provider returned error/i.test(message)) return 'provider-rate-limit';
+  if (/free-models-per-(day|min)/i.test(message)) return 'account-rate-limit';
+  return 'rate-limit-unknown';
+}
+
+function messageFor(status: number, kind: OpenRouterErrorKind, providerName: string | null): string {
+  switch (kind) {
+    case 'auth': return 'OpenRouter rejeitou a credencial (401).';
+    case 'credits': return 'Créditos OpenRouter insuficientes (402).';
+    case 'key-rate-limit': return `Limite da chave OpenRouter atingido (${status}).`;
+    case 'model-unavailable': return `Modelo OpenRouter inválido ou indisponível (${status}).`;
+    case 'provider-rate-limit':
+      return `Modelo temporariamente indisponível: o provedor${providerName ? ` ${providerName}` : ''} limitou as requisições (429). Tente de novo em instantes ou escolha outro modelo.`;
+    case 'account-rate-limit': return 'Limite de requisições da conta OpenRouter atingido (429).';
+    case 'rate-limit-unknown': return 'Limite de requisições do OpenRouter (429).';
+    default: return `OpenRouter falhou (HTTP ${status}).`;
+  }
+}
+
+/** Mensagens HTTP seguras: o body remoto nunca é repassado, só classificado. */
+export class OpenRouterHttpError extends Error {
+  readonly kind: OpenRouterErrorKind;
+  readonly providerName: string | null;
+
+  constructor(readonly status: number, info: OpenRouterErrorInfo | null = null) {
+    const kind = classifyOpenRouterError(status, info);
+    const providerName = kind === 'provider-rate-limit' ? info?.providerName ?? null : null;
+    super(messageFor(status, kind, providerName));
+    this.kind = kind;
+    this.providerName = providerName;
+  }
+}
+
+export async function openRouterHttpError(res: Response): Promise<OpenRouterHttpError> {
+  return new OpenRouterHttpError(res.status, await readOpenRouterErrorInfo(res));
 }
 
 /** Extrai contagens de uso para o sink (e loga só se ZETEL_LOG_TOKENS=1). */
@@ -99,7 +178,7 @@ export async function* streamChat(params: StreamChatParams): AsyncIterable<strin
   logger.info('openrouter stream start', { model, status: res.status });
 
   if (!res.ok) {
-    throw openRouterHttpError(res.status);
+    throw await openRouterHttpError(res);
   }
 
   if (!res.body) {
@@ -227,8 +306,11 @@ export async function requestJson(params: RequestJsonParams): Promise<RequestJso
   logger.info('openrouter requestJson', { model, status: res.status });
 
   if (!res.ok) {
-    clearTimeout(timer);
-    throw openRouterHttpError(res.status);
+    try {
+      throw await openRouterHttpError(res);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   let data: {
@@ -290,6 +372,6 @@ export async function pingChat(apiKey: string, model: string): Promise<void> {
   }
 
   if (!res.ok) {
-    throw openRouterHttpError(res.status);
+    throw await openRouterHttpError(res);
   }
 }
