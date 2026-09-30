@@ -12,7 +12,7 @@ handoff: null
 execution_profile: FULL
 profile_justification: "Migration (tutor_profiles) e mudança do contrato de prompt."
 validation: FAIL
-validated_at: "2026-09-30T08:40:05.439Z"
+validated_at: "2026-09-30T09:04:18.415Z"
 ---
 
 ## Objetivo

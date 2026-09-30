@@ -2,15 +2,15 @@
   "schema_version": 1,
   "task_id": "007",
   "execution_profile": "FULL",
-  "state_revision": 58,
-  "git_head": "138251f4626bd0e7b8f7370a6fb89561f3c2ff6d",
-  "tree_fingerprint": "e15b796ea5914100d1928b14d0ba7edf55412b1e6847c7b533eb1f40511c5d0f",
+  "state_revision": 59,
+  "git_head": "9968ab7f787c253f1f2b6029d46d75c026950cf3",
+  "tree_fingerprint": "48cbeb98849780a00f221078b6f042aa7fcd41011d171a91aa39175d775b1fd0",
   "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "task_fingerprint": "e0b82e3db3ba53cc4e2a64b48a228cb7a354f70747371d74d5f1c678c09e365c",
   "plan_fingerprint": "82a0e7327dd43598f2523f4acef91e619f72d0523f17679970428349534977d0",
-  "fixed_point": "260aef3e6ff7b8f8980e6bdbe93a6c02a8c273ff270fcddccc4dfcbdcfaebbbf",
+  "fixed_point": "103688ed3916a5cf6fa5743813b9619310a39d506eafcaa5406dd878f1a618ea",
   "commands": [
     {
       "category": "focused",
@@ -22,17 +22,17 @@
         "tests/unit/tutor-profiles.test.ts",
         "tests/unit/partner-radar.test.ts"
       ],
-      "started_at": "2026-09-30T08:35:10.218Z",
-      "completed_at": "2026-09-30T08:35:16.343Z",
-      "duration_ms": 6119,
+      "started_at": "2026-09-30T08:57:46.431Z",
+      "completed_at": "2026-09-30T08:57:52.570Z",
+      "duration_ms": 6131,
       "exit_code": 0,
       "result": "PASS",
       "output": {
-        "stdout_sha256": "d488f95da87f78d642a40346f7cfd241a1f37fa46519969741ec892abef1f8ce",
+        "stdout_sha256": "34275a1bf1787d28646e8f5e1c7c67bf704c9c1608658357526384e0aa0caf98",
         "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "stdout_bytes": 338,
+        "stdout_bytes": 340,
         "stderr_bytes": 0,
-        "stdout_preview": "   Duration  2.42s (transform 246ms, setup 0ms, collect 320ms, tests 52ms, environment 1ms, prepare 501ms)",
+        "stdout_preview": "   Duration  2.38s (transform 393ms, setup 124ms, collect 324ms, tests 58ms, environment 2ms, prepare 873ms)",
         "stderr_preview": ""
       }
     },
@@ -46,17 +46,17 @@
         "tests/integration/tutor-profiles.test.ts",
         "tests/integration/study-sessions.test.ts"
       ],
-      "started_at": "2026-09-30T08:35:16.344Z",
-      "completed_at": "2026-09-30T08:35:23.567Z",
-      "duration_ms": 7222,
+      "started_at": "2026-09-30T08:57:52.570Z",
+      "completed_at": "2026-09-30T08:58:00.337Z",
+      "duration_ms": 7765,
       "exit_code": 0,
       "result": "PASS",
       "output": {
-        "stdout_sha256": "7a4e61d3072e503f7339631d16f0edbd90f11c68d10bd741553f3a634987b343",
+        "stdout_sha256": "831939f78e1b17f473bfb07041f0367359d5b8a3cde2c6011a3f4ee1a15a384c",
         "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "stdout_bytes": 358,
+        "stdout_bytes": 360,
         "stderr_bytes": 0,
-        "stdout_preview": "   Duration  3.77s (transform 1.06s, setup 0ms, collect 3.03s, tests 564ms, environment 3ms, prepare 828ms)",
+        "stdout_preview": "   Duration  4.10s (transform 1.21s, setup 191ms, collect 3.20s, tests 578ms, environment 2ms, prepare 634ms)",
         "stderr_preview": ""
       }
     },
@@ -66,13 +66,13 @@
         "pnpm",
         "build"
       ],
-      "started_at": "2026-09-30T08:35:23.567Z",
-      "completed_at": "2026-09-30T08:38:54.479Z",
-      "duration_ms": 210911,
+      "started_at": "2026-09-30T08:58:00.337Z",
+      "completed_at": "2026-09-30T09:01:37.594Z",
+      "duration_ms": 217257,
       "exit_code": 0,
       "result": "PASS",
       "output": {
-        "stdout_sha256": "0687b7abc828b1e8eb6c69fe5041f062631c1bb335c3a7068884a1457d173456",
+        "stdout_sha256": "cf2dcf19076cf08c2cdc3d6cae14a202f1fb6baf94c62bd56acc336550be5bc6",
         "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "stdout_bytes": 3693,
         "stderr_bytes": 0,
@@ -86,22 +86,42 @@
         "pnpm",
         "test:ci"
       ],
-      "started_at": "2026-09-30T08:38:54.479Z",
-      "completed_at": "2026-09-30T08:40:05.372Z",
-      "duration_ms": 70892,
+      "started_at": "2026-09-30T09:01:37.594Z",
+      "completed_at": "2026-09-30T09:03:04.945Z",
+      "duration_ms": 87348,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "393595d9a8b77b639661e8fcb43b5de3bc342ae85fa8944ac3997a66677507ab",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 69421,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  8.85s (transform 7.17s, setup 2.10s, collect 36.33s, tests 23.22s, environment 48ms, prepare 10.51s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "coverage",
+      "argv": [
+        "pnpm",
+        "test:coverage"
+      ],
+      "started_at": "2026-09-30T09:03:04.945Z",
+      "completed_at": "2026-09-30T09:04:18.350Z",
+      "duration_ms": 73403,
       "exit_code": 1,
       "result": "FAIL",
       "output": {
-        "stdout_sha256": "3562a656abdd491fc3cbf2863c7b09d9029577b3a4bcd35948980d46c2aea198",
-        "stderr_sha256": "36be62b09f25e964eebe2f5b0422821ffcc2e38e726a1161f44ab12d17a583d3",
-        "stdout_bytes": 54061,
-        "stderr_bytes": 883,
+        "stdout_sha256": "94dbab0a95505362f5f3a13f36a3047ecfd395d8a4c8500cd8fc161fc81bc460",
+        "stderr_sha256": "a8760717e9dc5ea5d9087fd8969b68169c26abc528c723a8312069e3349fc744",
+        "stdout_bytes": 16762,
+        "stderr_bytes": 1362,
         "stdout_preview": " ELIFECYCLE  Command failed with exit code 1.",
-        "stderr_preview": "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯"
+        "stderr_preview": "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯"
       }
     }
   ],
   "waivers": [],
-  "recorded_at": "2026-09-30T08:40:05.423Z",
+  "recorded_at": "2026-09-30T09:04:18.396Z",
   "validation_result": "FAIL"
 }
