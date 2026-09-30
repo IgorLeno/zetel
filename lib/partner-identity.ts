@@ -98,6 +98,20 @@ const TRAIT_LOW: Partial<Record<Axis | ToneKey, string>> = {
   concision: 'Detalhista',
 };
 
+/**
+ * Vértices do radar (SVG 160×160) para o nível de cada eixo pedagógico, 0–4.
+ * `scale` fixo desenha os anéis de referência. Primeiro eixo no topo.
+ */
+export function radarPoints(axes: TutorProfile['axes'], scale?: number): string {
+  const center = 80;
+  const radius = 58;
+  return AXES.map((axis, index) => {
+    const angle = -Math.PI / 2 + (index * 2 * Math.PI) / AXES.length;
+    const r = radius * (scale ?? axes[axis] / 4);
+    return `${(center + Math.cos(angle) * r).toFixed(1)},${(center + Math.sin(angle) * r).toFixed(1)}`;
+  }).join(' ');
+}
+
 /** Até três traços derivados das escalas — o suficiente para reconhecer o parceiro. */
 export function partnerTraits(profile: Pick<TutorProfile, 'axes' | 'tone'>): string[] {
   const scored: { label: string; weight: number }[] = [];

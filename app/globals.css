@@ -866,6 +866,7 @@ svg { stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round
 .partner-editor-hint { font-size: 13px; color: var(--text-3); line-height: 1.5; }
 .partner-editor-scales h3 { font-family: var(--font-display); font-weight: 500; font-size: 20px; margin: 0 0 16px; }
 .partner-editor-scales h3 + .partner-scales + h3 { margin-top: 26px; }
+.partner-radar { display: block; width: 132px; height: 132px; margin: 22px 0 0; color: var(--p-strong, var(--text)); }
 .partner-scales { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px 30px; }
 .partner-scale-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 800; font-size: 14px; margin-bottom: 8px; }
 .partner-scale-word { color: var(--text-3); font-weight: 700; }
