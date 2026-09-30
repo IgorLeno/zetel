@@ -2,6 +2,7 @@
 
 import type { CitedSource } from '@/types/chat-message';
 import { fonteCiteTarget, splitFonteMarkers } from '@/lib/fonte-markers';
+import { MathText } from './MathText';
 
 /**
  * Renderiza a narrativa e transforma `[fonte:Sn]` conhecido em chip.
@@ -20,7 +21,7 @@ export function FonteText({
   return (
     <>
       {parts.map((part, index) => {
-        if (part.kind === 'text') return <span key={index}>{part.text}</span>;
+        if (part.kind === 'text') return <MathText key={index} text={part.text} />;
         const target = onOpen ? fonteCiteTarget(part.id, sources) : null;
         if (!target?.fileId) return <span key={index}>{part.raw}</span>;
         return (

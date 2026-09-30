@@ -1120,6 +1120,10 @@ svg { stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round
 .msg-actions button:hover:not(:disabled) { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
 .msg-actions button:disabled { opacity: .45; }
 
+/* Matemática no chat (KaTeX; lib/chat-math.ts). Bloco rola na horizontal em vez de estourar a bolha. */
+.chat-math--display { display: block; max-width: 100%; overflow-x: auto; overflow-y: hidden; margin: 6px 0; }
+.chat-math .katex { font-size: 1.05em; }
+
 .fonte-chip {
   display: inline-flex;
   align-items: center;
