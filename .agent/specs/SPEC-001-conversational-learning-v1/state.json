@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 60,
+  "revision": 61,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -111,14 +111,14 @@
     {
       "id": "007",
       "title": "Perfis do tutor",
-      "status": "VALIDATING",
+      "status": "REVIEWING",
       "blocked_by": [
         "005"
       ],
       "execution_profile": "FULL",
       "profile_justification": "Migration (tutor_profiles) e mudança do contrato de prompt.",
       "reviews_requested": 2,
-      "validation": "FAIL"
+      "validation": "PASS"
     },
     {
       "id": "008",
@@ -180,14 +180,14 @@
     "id": "task-007-20260927",
     "agent": "cursor",
     "task_id": "007",
-    "status": "VALIDATING",
+    "status": "REVIEWING",
     "started_at": "2026-09-27T13:29:45.554Z",
     "execution_profile": "FULL",
     "profile_justification": "Migration (tutor_profiles) e mudança do contrato de prompt.",
     "reviews_requested": 2,
     "validating_at": "2026-09-30T08:35:10.194Z",
-    "validation_result": "FAIL",
-    "fixed_point": "103688ed3916a5cf6fa5743813b9619310a39d506eafcaa5406dd878f1a618ea",
+    "validation_result": "PASS",
+    "fixed_point": "e613a785f0a6c5b0e2ef96bc5ec74028c51fd2de1a068e3867bfac44b3b0db1c",
     "review_aggregate": null,
     "aggregated_at": null,
     "review_result": null,
@@ -251,7 +251,8 @@
           "--check"
         ]
       }
-    ]
+    ],
+    "reviewing_at": "2026-09-30T09:17:33.723Z"
   },
   "approval": {
     "spec": true,
