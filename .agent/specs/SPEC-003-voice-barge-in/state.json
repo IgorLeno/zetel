@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 4,
+  "revision": 6,
   "spec": {
     "id": "SPEC-003-voice-barge-in",
     "kind": "mini",
@@ -13,24 +13,84 @@
     {
       "id": "001",
       "title": "Voz: barge-in por detecção de fala",
-      "status": "IN_PROGRESS",
+      "status": "REVIEWING",
       "blocked_by": [],
       "execution_profile": "FULL",
       "profile_justification": "Altera a state machine de voz do cliente (pensando/falando -> ouvindo) e o ciclo de vida do microfone; risco de regressao do maos-livres e de autointerrupcao por eco. Sem mudanca de API, banco ou contrato de meta.interrupted.",
       "reviews_requested": 0,
-      "review_justification": "Sessao sem subagente autorizado pelo usuario; cobertura por testes unitarios do detector/controlador com fakes, gates FULL e validacao humana no Chrome."
+      "review_justification": "Sessao sem subagente autorizado pelo usuario; cobertura por testes unitarios do detector/controlador com fakes, gates FULL e validacao humana no Chrome.",
+      "validation": "PASS"
     }
   ],
   "session": {
     "id": "task-001-20260930",
     "agent": "claude-code",
     "task_id": "001",
-    "status": "IN_PROGRESS",
+    "status": "REVIEWING",
     "started_at": "2026-09-30T13:06:20.840Z",
     "execution_profile": "FULL",
     "profile_justification": "Altera a state machine de voz do cliente (pensando/falando -> ouvindo) e o ciclo de vida do microfone; risco de regressao do maos-livres e de autointerrupcao por eco. Sem mudanca de API, banco ou contrato de meta.interrupted.",
     "reviews_requested": 0,
-    "review_justification": "Sessao sem subagente autorizado pelo usuario; cobertura por testes unitarios do detector/controlador com fakes, gates FULL e validacao humana no Chrome."
+    "review_justification": "Sessao sem subagente autorizado pelo usuario; cobertura por testes unitarios do detector/controlador com fakes, gates FULL e validacao humana no Chrome.",
+    "validating_at": "2026-09-30T13:11:50.437Z",
+    "validation_result": "PASS",
+    "fixed_point": "e950ab8cb765a0439cd26a101d7370b9e1fb42275bbe9a5c43fe5c286f25b591",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": null,
+    "reviewing_at": "2026-09-30T13:16:00.338Z",
+    "validation": ".agent/specs/SPEC-003-voice-barge-in/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/voice/voice-activity.test.ts",
+          "tests/unit/voice/barge-in.test.ts",
+          "tests/unit/voice/speech-turn.test.ts",
+          "tests/unit/design-system/spec-002-visual-contract.test.ts"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ]
   },
   "approval": {
     "spec": true,

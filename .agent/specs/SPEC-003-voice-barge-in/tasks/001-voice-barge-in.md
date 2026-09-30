@@ -1,7 +1,7 @@
 ---
 id: "001"
 title: "Voz: barge-in por detecção de fala"
-status: IN_PROGRESS
+status: REVIEWING
 blocked_by: []
 writer: null
 reviewer: null
@@ -11,6 +11,8 @@ review_result: pending
 handoff: null
 execution_profile: FULL
 profile_justification: "Altera a state machine de voz do cliente (pensando/falando -> ouvindo) e o ciclo de vida do microfone; risco de regressao do maos-livres e de autointerrupcao por eco. Sem mudanca de API, banco ou contrato de meta.interrupted."
+validation: PASS
+validated_at: "2026-09-30T13:16:00.338Z"
 ---
 
 ## Objetivo
