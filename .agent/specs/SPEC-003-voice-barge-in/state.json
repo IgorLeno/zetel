@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "revision": 3,
+  "spec": {
+    "id": "SPEC-003-voice-barge-in",
+    "kind": "mini",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-09-30T08:33:19.630Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Voz: barge-in por detecção de fala",
+      "status": "READY",
+      "blocked_by": []
+    }
+  ],
+  "session": {
+    "id": null,
+    "agent": null,
+    "task_id": null,
+    "status": null
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "385236467a9d8227547852b0fe4728d86902d8e7f38e362950b62c34aba907e8"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "3158c067bbdd5ea3caaecf194ee48a3bf76cea464e97a4d2f6a0bc0487881c88"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "0b6db354f386f31784abe4af4ec198cfb8a992910acd18a495e60e18595e81af"
+        },
+        {
+          "path": "tasks/001-voice-barge-in.md",
+          "sha256": "270a71b79b37dc45e17e013279f50c1eb2e193a0f839bbd29d9324267edf42b5"
+        }
+      ],
+      "digest": "ff4ba0ab5f67792a169da31caa6d31222666aa9e7fc99de079e563d439907868",
+      "kind": "mini",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-09-30T08:33:19.630Z"
+    }
+  }
+}
