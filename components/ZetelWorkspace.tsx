@@ -39,11 +39,13 @@ function WorkspaceView({
   hasSources,
   readingStale,
   lastBuiltAt,
+  originalPdfId,
 }: {
   zetelId: string;
   hasSources: boolean;
   readingStale: boolean;
   lastBuiltAt: string | null;
+  originalPdfId: string | null;
 }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -86,6 +88,7 @@ function WorkspaceView({
           zetelId={zetelId}
           readingStale={readingStale}
           lastBuiltAt={lastBuiltAt}
+          originalPdfId={originalPdfId}
           selectedMode={view === 'pdf' ? 'tecnico' : view}
           chatActive={view !== 'pdf'}
         />
@@ -132,6 +135,7 @@ export function ZetelWorkspace(props: {
   hasSources: boolean;
   readingStale: boolean;
   lastBuiltAt: string | null;
+  originalPdfId: string | null;
 }) {
   return (
     <Suspense fallback={null}>
