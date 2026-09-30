@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { speechRecognitionErrorMessage } from '@/lib/speech-recognition-error';
+import {
+  insecureContextMicMessage,
+  speechRecognitionErrorMessage,
+} from '@/lib/speech-recognition-error';
 
 describe('speechRecognitionErrorMessage', () => {
   it('só cita permissão quando o navegador negou o microfone', () => {
@@ -23,5 +26,14 @@ describe('speechRecognitionErrorMessage', () => {
     for (const code of ['no-speech', 'aborted', 'desconhecido']) {
       expect(speechRecognitionErrorMessage(code)).toBeNull();
     }
+  });
+});
+
+describe('insecureContextMicMessage', () => {
+  it('troca só o host por localhost, preservando porta, rota e query', () => {
+    const message = insecureContextMicMessage('http://192.168.31.186:3002/zetel/dft3?view=tecnico');
+    expect(message).toMatch(/conexão segura/);
+    expect(message).toContain('http://localhost:3002/zetel/dft3?view=tecnico');
+    expect(message).not.toContain('192.168');
   });
 });
