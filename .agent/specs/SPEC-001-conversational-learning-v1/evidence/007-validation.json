@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "task_id": "007",
+  "execution_profile": "FULL",
+  "state_revision": 58,
+  "git_head": "138251f4626bd0e7b8f7370a6fb89561f3c2ff6d",
+  "tree_fingerprint": "e15b796ea5914100d1928b14d0ba7edf55412b1e6847c7b533eb1f40511c5d0f",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "task_fingerprint": "e0b82e3db3ba53cc4e2a64b48a228cb7a354f70747371d74d5f1c678c09e365c",
+  "plan_fingerprint": "82a0e7327dd43598f2523f4acef91e619f72d0523f17679970428349534977d0",
+  "fixed_point": "260aef3e6ff7b8f8980e6bdbe93a6c02a8c273ff270fcddccc4dfcbdcfaebbbf",
+  "commands": [
+    {
+      "category": "focused",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/unit/tutor-profiles.test.ts",
+        "tests/unit/partner-radar.test.ts"
+      ],
+      "started_at": "2026-09-30T08:35:10.218Z",
+      "completed_at": "2026-09-30T08:35:16.343Z",
+      "duration_ms": 6119,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "d488f95da87f78d642a40346f7cfd241a1f37fa46519969741ec892abef1f8ce",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 338,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  2.42s (transform 246ms, setup 0ms, collect 320ms, tests 52ms, environment 1ms, prepare 501ms)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "integration",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/integration/tutor-profiles.test.ts",
+        "tests/integration/study-sessions.test.ts"
+      ],
+      "started_at": "2026-09-30T08:35:16.344Z",
+      "completed_at": "2026-09-30T08:35:23.567Z",
+      "duration_ms": 7222,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "7a4e61d3072e503f7339631d16f0edbd90f11c68d10bd741553f3a634987b343",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 358,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  3.77s (transform 1.06s, setup 0ms, collect 3.03s, tests 564ms, environment 3ms, prepare 828ms)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "build",
+      "argv": [
+        "pnpm",
+        "build"
+      ],
+      "started_at": "2026-09-30T08:35:23.567Z",
+      "completed_at": "2026-09-30T08:38:54.479Z",
+      "duration_ms": 210911,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "0687b7abc828b1e8eb6c69fe5041f062631c1bb335c3a7068884a1457d173456",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 3693,
+        "stderr_bytes": 0,
+        "stdout_preview": "ƒ  (Dynamic)  server-rendered on demand",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "test-ci",
+      "argv": [
+        "pnpm",
+        "test:ci"
+      ],
+      "started_at": "2026-09-30T08:38:54.479Z",
+      "completed_at": "2026-09-30T08:40:05.372Z",
+      "duration_ms": 70892,
+      "exit_code": 1,
+      "result": "FAIL",
+      "output": {
+        "stdout_sha256": "3562a656abdd491fc3cbf2863c7b09d9029577b3a4bcd35948980d46c2aea198",
+        "stderr_sha256": "36be62b09f25e964eebe2f5b0422821ffcc2e38e726a1161f44ab12d17a583d3",
+        "stdout_bytes": 54061,
+        "stderr_bytes": 883,
+        "stdout_preview": " ELIFECYCLE  Command failed with exit code 1.",
+        "stderr_preview": "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯"
+      }
+    }
+  ],
+  "waivers": [],
+  "recorded_at": "2026-09-30T08:40:05.423Z",
+  "validation_result": "FAIL"
+}
