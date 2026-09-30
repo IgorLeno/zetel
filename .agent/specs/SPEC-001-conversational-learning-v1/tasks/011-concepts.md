@@ -48,17 +48,3 @@ Fora de escopo: Relações entre conceitos, grafo, SRS, dedupe semântica.
 ## Riscos
 
 Sugestões excessivas; rubrica limita a no máximo uma por turno.
-
-## Plano de execução em main (2026-09-27)
-
-`execution_profile: FULL` pelo contrato de segurança, proveniência e escrita no vault. Por instrução explícita desta execução, os gates serão o smoke real, testes focados, typecheck e diff-check; sem gates FULL amplos ou lifecycle antigo.
-
-- [x] Inspecionar os contratos de chat, fontes, mensagens, sugestões e escrita no vault.
-- [x] Estender a sentinela e o fluxo de chat para sugestão de conceito validada e persistida apenas em metadata.
-- [x] Implementar serviço/rota de conceitos com proveniência reconstruída no servidor, dedupe e append seguro.
-- [x] Integrar `ConceptCard` ao chat com Salvar, Explorar e Ignorar.
-- [x] Rodar o produto com PDF real e verificar create, append e ignore; corrigir problemas observados.
-- [x] Executar testes focados, `pnpm typecheck` e `git diff --check`.
-- [x] Revisar o diff, registrar o resultado, commitar e enviar `main` a `origin`.
-
-Resultado: o primeiro `next dev` compartilhou `.next` com outro servidor e causou recargas/404 intermitentes; o smoke passou em cópia temporária do checkout, com build próprio. A revisão automática bloqueou inicialmente o envio do PDF ao OpenRouter; após autorização explícita do usuário, três chamadas live foram feitas. A primeira recebeu HTTP 429 (`mistralai/mistral-small-2603`); a segunda respondeu em linguagem natural sem sentinela; ajustada a regra de pedido explícito, a terceira (`openai/gpt-4o-mini`) emitiu `CONCEITO_SUGERIDO`, renderizou o cartão com `termo.pdf · p. 1` e permitiu edição e append ao conceito existente. O create inicial, outro append e o Ignorar também passaram na UI com sugestões de smoke persistidas na base temporária. O Markdown e as flags foram conferidos. Três testes focados, typecheck e diff-check passaram. Sem chamadas live restantes para exercitar Explorar.

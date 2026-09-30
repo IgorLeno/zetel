@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 54,
+  "revision": 61,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
@@ -111,13 +111,14 @@
     {
       "id": "007",
       "title": "Perfis do tutor",
-      "status": "IN_PROGRESS",
+      "status": "REVIEWING",
       "blocked_by": [
         "005"
       ],
       "execution_profile": "FULL",
       "profile_justification": "Migration (tutor_profiles) e mudança do contrato de prompt.",
-      "reviews_requested": 2
+      "reviews_requested": 2,
+      "validation": "PASS"
     },
     {
       "id": "008",
@@ -179,11 +180,79 @@
     "id": "task-007-20260927",
     "agent": "cursor",
     "task_id": "007",
-    "status": "IN_PROGRESS",
+    "status": "REVIEWING",
     "started_at": "2026-09-27T13:29:45.554Z",
     "execution_profile": "FULL",
     "profile_justification": "Migration (tutor_profiles) e mudança do contrato de prompt.",
-    "reviews_requested": 2
+    "reviews_requested": 2,
+    "validating_at": "2026-09-30T08:35:10.194Z",
+    "validation_result": "PASS",
+    "fixed_point": "e613a785f0a6c5b0e2ef96bc5ec74028c51fd2de1a068e3867bfac44b3b0db1c",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": null,
+    "validation": ".agent/specs/SPEC-001-conversational-learning-v1/evidence/007-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/tutor-profiles.test.ts",
+          "tests/unit/partner-radar.test.ts"
+        ]
+      },
+      {
+        "category": "integration",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/integration/tutor-profiles.test.ts",
+          "tests/integration/study-sessions.test.ts"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "reviewing_at": "2026-09-30T09:17:33.723Z"
   },
   "approval": {
     "spec": true,

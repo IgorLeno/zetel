@@ -23,6 +23,7 @@ import {
   partnerSample,
   partnerTagline,
   partnerTraits,
+  radarPoints,
 } from '@/lib/partner-identity';
 import { PartnerOrb } from './PartnerOrb';
 
@@ -310,6 +311,7 @@ export function PartnerStudio({
                 />
               ))}
             </div>
+            <PartnerRadar axes={draft.axes} />
             <div className="partner-editor-actions">
               {inSession && (
                 <button type="button" className="btn primary" disabled={locked || (!changed && !session!.profileOverrides)}
@@ -392,4 +394,17 @@ function overridesAgainst(base: TutorProfile, draft: TutorProfile): ProfileOverr
 function nextFreeColor(profiles: TutorProfile[], fallback: PartnerColor): PartnerColor {
   const used = new Set(profiles.map((profile) => profile.color));
   return PARTNER_COLORS.find((option) => !used.has(option)) ?? fallback;
+}
+
+/** Radar só de leitura: resume o jeito de ensinar; as escalas continuam sendo o editor. */
+function PartnerRadar({ axes }: { axes: TutorProfile['axes'] }) {
+  const label = AXES.map((axis) => `${AXIS_LABELS[axis]} ${axes[axis]} de 4`).join(', ');
+  return (
+    <svg className="partner-radar" viewBox="0 0 160 160" role="img" aria-label={`Radar do jeito de ensinar: ${label}`}>
+      {[0.25, 0.5, 0.75, 1].map((ring) => (
+        <polygon key={ring} points={radarPoints(axes, ring)} fill="none" stroke="currentColor" strokeOpacity={0.2} />
+      ))}
+      <polygon points={radarPoints(axes)} fill="currentColor" fillOpacity={0.25} stroke="currentColor" />
+    </svg>
+  );
 }

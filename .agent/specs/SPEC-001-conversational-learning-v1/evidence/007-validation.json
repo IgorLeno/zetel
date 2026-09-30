@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "task_id": "007",
+  "execution_profile": "FULL",
+  "state_revision": 60,
+  "git_head": "04ce5327256843a31883783da89b562d6f91e5b8",
+  "tree_fingerprint": "dbba21a7d61bab6e34179f7337341256b7fbc959168e93475512de7c6366981c",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "task_fingerprint": "e0b82e3db3ba53cc4e2a64b48a228cb7a354f70747371d74d5f1c678c09e365c",
+  "plan_fingerprint": "82a0e7327dd43598f2523f4acef91e619f72d0523f17679970428349534977d0",
+  "fixed_point": "e613a785f0a6c5b0e2ef96bc5ec74028c51fd2de1a068e3867bfac44b3b0db1c",
+  "commands": [
+    {
+      "category": "focused",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/unit/tutor-profiles.test.ts",
+        "tests/unit/partner-radar.test.ts"
+      ],
+      "started_at": "2026-09-30T09:11:39.244Z",
+      "completed_at": "2026-09-30T09:11:44.607Z",
+      "duration_ms": 5355,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "be0ffbcad65e072284ec1187ff8fb9c54a3796def8f003aa9d1edb228bb2f40d",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 340,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  2.00s (transform 279ms, setup 101ms, collect 285ms, tests 44ms, environment 1ms, prepare 647ms)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "integration",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/integration/tutor-profiles.test.ts",
+        "tests/integration/study-sessions.test.ts"
+      ],
+      "started_at": "2026-09-30T09:11:44.607Z",
+      "completed_at": "2026-09-30T09:11:51.453Z",
+      "duration_ms": 6845,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "a0b091ae78a50e46ac34f3513da5e9e77ebf93bcdc83f4e1d28516a6cebdf82f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 360,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  3.69s (transform 1.02s, setup 186ms, collect 2.86s, tests 517ms, environment 1ms, prepare 601ms)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "build",
+      "argv": [
+        "pnpm",
+        "build"
+      ],
+      "started_at": "2026-09-30T09:11:51.453Z",
+      "completed_at": "2026-09-30T09:14:59.030Z",
+      "duration_ms": 187576,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "7035022e3c0f4060b2a6a71e440ec926fa487e3fc4c0d760a49419ce9bded4af",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 3693,
+        "stderr_bytes": 0,
+        "stdout_preview": "ƒ  (Dynamic)  server-rendered on demand",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "test-ci",
+      "argv": [
+        "pnpm",
+        "test:ci"
+      ],
+      "started_at": "2026-09-30T09:14:59.030Z",
+      "completed_at": "2026-09-30T09:16:15.758Z",
+      "duration_ms": 76727,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "f6870add9e9dafa8c6870a2be132668d534128ecce2d15866ba695e7244fb99e",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 69406,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  7.82s (transform 6.26s, setup 1.93s, collect 31.21s, tests 21.38s, environment 22ms, prepare 9.93s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "coverage",
+      "argv": [
+        "pnpm",
+        "test:coverage"
+      ],
+      "started_at": "2026-09-30T09:16:15.758Z",
+      "completed_at": "2026-09-30T09:17:23.712Z",
+      "duration_ms": 67952,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "4b1355101e9728d651f07f3ddae628882a6f5a99e55d0c0195cf0c1863353062",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 16541,
+        "stderr_bytes": 0,
+        "stdout_preview": "-------------------|---------|----------|---------|---------|-------------------",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "typecheck",
+      "argv": [
+        "pnpm",
+        "typecheck"
+      ],
+      "started_at": "2026-09-30T09:17:23.712Z",
+      "completed_at": "2026-09-30T09:17:33.625Z",
+      "duration_ms": 9911,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e87f658d79ce7cab0c3553cf450dd8c27dcdc625c97bd411e30fd4140a9e951f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 74,
+        "stderr_bytes": 0,
+        "stdout_preview": "> tsc --noEmit",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "diff-check",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-09-30T09:17:33.625Z",
+      "completed_at": "2026-09-30T09:17:33.634Z",
+      "duration_ms": 9,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stderr_bytes": 0,
+        "stdout_preview": "",
+        "stderr_preview": ""
+      }
+    }
+  ],
+  "waivers": [],
+  "recorded_at": "2026-09-30T09:17:33.670Z",
+  "validation_result": "PASS"
+}

@@ -12,7 +12,13 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// Each test drives the real ./agentctl launcher through several spawnSync
+// calls (~3s each normally). Under coverage and machine load they exceed
+// vitest's 5s unit-test default, so the whole file gets a 15s budget;
+// explicit per-test timeouts still take precedence.
+vi.setConfig({ testTimeout: 15_000 });
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 const AGENTCTL = join(ROOT, 'agentctl');
