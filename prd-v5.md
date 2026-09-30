@@ -111,7 +111,6 @@ Não implementar como requisito desta entrega:
 - importação automática de resultados da web;
 - prova estruturada completa;
 - planejamento automático de estudos;
-- barge-in acústico automático;
 - sistema completo de avaliação do aluno;
 - Visão Integrada multi-documento completa;
 - marketplace ou compartilhamento de perfis;
@@ -315,7 +314,24 @@ A ação deve:
 3. preservar texto já recebido;
 4. liberar imediatamente nova entrada.
 
-Barge-in por detecção de fala fica fora da V1.
+### Emenda 2026-09-30 — barge-in por detecção de fala
+
+Aprovada por Igor Fernandes em chat. Com microfone e voz automática ligados, a
+fala do usuário durante pensando/falando interrompe a parceira com a mesma
+semântica de `[■ Parar]` (itens 1–4 acima) e o microfone volta a ouvir. A
+parceira responde à nova fala; a resposta interrompida permanece como texto
+parcial (`meta.interrupted`). Não retoma a resposta interrompida de onde parou.
+
+- detecção local no navegador (nível de áudio com cancelamento de eco); nenhum
+  áudio sai do dispositivo por causa do barge-in;
+- limiar conservador e duração mínima de fala para não se autointerromper com
+  o próprio TTS;
+- pode ser desligado pelo usuário;
+- `[■ Parar]` continua disponível;
+- limitação aceita: o início da fala que interrompe pode se perder até o
+  reconhecimento reiniciar.
+
+Entrega: `.agent/specs/SPEC-003-voice-barge-in/`.
 
 ## R12 — Provedor de voz
 

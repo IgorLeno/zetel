@@ -1,6 +1,6 @@
 ---
 id: "012"
-title: "Verificação de integração estrutural da V1"
+title: "Integração do fluxo principal e E2E não-live"
 status: READY
 blocked_by: ["004", "006", "007", "009", "011"]
 writer: null
@@ -13,48 +13,35 @@ handoff: null
 
 ## Objetivo
 
-Verificar estruturalmente a integração das capacidades da V1 e corrigir lacunas reais de contrato/backend. A validação visual e interativa fica com o proprietário do projeto.
+Montar a experiência de sessão de estudo completa e provar o cenário do PRD v5 §21 automaticamente.
 
 ## Perfil planejado
 
-`execution_profile`: `FULL`. A correção de ownership na rota de memória eleva o perfil por tocar uma fronteira de segurança. O proprietário determinou expressamente testes estruturais focados, typecheck e diff-check nesta execução, sem gates longos ou validação em navegador; essa restrição de escopo prevalece sobre a lista padrão do perfil. O lifecycle antigo do `agentctl` foi dispensado.
+`execution_profile` planejado: `STANDARD`. Justificativa: Integração de UI e teste E2E com mocks; sem migration nem contrato novo. Elevar a FULL se exigir mudança de contrato.
+O perfil efetivo é registrado por `./agentctl task start`; elevação autônoma
+permitida, downgrade exige aprovação humana.
 
 ## Criterios de aceitacao
 
-- Inventário das capacidades V1 com contratos de entrada/saída, sessão/chat e persistência conferidos.
-- Nenhuma lacuna estrutural conhecida impede o teste manual do proprietário.
-- Apenas lacunas comprovadas são corrigidas, sem redesign visual.
+- Layout material + parceira com prioridade visual do R33; transcript recolhível sem afetar persistência.
+- Entrada do Zetel oferece Continuar sessão / Nova sessão.
+- E2E Playwright com OpenRouter e voz mockados cobre os passos automatizáveis do §21.
+- Fluxo antigo continua acessível.
 
 ## Testes
 
-Testes unitários/integrados focados das integrações relevantes. Sem novo E2E de browser.
+E2E não-live do cenário principal; regressão das suítes existentes.
 
 ## Gates
 
-Focados úteis; `pnpm typecheck`; `git diff --check`.
+Focados; `pnpm typecheck`; `pnpm test:ci`; E2E não-live; `git diff --check`.
 
 ## Escopo
 
-Arquivos ou áreas prováveis: `components/`, rotas `/api/zetels/`, serviços `lib/`, testes focados.
+Arquivos ou áreas prováveis: `components/`, `app/zetel/[slug]/page.tsx`, `e2e/`.
 
-Fora de escopo: novas features, redesign visual, validação em navegador e E2E live.
+Fora de escopo: Novas features; E2E live.
 
 ## Riscos
 
-Evitar inferir funcionamento visual de contratos estruturais. O proprietário validará a experiência no produto.
-
-## Plano de execução direta em main (2026-09-28)
-
-- [x] Inventariar as capacidades V1 e traçar seus contratos de frontend, APIs, serviços e persistência.
-- [x] Corrigir somente lacunas estruturais comprovadas.
-- [x] Rodar testes focados úteis, `pnpm typecheck` e `git diff --check`.
-- [x] Registrar a matriz de integração, revisar o diff, fazer o commit solicitado e enviar `main` a `origin/main`.
-
-Perfil efetivo desta execução: `FULL` após a correção de ownership da memória. Conforme atualização do proprietário, a validação visual/interativa é feita pelo usuário; esta execução não usa navegador nem cria E2E.
-
-## Resultado estrutural
-
-- Contratos percorridos: ingestão/leitura PDF, foco e seleção, sessões/retomada, retrieval/fontes, perfil, voz/cancelamento, starters, conceitos, notas e memória.
-- Lacunas corrigidas: criação duplicada de sessão na montagem do chat; associação de memória a uma mensagem fora do Zetel de origem; frontmatter de memória com ID/modelo fornecidos pelo cliente em vez do slug/modelo da origem validada.
-- Verificação: 15 arquivos de teste focado, 87 testes aprovados; `pnpm typecheck` e `git diff --check` aprovados.
-- Validação visual e interativa permanece com o proprietário; nenhum E2E de navegador foi criado.
+Flakiness de E2E com áudio; usar fakes determinísticos.

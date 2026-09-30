@@ -358,7 +358,9 @@ Ao interromper:
 2. a resposta textual já produzida permanece;
 3. o usuário pode falar ou digitar imediatamente.
 
-Barge-in automático por detecção de fala é uma evolução posterior.
+Barge-in automático por detecção de fala entra na V1 por emenda de 2026-09-30
+(`prd-v5.md`, R11): falar por cima da parceira tem o mesmo efeito de
+`[■ Parar]`, e ela responde à nova fala (`SPEC-003-voice-barge-in`).
 
 ---
 

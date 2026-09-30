@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 54,
+  "revision": 57,
   "spec": {
     "id": "SPEC-001-conversational-learning-v1",
     "kind": "full",
