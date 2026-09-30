@@ -21,3 +21,15 @@ export function speechRecognitionErrorMessage(code: string): string | null {
       return null;
   }
 }
+
+/**
+ * Mensagem para origem insegura (ex.: `http://192.168.x.x`). O Chrome só entrega o
+ * microfone em secure context: fora dele o reconhecimento falha com `not-allowed`
+ * sem nunca exibir o pedido de permissão, e a mensagem de "permissão negada" engana.
+ * `http://localhost` conta como seguro, então a mesma rota por localhost funciona.
+ */
+export function insecureContextMicMessage(href: string): string {
+  const url = new URL(href);
+  url.hostname = 'localhost';
+  return `O navegador só libera o microfone em conexão segura (HTTPS ou localhost). Nesta máquina, abra ${url.href}`;
+}

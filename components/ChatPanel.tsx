@@ -6,7 +6,10 @@ import type { ChatMessage, CitedSource } from '@/types/chat-message';
 import type { StudySession } from '@/types/study-session';
 import { toSpeakable } from '@/lib/speech-text';
 import { starterCanonical, type ChatStarter } from '@/lib/chat-starters';
-import { speechRecognitionErrorMessage } from '@/lib/speech-recognition-error';
+import {
+  insecureContextMicMessage,
+  speechRecognitionErrorMessage,
+} from '@/lib/speech-recognition-error';
 import { FonteText } from './FonteText';
 import { NoteCard, type Suggestion, type SaveNotePayload } from './NoteCard';
 import { MemoryCard, type MemorySuggestionData } from './MemoryCard';
@@ -600,6 +603,10 @@ export function ChatPanel({
     if (!micAtivoRef.current) return;
     const Ctor = getSpeechRecognitionCtor();
     if (!Ctor) return;
+    if (!window.isSecureContext) {
+      disableMicWithError(insecureContextMicMessage(window.location.href));
+      return;
+    }
 
     stopListeningClean(); // limpa instância anterior sem flash de estado
 
@@ -627,14 +634,7 @@ export function ChatPanel({
         const message = speechRecognitionErrorMessage(event.error);
         // no-speech e aborted são benignos; onend trata o reinício
         if (!message) return;
-        // Erro fatal desliga o mic; senão onend reiniciaria em laço contra o mesmo erro.
-        micAtivoRef.current = false;
-        setMicAtivo(false);
-        pendingMicStartRef.current = false;
-        saveVoicePrefs(false, autoPlayRef.current);
-        setError(message);
-        voiceStateRef.current = 'error';
-        setVoiceState('error');
+        disableMicWithError(message);
       };
 
       rec.onend = () => {
@@ -656,6 +656,17 @@ export function ChatPanel({
       voiceStateRef.current = 'idle';
       setVoiceState('idle');
     }
+  }
+
+  /** Erro fatal desliga o mic; senão onend reiniciaria em laço contra o mesmo erro. */
+  function disableMicWithError(message: string): void {
+    micAtivoRef.current = false;
+    setMicAtivo(false);
+    pendingMicStartRef.current = false;
+    saveVoicePrefs(false, autoPlayRef.current);
+    setError(message);
+    voiceStateRef.current = 'error';
+    setVoiceState('error');
   }
 
   function handleFinalTranscript(text: string): void {
