@@ -19,6 +19,8 @@ import { PartnerSheet } from './PartnerSheet';
 import { PartnerStudio, resolvePartner, useTutorProfiles } from './PartnerStudio';
 import { partnerColorVar, partnerTagline, type PartnerColor } from '@/lib/partner-identity';
 import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
+import { useBargeIn } from '@/hooks/useBargeIn';
+import { readBargeInPref, shouldArmBargeIn } from '@/lib/barge-in';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
 type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'stopped' | 'error';
@@ -56,9 +58,19 @@ function loadVoicePrefs(): { micAtivo: boolean; autoPlay: boolean } {
   }
 }
 
-function saveVoicePrefs(micAtivo: boolean, autoPlay: boolean): void {
+function loadBargeInPref(): boolean {
   try {
-    localStorage.setItem(VOICE_PREFS_KEY, JSON.stringify({ micAtivo, autoPlay }));
+    return readBargeInPref(localStorage.getItem(VOICE_PREFS_KEY));
+  } catch {
+    return true;
+  }
+}
+
+// bargeIn omitido preserva o valor salvo: os toggles de mic/voz não o apagam.
+function saveVoicePrefs(micAtivo: boolean, autoPlay: boolean, bargeIn?: boolean): void {
+  try {
+    const keep = bargeIn ?? readBargeInPref(localStorage.getItem(VOICE_PREFS_KEY));
+    localStorage.setItem(VOICE_PREFS_KEY, JSON.stringify({ micAtivo, autoPlay, bargeIn: keep }));
   } catch {
     /* localStorage indisponível — prefs não persistem */
   }
@@ -227,10 +239,14 @@ export function ChatPanel({
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   const [micAtivo, setMicAtivo] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
+  const [bargeIn, setBargeIn] = useState(true);
 
   // ── Refs (leitura síncrona em callbacks assíncronos) ─────────────────────────
   const micAtivoRef = useRef(false);
   const autoPlayRef = useRef(false);
+  const bargeInRef = useRef(true);
+  // Aviso de mic bloqueado para o barge-in aparece uma vez, não a cada turno.
+  const bargeInErrorShownRef = useRef(false);
   const isLoadingRef = useRef(false);
   const voiceStateRef = useRef<VoiceState>('idle');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -279,6 +295,18 @@ export function ChatPanel({
       }
     },
     onTurnDrained: () => maybeRestartMic(),
+  });
+
+  // Barge-in (SPEC-003): fala do usuário durante pensando/falando = Parar + ouvir.
+  useBargeIn({
+    armed: shouldArmBargeIn({ enabled: bargeIn, micAtivo, autoPlay, voiceState }),
+    speaking: voiceState === 'speaking',
+    onBargeIn: interruptByVoice,
+    onError: () => {
+      if (bargeInErrorShownRef.current) return;
+      bargeInErrorShownRef.current = true;
+      showToast('Interrupção por fala indisponível: o microfone não abriu.');
+    },
   });
 
   const visibleMessages = messages.filter(
@@ -511,6 +539,9 @@ export function ChatPanel({
     setAutoPlay(prefs.autoPlay);
     micAtivoRef.current = prefs.micAtivo;
     autoPlayRef.current = prefs.autoPlay;
+    const bargeInPref = loadBargeInPref();
+    setBargeIn(bargeInPref);
+    bargeInRef.current = bargeInPref;
     if (prefs.micAtivo) pendingMicStartRef.current = true;
   }, []);
 
@@ -676,6 +707,8 @@ export function ChatPanel({
   }
 
   function maybeRestartMic(): void {
+    // Barge-in já reabriu a escuta: reiniciar agora abortaria a fala em captura.
+    if (voiceStateRef.current === 'listening' && recognitionRef.current) return;
     if (micAtivoRef.current && !isLoadingRef.current) {
       startListening();
     }
@@ -700,6 +733,13 @@ export function ChatPanel({
     inputRef.current?.focus();
   }
 
+  /** Mesma semântica de Parar; a escuta volta já, sem esperar o stream fechar. */
+  function interruptByVoice(): void {
+    if (!micAtivoRef.current) return;
+    stopPartner();
+    if (voiceStateRef.current !== 'listening') startListening();
+  }
+
   // ── Toggles ──────────────────────────────────────────────────────────────────
 
   function toggleMic(): void {
@@ -719,6 +759,13 @@ export function ChatPanel({
     } else {
       stopListening();
     }
+  }
+
+  function toggleBargeIn(): void {
+    const next = !bargeInRef.current;
+    bargeInRef.current = next;
+    setBargeIn(next);
+    saveVoicePrefs(micAtivoRef.current, autoPlayRef.current, next);
   }
 
   function toggleAutoPlay(): void {
@@ -765,7 +812,9 @@ export function ChatPanel({
   // race condition com setInput assíncrono (não lê o estado input nesses caminhos).
   async function sendMessage(textOverride?: string, starter?: ChatStarter) {
     const text = starter ? starterCanonical(starter) : (textOverride ?? input).trim();
-    if (isLoading || !text) return;
+    // Ref, não estado: o reconhecimento reaberto pelo barge-in guarda o closure
+    // de um render em que isLoading ainda era true.
+    if (isLoadingRef.current || !text) return;
 
     // D36: interactionMode derivado de autoPlay — estilo oral no backend quando autoPlay=ON
     const mode: 'text' | 'voice' = autoPlayRef.current ? 'voice' : 'text';
@@ -1181,6 +1230,13 @@ export function ChatPanel({
       <path d="M13 3c2 2 2 8 0 10" strokeLinecap="round"/>
     </svg>
   );
+  // Balão de fala; desligado ganha um traço diagonal.
+  const icBargeIn = (
+    <svg viewBox="0 0 16 16" aria-hidden>
+      <path d="M2 3h12v8H7l-3 3v-3H2z" strokeLinejoin="round"/>
+      {!bargeIn && <path d="M2 14L14 2" strokeLinecap="round"/>}
+    </svg>
+  );
   const icSend = (
     <svg viewBox="0 0 16 16" aria-hidden>
       <path d="M14 8L2 2l3 6-3 6 12-6z" strokeLinejoin="round"/>
@@ -1497,6 +1553,24 @@ export function ChatPanel({
             >
               {voiceState === 'listening' ? icStop : icMic}
             </button>
+
+            {/* Barge-in só age com o mic ligado; desligar o mic já o desativa */}
+            {micAtivo && (
+              <button
+                type="button"
+                data-testid="barge-in-toggle"
+                className="send-btn"
+                disabled={!autoPlay}
+                onClick={toggleBargeIn}
+                title={!autoPlay
+                  ? 'Interromper ao falar exige voz automática'
+                  : bargeIn ? 'Interromper ao falar: ligado' : 'Interromper ao falar: desligado'}
+                aria-label="Interromper a parceira ao falar"
+                aria-pressed={bargeIn}
+              >
+                {icBargeIn}
+              </button>
+            )}
           </div>
         </div>
       </div>

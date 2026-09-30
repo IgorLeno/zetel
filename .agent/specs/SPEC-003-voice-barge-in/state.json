@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 3,
+  "revision": 4,
   "spec": {
     "id": "SPEC-003-voice-barge-in",
     "kind": "mini",
@@ -8,20 +8,29 @@
     "approved_by": "Igor Fernandes",
     "approved_at": "2026-09-30T08:33:19.630Z"
   },
-  "active_task": null,
+  "active_task": "001",
   "tasks": [
     {
       "id": "001",
       "title": "Voz: barge-in por detecção de fala",
-      "status": "READY",
-      "blocked_by": []
+      "status": "IN_PROGRESS",
+      "blocked_by": [],
+      "execution_profile": "FULL",
+      "profile_justification": "Altera a state machine de voz do cliente (pensando/falando -> ouvindo) e o ciclo de vida do microfone; risco de regressao do maos-livres e de autointerrupcao por eco. Sem mudanca de API, banco ou contrato de meta.interrupted.",
+      "reviews_requested": 0,
+      "review_justification": "Sessao sem subagente autorizado pelo usuario; cobertura por testes unitarios do detector/controlador com fakes, gates FULL e validacao humana no Chrome."
     }
   ],
   "session": {
-    "id": null,
-    "agent": null,
-    "task_id": null,
-    "status": null
+    "id": "task-001-20260930",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "IN_PROGRESS",
+    "started_at": "2026-09-30T13:06:20.840Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Altera a state machine de voz do cliente (pensando/falando -> ouvindo) e o ciclo de vida do microfone; risco de regressao do maos-livres e de autointerrupcao por eco. Sem mudanca de API, banco ou contrato de meta.interrupted.",
+    "reviews_requested": 0,
+    "review_justification": "Sessao sem subagente autorizado pelo usuario; cobertura por testes unitarios do detector/controlador com fakes, gates FULL e validacao humana no Chrome."
   },
   "approval": {
     "spec": true,
