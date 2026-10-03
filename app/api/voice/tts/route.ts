@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
-import { hasVoiceKey, readVoiceKey, synthesizeSpeech } from '@/lib/openai-voice';
+import {
+  DEFAULT_TTS_INSTRUCTIONS,
+  DEFAULT_TTS_MODEL,
+  DEFAULT_TTS_VOICE,
+  hasVoiceKey,
+  readVoiceKey,
+  synthesizeSpeech,
+} from '@/lib/openai-voice';
 import { getSetting } from '@/lib/settings';
 import { logger } from '@/lib/logger';
 
@@ -34,11 +41,12 @@ export async function POST(request: Request) {
   const voice =
     (typeof body.voice === 'string' && body.voice.trim()) ||
     getSetting('tts_voice') ||
-    'nova';
+    DEFAULT_TTS_VOICE;
   const model =
     (typeof body.model === 'string' && body.model.trim()) ||
     getSetting('tts_model') ||
-    'tts-1';
+    DEFAULT_TTS_MODEL;
+  const instructions = getSetting('tts_instructions') || DEFAULT_TTS_INSTRUCTIONS;
 
   // Log só contagem de chars — nunca o texto (D39 / Regra #6).
   logger.info('voice tts', { chars: text.length });
@@ -51,7 +59,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const upstream = await synthesizeSpeech({ apiKey, text, voice, model });
+    const upstream = await synthesizeSpeech({ apiKey, text, voice, model, instructions });
     return new Response(upstream.body, {
       headers: {
         'Content-Type': 'audio/mpeg',

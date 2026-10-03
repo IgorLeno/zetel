@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "revision": 6,
+  "spec": {
+    "id": "SPEC-004-natural-tts",
+    "kind": "mini",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-03T23:37:05.826Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Voz: TTS natural com gpt-4o-mini-tts",
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "STANDARD",
+      "profile_justification": "Troca de modelo e novo parametro no mesmo provedor e nova chave em settings (chave/valor, sem migracao); nao toca state machine, seguranca, escrita atomica nem schema.",
+      "reviews_requested": 0,
+      "review_justification": "Mudanca pequena coberta por testes unitarios e de integracao com fetch falso; escuta humana no app.",
+      "validation": "PASS",
+      "review_result": "NOT_REQUIRED"
+    }
+  ],
+  "session": {
+    "id": "task-001-20261003",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-03T23:37:06.468Z",
+    "execution_profile": "STANDARD",
+    "profile_justification": "Troca de modelo e novo parametro no mesmo provedor e nova chave em settings (chave/valor, sem migracao); nao toca state machine, seguranca, escrita atomica nem schema.",
+    "reviews_requested": 0,
+    "review_justification": "Mudanca pequena coberta por testes unitarios e de integracao com fetch falso; escuta humana no app.",
+    "validating_at": "2026-10-03T23:38:10.458Z",
+    "validation_result": "PASS",
+    "fixed_point": "7681f9de0cf002a0c88a438a0accd42ea3ab3f47c1ae60eec8b9d9c688806dab",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": {},
+    "reviewing_at": "2026-10-03T23:38:30.859Z",
+    "validation": ".agent/specs/SPEC-004-natural-tts/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/voice",
+          "tests/integration/tts-settings.test.ts",
+          "tests/integration/config-credential.test.ts"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-10-03T23:38:38.226Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "8065de32ae0fd9730497247a4a5d92a7b7df6bf22cbbcf13540f6f6ea5593f5f"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "32d098d8b1d90e6fbb453147f5b783077c8c77d7dec6e4c427a7c5a03ee29d00"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "d9162d3c47239b12b91d09dc33e18069d71cedfa42b74ce03b997d3ce75dcdf6"
+        },
+        {
+          "path": "tasks/001-natural-tts.md",
+          "sha256": "32b4b5a7b402104e5b0176064425c8d0c04d03107e7d9a6b378c500def050c3a"
+        }
+      ],
+      "digest": "47be33a9352fca79500595656b3cd93317285b58ea00ffb5867c50f8a33b74ee",
+      "kind": "mini",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-03T23:37:05.826Z"
+    }
+  }
+}

@@ -63,7 +63,9 @@ Interfaces e dados). Em divergência, a SPEC prevalece.
   `[SOURCES]` mapeia ID → documento/página; TTS remove marcadores.
 - Voz (D11–D12): sem troca de provedor na V1; `/api/voice/status` →
   `{ tts, sttServer }`. Parar aborta áudio e stream; o servidor persiste a
-  narrativa parcial com `meta.interrupted = true`.
+  narrativa parcial com `meta.interrupted = true`. TTS padrão
+  `gpt-4o-mini-tts`/`marin` com instrução de tom em `tts_instructions`
+  (omitida para `tts-1*`; SPEC-004).
 - Starters (D13): `starter` enumerado; turno persiste mensagem canônica com
   `meta.starter`.
 

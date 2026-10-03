@@ -10,6 +10,12 @@ import {
   STUDY_GUIDE_TIMEOUT_S_MIN,
 } from '@/lib/study-guide-constants';
 import { logger } from '@/lib/logger';
+import {
+  DEFAULT_TTS_INSTRUCTIONS,
+  DEFAULT_TTS_MODEL,
+  DEFAULT_TTS_VOICE,
+  MAX_TTS_INSTRUCTIONS_CHARS,
+} from '@/lib/openai-voice';
 import { parseModelHistory, prependModelHistory } from '@/lib/model-history';
 
 export const runtime = 'nodejs';
@@ -59,8 +65,9 @@ function readSettingsPayload() {
     chat_model_history: parseModelHistory(getSetting('chat_model_history')),
     note_model_history: parseModelHistory(getSetting('note_model_history')),
     memory_model_history: parseModelHistory(getSetting('memory_model_history')),
-    tts_voice: getSetting('tts_voice') ?? 'nova',
-    tts_model: getSetting('tts_model') ?? 'tts-1',
+    tts_voice: getSetting('tts_voice') ?? DEFAULT_TTS_VOICE,
+    tts_model: getSetting('tts_model') ?? DEFAULT_TTS_MODEL,
+    tts_instructions: getSetting('tts_instructions') ?? DEFAULT_TTS_INSTRUCTIONS,
     openai_tts_key: maskKey(getVoiceKey()),
   };
 }
@@ -91,6 +98,7 @@ export async function PUT(request: Request) {
     study_guide_timeout_s?: unknown;
     tts_voice?: unknown;
     tts_model?: unknown;
+    tts_instructions?: unknown;
     openai_tts_key?: unknown;
   };
   try {
@@ -267,6 +275,25 @@ export async function PUT(request: Request) {
       deleteSetting('tts_model');
     }
     updated.push('tts_model');
+  }
+
+  if (body.tts_instructions !== undefined) {
+    if (typeof body.tts_instructions !== 'string') {
+      return NextResponse.json({ error: 'tts_instructions inválido.' }, { status: 400 });
+    }
+    const val = body.tts_instructions.trim();
+    if (val.length > MAX_TTS_INSTRUCTIONS_CHARS) {
+      return NextResponse.json(
+        { error: `tts_instructions excede ${MAX_TTS_INSTRUCTIONS_CHARS} caracteres.` },
+        { status: 400 },
+      );
+    }
+    if (val) {
+      setSetting('tts_instructions', val);
+    } else {
+      deleteSetting('tts_instructions');
+    }
+    updated.push('tts_instructions');
   }
 
   if (body.openai_tts_key !== undefined) {

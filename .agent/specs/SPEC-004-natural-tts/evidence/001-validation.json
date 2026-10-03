@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "task_id": "001",
+  "execution_profile": "STANDARD",
+  "state_revision": 4,
+  "git_head": "1069eba1bde48fb55e4eb6df3679aabdcff446f1",
+  "tree_fingerprint": "48b9b7afa28e03d94c82cf9bc179b94ccb5823aa63efae2099da554f1ab48bc7",
+  "tracked_diff_sha256": "8a7f1d1b9cfabfbcc7694abfe20ae9a9434691189e8bac302088e36a10750219",
+  "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked_sha256": "5e20bac0e5834c62480de2791971f04fee294830b18866c465913ff4d2ecb099",
+  "task_fingerprint": "32b4b5a7b402104e5b0176064425c8d0c04d03107e7d9a6b378c500def050c3a",
+  "plan_fingerprint": "2b4cc0f945b0215ec8bb64d6e83b10e273b48a60e828057972f00b5f5dfe6b64",
+  "fixed_point": "7681f9de0cf002a0c88a438a0accd42ea3ab3f47c1ae60eec8b9d9c688806dab",
+  "commands": [
+    {
+      "category": "focused",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/unit/voice",
+        "tests/integration/tts-settings.test.ts",
+        "tests/integration/config-credential.test.ts"
+      ],
+      "started_at": "2026-10-03T23:38:10.472Z",
+      "completed_at": "2026-10-03T23:38:19.370Z",
+      "duration_ms": 8892,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "f7c612ba8f7c7beaaa34ef967f366430e3d72724c425640d9b94995d316bace8",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 1347,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  5.51s (transform 2.40s, setup 678ms, collect 3.20s, tests 4.58s, environment 13ms, prepare 5.03s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "typecheck",
+      "argv": [
+        "pnpm",
+        "typecheck"
+      ],
+      "started_at": "2026-10-03T23:38:19.370Z",
+      "completed_at": "2026-10-03T23:38:30.750Z",
+      "duration_ms": 11379,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e87f658d79ce7cab0c3553cf450dd8c27dcdc625c97bd411e30fd4140a9e951f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 74,
+        "stderr_bytes": 0,
+        "stdout_preview": "> tsc --noEmit",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "diff-check",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-10-03T23:38:30.750Z",
+      "completed_at": "2026-10-03T23:38:30.762Z",
+      "duration_ms": 12,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stderr_bytes": 0,
+        "stdout_preview": "",
+        "stderr_preview": ""
+      }
+    }
+  ],
+  "waivers": [],
+  "recorded_at": "2026-10-03T23:38:30.809Z",
+  "validation_result": "PASS"
+}

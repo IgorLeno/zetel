@@ -3,6 +3,25 @@ import { getVoiceKey } from './config';
 const OPENAI_TTS_URL = 'https://api.openai.com/v1/audio/speech';
 const OPENAI_STT_URL = 'https://api.openai.com/v1/audio/transcriptions';
 
+export const DEFAULT_TTS_MODEL = 'gpt-4o-mini-tts';
+export const DEFAULT_TTS_VOICE = 'marin';
+export const MAX_TTS_INSTRUCTIONS_CHARS = 2000;
+
+/** Tom padrão da parceira (SPEC-004 D2); ajustável por `tts_instructions`. */
+export const DEFAULT_TTS_INSTRUCTIONS = [
+  'Fale em português do Brasil, com sotaque brasileiro neutro e pouco carregado, com uma leve naturalidade mineira. Nunca use sotaque de Portugal.',
+  'Timbre macio, tom calmo e próximo; transmita confiança e clareza.',
+  'Calor humano moderado e energia média: viva, sem entusiasmo de apresentador nem tom de atendimento ao cliente.',
+  'Ritmo tranquilo e fluido, sem pressa e sem pausas artificiais.',
+  'Mude a entonação de forma discreta para marcar distinções, ênfases e humor leve.',
+  'Soe como uma conversa entre colegas de estudo, nunca como locução.',
+].join(' ');
+
+/** `tts-1` e `tts-1-hd` não aceitam `instructions` (SPEC-004 D3). */
+export function ttsModelSupportsInstructions(model: string): boolean {
+  return !/^tts-1(-|$)/.test(model);
+}
+
 /** Env (dev/CI) → `~/.zetel/config` `openai_tts_key` (D30). */
 export function readVoiceKey(): string {
   const fromEnv = process.env.OPENAI_API_KEY?.trim();
@@ -55,20 +74,24 @@ export interface SynthesizeParams {
   text: string;
   voice: string;
   model: string;
+  instructions?: string;
 }
 
 /**
  * Retorna a Response upstream para passthrough do ReadableStream (D32).
  * O chamador faz: new Response(upstream.body, { headers: { 'Content-Type': 'audio/mpeg' } })
  */
-export async function synthesizeSpeech({ apiKey, text, voice, model }: SynthesizeParams): Promise<Response> {
+export async function synthesizeSpeech({ apiKey, text, voice, model, instructions }: SynthesizeParams): Promise<Response> {
+  const payload: Record<string, string> = { model, voice, input: text };
+  if (instructions && ttsModelSupportsInstructions(model)) payload.instructions = instructions;
+
   const res = await fetch(OPENAI_TTS_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ model, voice, input: text }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
