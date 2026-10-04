@@ -1,9 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <style>
-    .tile { fill: #faf7f2; stroke: #d9d4cc; }
-    @media (prefers-color-scheme: dark) { .tile { fill: #2e2e33; stroke: #2e2e33; } }
-  </style>
-  <rect class="tile" x="0.5" y="0.5" width="63" height="63" rx="15" stroke-width="1" />
+  <!-- Tile sempre creme: no escuro a diagonal berinjela some sobre grafite (SPEC-010). -->
+  <rect x="0.5" y="0.5" width="63" height="63" rx="15" fill="#faf7f2" stroke="#d9d4cc" stroke-width="1" />
   <g transform="translate(6.4 6.4) scale(0.8)">
     <polygon points="36,22 50,22 29,42 15,42" fill="#4e3d63" stroke="#4e3d63" stroke-width="4" stroke-linejoin="round" />
     <polygon points="21,9 58,9 51,23 14,23" fill="#f7c9b3" stroke="#f7c9b3" stroke-width="6" stroke-linejoin="round" />

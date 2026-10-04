@@ -24,7 +24,8 @@ export function ZetelMark({ size = 32, title }: { size?: number; title?: string 
 export function ZetelLockup({ className }: { className?: string }) {
   return (
     <div className={`zetel-lockup${className ? ` ${className}` : ''}`}>
-      <ZetelMark size={52} />
+      {/* Wrapper recebe tile creme no tema escuro (SPEC-010), onde a diagonal berinjela some. */}
+      <span className="zetel-lockup-mark"><ZetelMark size={52} /></span>
       <div className="zetel-lockup-text">
         <span className="zetel-wordmark">Zetel</span>
         <span className="zetel-tagline">parceiro de estudos</span>

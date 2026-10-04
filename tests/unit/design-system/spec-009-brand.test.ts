@@ -61,7 +61,8 @@ describe('SPEC-009 brand identity', () => {
     for (const [name, hex] of Object.entries(palette)) expect(token(light, name)).toBe(hex);
     expect(token(light, '--bg')).toBe('#faf7f2');
     expect(token(light, '--text')).toBe('#2e2e33');
-    expect(token(dark, '--surface')).toBe('#2e2e33');
+    // SPEC-010: o escuro voltou aos neutros quentes anteriores; a marca não define o escuro.
+    expect(token(dark, '--surface')).toBe('#28221e');
   });
 
   it.each([
@@ -87,9 +88,8 @@ describe('SPEC-009 brand identity', () => {
     expect(css).not.toMatch(/--(?:p|accent):\s*var\(--brand-/);
   });
 
-  it('ships a self-contained app icon with light and dark tiles', () => {
+  it('ships a self-contained app icon on a creme tile', () => {
     expect(icon).toContain('#faf7f2');
-    expect(icon).toMatch(/prefers-color-scheme:\s*dark[^}]*#2e2e33/);
     for (const color of ['#f7c9b3', '#cec4f0', '#4e3d63']) expect(icon).toContain(color);
     expect(icon).not.toMatch(/href=|url\(|<image|<script|@import/);
   });

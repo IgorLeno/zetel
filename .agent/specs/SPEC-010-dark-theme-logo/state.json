@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "revision": 8,
+  "spec": {
+    "id": "SPEC-010-dark-theme-logo",
+    "kind": "mini",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-04T12:40:16.126Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Tema escuro antigo, toggle visivel e logo legivel",
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "FULL",
+      "profile_justification": "Mudanca de tokens globais do tema escuro, tile do logo, favicon e config de dev do Next; sem state machine, escrita atomica, seguranca ou banco",
+      "reviews_requested": 0,
+      "review_justification": "Mudanca de apresentacao coberta por contrato unitario de tokens/contraste e validacao visual com screenshots",
+      "validation": "PASS",
+      "review_result": "NOT_REQUIRED"
+    }
+  ],
+  "session": {
+    "id": "task-001-20261004",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-04T12:40:22.767Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Mudanca de tokens globais do tema escuro, tile do logo, favicon e config de dev do Next; sem state machine, escrita atomica, seguranca ou banco",
+    "reviews_requested": 0,
+    "review_justification": "Mudanca de apresentacao coberta por contrato unitario de tokens/contraste e validacao visual com screenshots",
+    "validating_at": "2026-10-04T12:44:10.755Z",
+    "validation_result": "PASS",
+    "fixed_point": "3493f4230ad688034a9b132609581bf4f6d8a91eaa6a51a0fa0baf2fc29081e1",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": {},
+    "validation": ".agent/specs/SPEC-010-dark-theme-logo/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/design-system"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "reviewing_at": "2026-10-04T12:59:31.088Z",
+    "done_at": "2026-10-04T12:59:38.630Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "fbdd94e5ab52c08f1eb1cef4a7acd2a9d3ce1a9a882851a09fc04ca66d2d8ddb"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "0b7418cad588b7f8bf30923ffa0e6d61ed8df5b26e89bd66f5c59062252cb362"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "1321b5393c9fa9290bc50ead3f3fb8890c3c76a974b62e41486fb8181e58cb42"
+        },
+        {
+          "path": "tasks/001-dark-theme-logo.md",
+          "sha256": "461503b1e5b4552ce96d8d5f555d0681b2ce8787906fe6378903fb90b1c345b3"
+        }
+      ],
+      "digest": "52fbc57d0c2dbf438c87c8783cc12384819e83fd0768da676820ebdc224e4f6c",
+      "kind": "mini",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-04T12:40:16.126Z"
+    }
+  }
+}
