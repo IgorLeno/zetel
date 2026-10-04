@@ -4,15 +4,13 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * Contrato da SPEC-010: tema escuro volta aos neutros quentes de antes da
- * SPEC-009, a marca fica sobre tile creme no escuro e o indicador de dev do
- * Next não cobre o toggle de tema.
+ * SPEC-009 e o indicador de dev do Next não cobre o toggle de tema. O tile
+ * creme da marca foi substituído pela variante escura (SPEC-011).
  */
 const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
 const css = read('app/globals.css');
-const icon = read('app/icon.svg');
-const logo = read('components/ZetelLogo.tsx');
 const nextConfig = read('next.config.ts');
 
 function block(selector: string): string {
@@ -42,18 +40,6 @@ describe('SPEC-010 dark theme and logo', () => {
     for (const [name, hex] of Object.entries(neutrals)) {
       expect(dark, name).toMatch(new RegExp(`\\n  ${name}:\\s*${hex};`));
     }
-  });
-
-  it('puts the mark on a creme tile in the dark theme', () => {
-    expect(block("[data-theme='dark'] .rail-logo")).toContain('var(--brand-creme)');
-    expect(block("[data-theme='dark'] .zetel-lockup-mark")).toContain('var(--brand-creme)');
-    expect(logo).toMatch(/<span className="zetel-lockup-mark"><ZetelMark/);
-  });
-
-  it('keeps the favicon tile creme regardless of the system scheme', () => {
-    expect(icon).not.toContain('prefers-color-scheme');
-    expect(icon).not.toContain('#2e2e33');
-    expect(icon).toMatch(/<rect[^>]*fill="#faf7f2"/);
   });
 
   it('disables the Next dev indicator that covered the theme toggle', () => {

@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "revision": 7,
+  "spec": {
+    "id": "SPEC-011-dark-logo-colors",
+    "kind": "mini",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-04T20:30:05.661Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Cores da marca no tema escuro",
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "FULL",
+      "profile_justification": "Mudanca visual transversal: cores da marca por tema, CSS global e favicon; sem state machine, escrita atomica, seguranca ou banco",
+      "reviews_requested": 0,
+      "review_justification": "Mudanca de apresentacao coberta por contrato unitario de cores/contraste e validacao visual com screenshots",
+      "validation": "PASS",
+      "review_result": "NOT_REQUIRED"
+    }
+  ],
+  "session": {
+    "id": "task-001-20261004",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-04T20:30:07.151Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Mudanca visual transversal: cores da marca por tema, CSS global e favicon; sem state machine, escrita atomica, seguranca ou banco",
+    "reviews_requested": 0,
+    "review_justification": "Mudanca de apresentacao coberta por contrato unitario de cores/contraste e validacao visual com screenshots",
+    "validating_at": "2026-10-04T20:31:54.890Z",
+    "validation_result": "PASS",
+    "fixed_point": "6cf4f316518fdc81915fd04f914516e6b3a1e2b788418623a0e94b3a497b1333",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": {},
+    "reviewing_at": "2026-10-04T20:37:56.300Z",
+    "validation": ".agent/specs/SPEC-011-dark-logo-colors/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/design-system"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-10-04T20:38:04.020Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "fff9e161e27b2aebb166707a3cab80c6ca1f5112944e48ddd97a9fed0ef84ff2"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "e0f23789c61b6eeff44eb1362ad138e4f46f5655169ddbe94841478af436076d"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "ed224b4943692c017efb470bb8b23db6fe68997bd7c8c0596b79de55c0ff87a1"
+        },
+        {
+          "path": "tasks/001-dark-logo-colors.md",
+          "sha256": "1dfc4a76d8b8b61277e38c6a77c5d2a8b5d67e66a8de90e2dfb2c2d3cc891218"
+        }
+      ],
+      "digest": "0ec414d88b7ad96ce37ca420c9dc55d7c56e710e465cb25258ebf6d0aa1a9cee",
+      "kind": "mini",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-04T20:30:05.661Z"
+    }
+  }
+}

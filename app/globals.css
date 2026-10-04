@@ -220,14 +220,16 @@ svg { stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round
   transition: transform var(--t-med);
 }
 .rail-logo .zetel-mark { display: block; }
-/* No escuro a diagonal berinjela some sobre --surface: tile creme, como o ícone do app (SPEC-010). */
-[data-theme='dark'] .rail-logo { background: var(--brand-creme); }
+/* Variante escura da marca (SPEC-011): berinjela some sobre fundo escuro e os
+   balões da marca ficam fortes demais; diagonal clareada (≥3:1) e balões suavizados. */
+[data-theme='dark'] .zetel-mark .zm-top    { fill: #e3b39c; stroke: #e3b39c; }
+[data-theme='dark'] .zetel-mark .zm-bottom { fill: #b6aadb; stroke: #b6aadb; }
+[data-theme='dark'] .zetel-mark .zm-diag   { fill: #8c79ab; stroke: #8c79ab; }
+[data-theme='dark'] .zetel-mark .zm-lines  { stroke: #4e3d63; }
 
 /* ── Marca (SPEC-009) ── */
 .zetel-mark { flex: none; }
 .zetel-lockup { display: inline-flex; align-items: center; gap: 12px; color: var(--text); }
-.zetel-lockup-mark { display: grid; place-items: center; border-radius: 17px; }
-[data-theme='dark'] .zetel-lockup-mark { padding: 6px; background: var(--brand-creme); box-shadow: var(--shadow-md); }
 .zetel-lockup-text { display: flex; flex-direction: column; line-height: 1; }
 .zetel-wordmark {
   font-family: var(--font-display);
