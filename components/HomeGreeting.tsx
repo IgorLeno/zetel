@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { PartnerOrb } from './PartnerOrb';
+import { ZetelLockup } from './ZetelLogo';
 
 function greetingFor(hour: number) {
   if (hour < 5) return 'Boa madrugada';
@@ -17,25 +18,28 @@ export function HomeGreeting({ resume }: { resume: { slug: string; name: string 
   useEffect(() => setGreeting(greetingFor(new Date().getHours())), []);
 
   return (
-    <section className="home-hello">
-      <PartnerOrb size={88} />
-      <div className="home-hello-text">
-        <h1>{greeting}!</h1>
-        <p className="home-bubble">
-          {resume
-            ? <>Quer continuar <b>{resume.name}</b> de onde paramos, ou começar algo novo?</>
-            : <>Me traga um material — PDF ou Markdown — e a gente estuda junto, conversando.</>}
-        </p>
-        <div className="home-chips">
-          {resume && (
-            <Link className="chip chip--accent" href={`/zetel/${resume.slug}`}>
-              <span className="chip-dot" aria-hidden /> Retomar {resume.name}
-            </Link>
-          )}
-          <Link className="chip" href="/parceiros">Escolher parceiro</Link>
-          <Link className="chip" href="/memoria">Ver memória</Link>
+    <>
+      <ZetelLockup className="home-brand" />
+      <section className="home-hello">
+        <PartnerOrb size={88} />
+        <div className="home-hello-text">
+          <h1>{greeting}!</h1>
+          <p className="home-bubble">
+            {resume
+              ? <>Quer continuar <b>{resume.name}</b> de onde paramos, ou começar algo novo?</>
+              : <>Me traga um material — PDF ou Markdown — e a gente estuda junto, conversando.</>}
+          </p>
+          <div className="home-chips">
+            {resume && (
+              <Link className="chip chip--accent" href={`/zetel/${resume.slug}`}>
+                <span className="chip-dot" aria-hidden /> Retomar {resume.name}
+              </Link>
+            )}
+            <Link className="chip" href="/parceiros">Escolher parceiro</Link>
+            <Link className="chip" href="/memoria">Ver memória</Link>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }

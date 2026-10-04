@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "revision": 8,
+  "spec": {
+    "id": "SPEC-009-brand-identity",
+    "kind": "mini",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-04T11:55:38.908Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Logo SVG e paleta da marca",
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "FULL",
+      "profile_justification": "Mudanca visual transversal: tokens globais de tema claro/escuro, componente de logo e icone do app; sem state machine, escrita atomica, seguranca ou banco",
+      "reviews_requested": 0,
+      "review_justification": "Mudanca de apresentacao coberta por contrato unitario de tokens/contraste e validacao visual com screenshots aprovada pelo Igor",
+      "validation": "PASS",
+      "review_result": "NOT_REQUIRED"
+    }
+  ],
+  "session": {
+    "id": "task-001-20261004",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-04T11:55:40.394Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Mudanca visual transversal: tokens globais de tema claro/escuro, componente de logo e icone do app; sem state machine, escrita atomica, seguranca ou banco",
+    "reviews_requested": 0,
+    "review_justification": "Mudanca de apresentacao coberta por contrato unitario de tokens/contraste e validacao visual com screenshots aprovada pelo Igor",
+    "validating_at": "2026-10-04T12:00:46.210Z",
+    "validation_result": "PASS",
+    "fixed_point": "3892bbfcd4ff688790dd7a64b30227a284dddb9f9e2910b81a7cc156b86fcfdf",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": {},
+    "reviewing_at": "2026-10-04T12:07:56.154Z",
+    "validation": ".agent/specs/SPEC-009-brand-identity/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/design-system"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-10-04T12:08:02.900Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "bb3a8c6a8a925bd1e6d626e4df510e6c7e4c7fe37d0c856d59c5ecd54747e3a9"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "5e29e808ff498f5c67a6efeb7f2186761c453834c354508f555db9da1f335cb2"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "a7f0ad73bc2814dedcdce194c9d29df10fc235c4ede8f273fb142c3810e24111"
+        },
+        {
+          "path": "tasks/001-brand-identity.md",
+          "sha256": "860e88917a936fdcf75f6be60e33e689d32491fd3bce8a6c2f954b33e88eeaa8"
+        }
+      ],
+      "digest": "57f0cf82196177cadbf3f3cc35d787cc5d45be221806eb2c7d17747e9598e29e",
+      "kind": "mini",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-04T11:55:38.908Z"
+    }
+  }
+}

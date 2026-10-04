@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from './ThemeToggle';
+import { ZetelMark } from './ZetelLogo';
 
 const NAV = [
   {
@@ -43,7 +44,9 @@ export function Sidebar({ theme }: { theme: 'light' | 'dark' }) {
 
   return (
     <aside className="rail" aria-label="Navegação principal">
-      <Link href="/zetel" className="rail-logo" aria-label="Zetel — início">z</Link>
+      <Link href="/zetel" className="rail-logo" aria-label="Zetel — início">
+        <ZetelMark size={34} />
+      </Link>
       <nav className="rail-nav">
         {NAV.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
