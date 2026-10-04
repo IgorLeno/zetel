@@ -2,8 +2,7 @@
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { partnerColorVar, type PartnerColor } from '@/lib/partner-identity';
-
-const MATERIAL_KEY = 'zetel_material_open';
+import { readUiPref, writeUiPref, MATERIAL_OPEN } from '@/lib/ui-prefs';
 
 /**
  * Conversa no centro; material ao lado, recolhível. As duas superfícies ficam
@@ -26,23 +25,16 @@ export function StudyShell({
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(MATERIAL_KEY);
-      // Em tela estreita o material cobre a conversa; começa recolhido.
-      if (window.matchMedia('(max-width: 860px)').matches) setOpen(false);
-      else if (saved !== null) setOpen(saved === 'true');
-    } catch {
-      /* preferência só local */
-    }
+    // Cookie (não localStorage): vale em qualquer porta do localhost (SPEC-008).
+    const saved = readUiPref(MATERIAL_OPEN);
+    // Em tela estreita o material cobre a conversa; começa recolhido.
+    if (window.matchMedia('(max-width: 860px)').matches) setOpen(false);
+    else if (saved !== null) setOpen(saved);
   }, []);
 
   function toggle(next: boolean) {
     setOpen(next);
-    try {
-      localStorage.setItem(MATERIAL_KEY, String(next));
-    } catch {
-      /* preferência só local */
-    }
+    writeUiPref(MATERIAL_OPEN, next);
   }
 
   const style = partnerColor ? ({ '--p': partnerColorVar(partnerColor) } as CSSProperties) : undefined;

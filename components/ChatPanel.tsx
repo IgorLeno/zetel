@@ -20,7 +20,8 @@ import { PartnerStudio, resolvePartner, useTutorProfiles } from './PartnerStudio
 import { partnerColorVar, partnerTagline, type PartnerColor } from '@/lib/partner-identity';
 import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
 import { useBargeIn } from '@/hooks/useBargeIn';
-import { readBargeInPref, shouldArmBargeIn } from '@/lib/barge-in';
+import { shouldArmBargeIn } from '@/lib/barge-in';
+import { readUiPref, writeUiPref, VOICE_PREFS } from '@/lib/ui-prefs';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
 type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'stopped' | 'error';
@@ -34,46 +35,16 @@ const VOICE_STATE_LABEL: Record<VoiceState, string> = {
   error: 'Erro',
 };
 
-const VOICE_PREFS_KEY = 'zetel_voice_prefs';
-
 function getSpeechRecognitionCtor(): (new () => SpeechRecognition) | null {
   if (typeof window === 'undefined') return null;
   return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
 }
 
-function loadVoicePrefs(): { micAtivo: boolean; autoPlay: boolean } {
-  try {
-    const raw = localStorage.getItem(VOICE_PREFS_KEY);
-    if (!raw) return { micAtivo: false, autoPlay: false };
-    const parsed = JSON.parse(raw) as unknown;
-    if (typeof parsed !== 'object' || parsed === null)
-      return { micAtivo: false, autoPlay: false };
-    const p = parsed as Record<string, unknown>;
-    return {
-      micAtivo: p.micAtivo === true,
-      autoPlay: p.autoPlay === true,
-    };
-  } catch {
-    return { micAtivo: false, autoPlay: false };
-  }
-}
-
-function loadBargeInPref(): boolean {
-  try {
-    return readBargeInPref(localStorage.getItem(VOICE_PREFS_KEY));
-  } catch {
-    return true;
-  }
-}
-
+// Cookie (não localStorage): vale em qualquer porta do localhost (SPEC-008).
 // bargeIn omitido preserva o valor salvo: os toggles de mic/voz não o apagam.
 function saveVoicePrefs(micAtivo: boolean, autoPlay: boolean, bargeIn?: boolean): void {
-  try {
-    const keep = bargeIn ?? readBargeInPref(localStorage.getItem(VOICE_PREFS_KEY));
-    localStorage.setItem(VOICE_PREFS_KEY, JSON.stringify({ micAtivo, autoPlay, bargeIn: keep }));
-  } catch {
-    /* localStorage indisponível — prefs não persistem */
-  }
+  const keep = bargeIn ?? readUiPref(VOICE_PREFS).bargeIn;
+  writeUiPref(VOICE_PREFS, { micAtivo, autoPlay, bargeIn: keep });
 }
 
 function parseSseChunk(text: string): {
@@ -532,16 +503,15 @@ export function ChatPanel({
     };
   }, []);
 
-  // ── Restaura prefs do localStorage (apenas estado visual; mic não inicia agora) ──
+  // ── Restaura prefs do cookie (apenas estado visual; mic não inicia agora) ──
   useEffect(() => {
-    const prefs = loadVoicePrefs();
+    const prefs = readUiPref(VOICE_PREFS);
     setMicAtivo(prefs.micAtivo);
     setAutoPlay(prefs.autoPlay);
     micAtivoRef.current = prefs.micAtivo;
     autoPlayRef.current = prefs.autoPlay;
-    const bargeInPref = loadBargeInPref();
-    setBargeIn(bargeInPref);
-    bargeInRef.current = bargeInPref;
+    setBargeIn(prefs.bargeIn);
+    bargeInRef.current = prefs.bargeIn;
     if (prefs.micAtivo) pendingMicStartRef.current = true;
   }, []);
 

@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "revision": 7,
+  "spec": {
+    "id": "SPEC-008-ui-prefs-cookie",
+    "kind": "mini",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-04T11:43:15.008Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Preferências de UI em cookie",
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "STANDARD",
+      "profile_justification": "Persistencia de preferencias de UI no cliente + modulo puro novo; sem state machine, escrita atomica, seguranca ou banco",
+      "reviews_requested": 0,
+      "review_justification": "Escopo pequeno coberto por unit e validacao no navegador",
+      "validation": "PASS",
+      "review_result": "NOT_REQUIRED"
+    }
+  ],
+  "session": {
+    "id": "task-001-20261004",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-04T11:43:21.852Z",
+    "execution_profile": "STANDARD",
+    "profile_justification": "Persistencia de preferencias de UI no cliente + modulo puro novo; sem state machine, escrita atomica, seguranca ou banco",
+    "reviews_requested": 0,
+    "review_justification": "Escopo pequeno coberto por unit e validacao no navegador",
+    "validating_at": "2026-10-04T11:46:28.040Z",
+    "validation_result": "PASS",
+    "fixed_point": "08d828581df01bb4839460c4b277c9bc5ca70c9bc8528e8be9727033a8cc2765",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": {},
+    "reviewing_at": "2026-10-04T11:46:47.489Z",
+    "validation": ".agent/specs/SPEC-008-ui-prefs-cookie/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/ui/ui-prefs.test.ts",
+          "tests/unit/voice/barge-in.test.ts"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-10-04T11:46:48.169Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "b9833cfed636afcaccf9d3275e61e6670fac634f6a3890a49977e3697c9083e2"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "3a611db84dba204d4734f1259ee3c42da3d4eeec355daded911975b7f5272738"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "8979eac56f3e89fe7ecff65c4729e7ab65eac69a2fdb520b6411e9433c56b477"
+        },
+        {
+          "path": "tasks/001-ui-prefs-cookie.md",
+          "sha256": "77448955bb36bbf1fc639ab1f027889f05b61018c77eda0bd96da07aa0b12fd4"
+        }
+      ],
+      "digest": "41d4635b5823bf15eb5c92c60689025da41b9c852da133b19bd80de5e76685d2",
+      "kind": "mini",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-04T11:43:15.008Z"
+    }
+  }
+}
