@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "revision": 7,
+  "spec": {
+    "id": "SPEC-005-voice-settings-ui",
+    "kind": "mini",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-04T00:17:37.124Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Voz: secao de configuracao de voz com selecao validada",
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "STANDARD",
+      "profile_justification": "UI isolada (aba Voz) e validacao de entrada em PUT /api/settings e POST /api/voice/tts; chave/valor sem migracao; nao toca state machine, escrita atomica, seguranca nem schema.",
+      "reviews_requested": 0,
+      "validation": "PASS",
+      "review_result": "NOT_REQUIRED"
+    }
+  ],
+  "session": {
+    "id": "task-001-20261004",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-04T00:18:25.235Z",
+    "execution_profile": "STANDARD",
+    "profile_justification": "UI isolada (aba Voz) e validacao de entrada em PUT /api/settings e POST /api/voice/tts; chave/valor sem migracao; nao toca state machine, escrita atomica, seguranca nem schema.",
+    "reviews_requested": 0,
+    "validating_at": "2026-10-04T00:23:02.142Z",
+    "validation_result": "PASS",
+    "fixed_point": "e00b322f47e54c1a30ab044be84c2da98fd4e488a3be8109466e9b498fdf8d58",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": {},
+    "reviewing_at": "2026-10-04T00:23:14.958Z",
+    "validation": ".agent/specs/SPEC-005-voice-settings-ui/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/voice/tts-options.test.ts",
+          "tests/unit/voice/tts-route.test.ts",
+          "tests/integration/tts-settings.test.ts"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-10-04T00:23:28.289Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "a4820fba4634e8c9cc495a1fdb60fcfaadc9154c6f14dc868f8057abed1af145"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "ab413c063f6ceee741907b3c206b61c6934de2b453505c381548a6b3f78a8c88"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "887bc78cee6120845cd4c24682a46f86a2092fdeaaba3e21c03d880cee6b38e9"
+        },
+        {
+          "path": "tasks/001-voice-settings-ui.md",
+          "sha256": "1e5411dd310792c3955151348a9a899fb98699d25e0d6064c91fe4e466618c82"
+        }
+      ],
+      "digest": "daabe77a610d2c8113bf43ec295ed63c031949ce6c16c284d41bf835b90e59c4",
+      "kind": "mini",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-04T00:17:37.124Z"
+    }
+  }
+}

@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { ConfiguracoesForm } from './ConfiguracoesForm';
 import { LixeiraPanel } from './LixeiraPanel';
+import { VozPanel } from './VozPanel';
 
-type Tab = 'geral' | 'lixeira';
+type Tab = 'geral' | 'voz' | 'lixeira';
 
 export function ConfiguracoesTabs({
   initialVaultPath,
@@ -56,6 +57,13 @@ export function ConfiguracoesTabs({
           Geral
         </button>
         <button
+          className={`tab${tab === 'voz' ? ' active' : ''}`}
+          type="button"
+          onClick={() => setTab('voz')}
+        >
+          Voz
+        </button>
+        <button
           className={`tab${tab === 'lixeira' ? ' active' : ''}`}
           type="button"
           onClick={() => setTab('lixeira')}
@@ -84,6 +92,8 @@ export function ConfiguracoesTabs({
           initialNoteModelHistory={initialNoteModelHistory}
           initialMemoryModelHistory={initialMemoryModelHistory}
         />
+      ) : tab === 'voz' ? (
+        <VozPanel />
       ) : (
         <LixeiraPanel />
       )}

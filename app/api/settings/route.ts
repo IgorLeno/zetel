@@ -17,6 +17,7 @@ import {
   MAX_TTS_INSTRUCTIONS_CHARS,
 } from '@/lib/openai-voice';
 import { parseModelHistory, prependModelHistory } from '@/lib/model-history';
+import { isTtsModel, isTtsVoice, ttsVoiceSupportedBy } from '@/lib/tts-options';
 
 export const runtime = 'nodejs';
 
@@ -251,43 +252,65 @@ export async function PUT(request: Request) {
     updated.push('study_guide_timeout_s');
   }
 
+  // Voz e modelo TTS (SPEC-005 D1): só valores da lista e par efetivo compatível.
+  // Vazio apaga a chave (volta ao padrão). Valida tudo antes de gravar, inclusive
+  // a instrução, para a aba Voz nunca deixar gravação parcial das três chaves.
+  if (
+    body.tts_instructions !== undefined &&
+    (typeof body.tts_instructions !== 'string' ||
+      body.tts_instructions.trim().length > MAX_TTS_INSTRUCTIONS_CHARS)
+  ) {
+    return NextResponse.json(
+      { error: `tts_instructions inválido ou acima de ${MAX_TTS_INSTRUCTIONS_CHARS} caracteres.` },
+      { status: 400 },
+    );
+  }
+  let ttsVoice: string | undefined;
+  let ttsModel: string | undefined;
   if (body.tts_voice !== undefined) {
     if (typeof body.tts_voice !== 'string') {
       return NextResponse.json({ error: 'tts_voice inválido.' }, { status: 400 });
     }
-    const val = body.tts_voice.trim();
-    if (val) {
-      setSetting('tts_voice', val);
-    } else {
-      deleteSetting('tts_voice');
+    ttsVoice = body.tts_voice.trim();
+    if (ttsVoice && !isTtsVoice(ttsVoice)) {
+      return NextResponse.json({ error: 'Voz desconhecida.' }, { status: 400 });
     }
-    updated.push('tts_voice');
   }
-
   if (body.tts_model !== undefined) {
     if (typeof body.tts_model !== 'string') {
       return NextResponse.json({ error: 'tts_model inválido.' }, { status: 400 });
     }
-    const val = body.tts_model.trim();
-    if (val) {
-      setSetting('tts_model', val);
-    } else {
-      deleteSetting('tts_model');
+    ttsModel = body.tts_model.trim();
+    if (ttsModel && !isTtsModel(ttsModel)) {
+      return NextResponse.json({ error: 'Modelo de voz desconhecido.' }, { status: 400 });
     }
-    updated.push('tts_model');
   }
-
-  if (body.tts_instructions !== undefined) {
-    if (typeof body.tts_instructions !== 'string') {
-      return NextResponse.json({ error: 'tts_instructions inválido.' }, { status: 400 });
-    }
-    const val = body.tts_instructions.trim();
-    if (val.length > MAX_TTS_INSTRUCTIONS_CHARS) {
+  if (ttsVoice !== undefined || ttsModel !== undefined) {
+    const effectiveVoice =
+      (ttsVoice !== undefined ? ttsVoice : getSetting('tts_voice')) || DEFAULT_TTS_VOICE;
+    const effectiveModel =
+      (ttsModel !== undefined ? ttsModel : getSetting('tts_model')) || DEFAULT_TTS_MODEL;
+    if (!ttsVoiceSupportedBy(effectiveModel, effectiveVoice)) {
       return NextResponse.json(
-        { error: `tts_instructions excede ${MAX_TTS_INSTRUCTIONS_CHARS} caracteres.` },
+        { error: `A voz ${effectiveVoice} não está disponível no modelo ${effectiveModel}.` },
         { status: 400 },
       );
     }
+  }
+  if (ttsVoice !== undefined) {
+    if (ttsVoice) setSetting('tts_voice', ttsVoice);
+    else deleteSetting('tts_voice');
+    updated.push('tts_voice');
+  }
+  if (ttsModel !== undefined) {
+    if (ttsModel) setSetting('tts_model', ttsModel);
+    else deleteSetting('tts_model');
+    updated.push('tts_model');
+  }
+
+  // Tipo e limite já validados acima, antes das gravações de voz/modelo.
+  if (typeof body.tts_instructions === 'string') {
+    const val = body.tts_instructions.trim();
     if (val) {
       setSetting('tts_instructions', val);
     } else {

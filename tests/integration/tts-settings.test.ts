@@ -59,4 +59,45 @@ describe('configuração de voz TTS', () => {
     expect((await PUT(put({ tts_instructions: 'a'.repeat(2001) }))).status).toBe(400);
     expect((await PUT(put({ tts_instructions: 'a'.repeat(2000) }))).status).toBe(200);
   });
+
+  it('aceita modelo e voz da lista e rejeita valores desconhecidos', async () => {
+    const { PUT, GET } = await import('@/app/api/settings/route');
+    expect((await PUT(put({ tts_model: 'tts-1-hd', tts_voice: 'onyx' }))).status).toBe(200);
+    expect(await (await GET()).json()).toMatchObject({ tts_model: 'tts-1-hd', tts_voice: 'onyx' });
+
+    expect((await PUT(put({ tts_model: 'gpt-9-tts' }))).status).toBe(400);
+    expect((await PUT(put({ tts_voice: 'darth' }))).status).toBe(400);
+    expect(await (await GET()).json()).toMatchObject({ tts_model: 'tts-1-hd', tts_voice: 'onyx' });
+  });
+
+  it('rejeita par efetivo incompatível considerando o valor já salvo', async () => {
+    const { PUT, GET } = await import('@/app/api/settings/route');
+    // Padrão é gpt-4o-mini-tts + marin; marin não existe no tts-1.
+    expect((await PUT(put({ tts_model: 'tts-1' }))).status).toBe(400);
+    expect((await PUT(put({ tts_model: 'tts-1', tts_voice: 'marin' }))).status).toBe(400);
+    expect((await PUT(put({ tts_model: 'tts-1', tts_voice: 'nova' }))).status).toBe(200);
+    expect((await PUT(put({ tts_voice: 'cedar' }))).status).toBe(400);
+    expect(await (await GET()).json()).toMatchObject({ tts_model: 'tts-1', tts_voice: 'nova' });
+  });
+
+  it('não grava nada quando a instrução é inválida junto com voz e modelo', async () => {
+    const { PUT, GET } = await import('@/app/api/settings/route');
+    const res = await PUT(
+      put({ tts_model: 'tts-1', tts_voice: 'nova', tts_instructions: 'a'.repeat(2001) }),
+    );
+    expect(res.status).toBe(400);
+    expect(await (await GET()).json()).toMatchObject({ tts_model: 'gpt-4o-mini-tts', tts_voice: 'marin' });
+  });
+
+  it('vazio nas três chaves restaura os padrões', async () => {
+    const { PUT, GET } = await import('@/app/api/settings/route');
+    const { DEFAULT_TTS_INSTRUCTIONS } = await import('@/lib/openai-voice');
+    await PUT(put({ tts_model: 'tts-1', tts_voice: 'echo', tts_instructions: 'x' }));
+    expect((await PUT(put({ tts_model: '', tts_voice: '', tts_instructions: '' }))).status).toBe(200);
+    expect(await (await GET()).json()).toMatchObject({
+      tts_model: 'gpt-4o-mini-tts',
+      tts_voice: 'marin',
+      tts_instructions: DEFAULT_TTS_INSTRUCTIONS,
+    });
+  });
 });

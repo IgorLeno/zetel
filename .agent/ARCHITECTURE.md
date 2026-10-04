@@ -65,7 +65,11 @@ Interfaces e dados). Em divergência, a SPEC prevalece.
   `{ tts, sttServer }`. Parar aborta áudio e stream; o servidor persiste a
   narrativa parcial com `meta.interrupted = true`. TTS padrão
   `gpt-4o-mini-tts`/`marin` com instrução de tom em `tts_instructions`
-  (omitida para `tts-1*`; SPEC-004).
+  (omitida para `tts-1*`; SPEC-004). Modelos, vozes e compatibilidade vivem
+  em `lib/tts-options.ts`; `PUT /api/settings` rejeita `tts_model`/`tts_voice`
+  fora da lista ou par incompatível, e `/api/voice/tts` aceita
+  `model`/`voice`/`instructions` validados no corpo para a amostra da aba Voz
+  (SPEC-005).
 - Starters (D13): `starter` enumerado; turno persiste mensagem canônica com
   `meta.starter`.
 

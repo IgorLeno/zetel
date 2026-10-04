@@ -1,26 +1,17 @@
 import { getVoiceKey } from './config';
+import { ttsModelSupportsInstructions } from './tts-options';
+
+// Constantes vivem em módulo puro, seguro para o cliente (SPEC-005 D3).
+export {
+  DEFAULT_TTS_INSTRUCTIONS,
+  DEFAULT_TTS_MODEL,
+  DEFAULT_TTS_VOICE,
+  MAX_TTS_INSTRUCTIONS_CHARS,
+  ttsModelSupportsInstructions,
+} from './tts-options';
 
 const OPENAI_TTS_URL = 'https://api.openai.com/v1/audio/speech';
 const OPENAI_STT_URL = 'https://api.openai.com/v1/audio/transcriptions';
-
-export const DEFAULT_TTS_MODEL = 'gpt-4o-mini-tts';
-export const DEFAULT_TTS_VOICE = 'marin';
-export const MAX_TTS_INSTRUCTIONS_CHARS = 2000;
-
-/** Tom padrão da parceira (SPEC-004 D2); ajustável por `tts_instructions`. */
-export const DEFAULT_TTS_INSTRUCTIONS = [
-  'Fale em português do Brasil, com sotaque brasileiro neutro e pouco carregado, com uma leve naturalidade mineira. Nunca use sotaque de Portugal.',
-  'Timbre macio, tom calmo e próximo; transmita confiança e clareza.',
-  'Calor humano moderado e energia média: viva, sem entusiasmo de apresentador nem tom de atendimento ao cliente.',
-  'Ritmo tranquilo e fluido, sem pressa e sem pausas artificiais.',
-  'Mude a entonação de forma discreta para marcar distinções, ênfases e humor leve.',
-  'Soe como uma conversa entre colegas de estudo, nunca como locução.',
-].join(' ');
-
-/** `tts-1` e `tts-1-hd` não aceitam `instructions` (SPEC-004 D3). */
-export function ttsModelSupportsInstructions(model: string): boolean {
-  return !/^tts-1(-|$)/.test(model);
-}
 
 /** Env (dev/CI) → `~/.zetel/config` `openai_tts_key` (D30). */
 export function readVoiceKey(): string {

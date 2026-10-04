@@ -72,6 +72,33 @@ describe('POST /api/voice/tts', () => {
     expect(payload).not.toHaveProperty('instructions');
   });
 
+  it('usa modelo, voz e instrução do corpo sem tocar em settings (amostra)', async () => {
+    settings.set('tts_instructions', 'Salva.');
+    await POST(ttsRequest({ text: 'Olá.', model: 'gpt-4o-mini-tts', voice: 'coral', instructions: ' Do corpo. ' }));
+    expect(await sentPayload()).toMatchObject({
+      model: 'gpt-4o-mini-tts',
+      voice: 'coral',
+      instructions: 'Do corpo.',
+    });
+  });
+
+  it.each([
+    [{ model: 'gpt-9-tts' }],
+    [{ voice: 'darth' }],
+    [{ model: 'tts-1', voice: 'marin' }],
+    [{ instructions: 42 }],
+    [{ instructions: 'a'.repeat(2001) }],
+  ])('rejeita corpo inválido %j com 400 sem chamar a OpenAI', async (extra) => {
+    const res = await POST(ttsRequest({ text: 'Olá.', ...extra }));
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('não loga a instrução do corpo', async () => {
+    await POST(ttsRequest({ text: 'Olá.', instructions: 'instrução secreta' }));
+    expect(JSON.stringify(logger.info.mock.calls)).not.toMatch(/secreta/);
+  });
+
   it('loga só a contagem de caracteres', async () => {
     settings.set('tts_instructions', 'instrução secreta');
     await POST(ttsRequest({ text: 'Conteúdo do usuário.' }));
