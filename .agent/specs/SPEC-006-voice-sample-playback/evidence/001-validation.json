@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "task_id": "001",
+  "execution_profile": "STANDARD",
+  "state_revision": 5,
+  "git_head": "4990e6e2b9e59b6f48d5c1f25a779d02afe0cec3",
+  "tree_fingerprint": "0b98d22ef7b3cf6c2a62be794812d646ed1466a5359d1b6b519835efb2b3d751",
+  "tracked_diff_sha256": "4bf3dae6a1f3f856f6db17ee429187d04bcdc2051673f6c6457134e347feb2dd",
+  "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked_sha256": "f5fa2b2ac3e013feb089d85bc7074785f5c89d4f75861db4eabf8bf0851dc741",
+  "task_fingerprint": "dc7325a502fcb81869b120e3522b1e983093c20c0f95fef07d179c4fd24aa603",
+  "plan_fingerprint": "ec31a76a7535736c7f9c832de21e794c9d6273c02acf7a1d13aefec05fc55261",
+  "fixed_point": "77d77aabd8e26612c05bfea50925f8de3862126fa8c1112a09494e100311a0e4",
+  "commands": [
+    {
+      "category": "focused",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/unit/voice/sample-player.test.ts",
+        "tests/unit/voice/tts-options.test.ts",
+        "tests/unit/voice/tts-route.test.ts"
+      ],
+      "started_at": "2026-10-04T02:31:23.969Z",
+      "completed_at": "2026-10-04T02:31:31.764Z",
+      "duration_ms": 7789,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "40d073817d73515ee5918187b02aebd5ecf85d8d081477f42ca47b03f9c99286",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 408,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  2.73s (transform 549ms, setup 151ms, collect 739ms, tests 208ms, environment 4ms, prepare 1.45s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "focused",
+      "argv": [
+        "pnpm",
+        "typecheck"
+      ],
+      "started_at": "2026-10-04T02:31:31.764Z",
+      "completed_at": "2026-10-04T02:31:39.476Z",
+      "duration_ms": 7711,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e87f658d79ce7cab0c3553cf450dd8c27dcdc625c97bd411e30fd4140a9e951f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 74,
+        "stderr_bytes": 0,
+        "stdout_preview": "> tsc --noEmit",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "typecheck",
+      "argv": [
+        "pnpm",
+        "typecheck"
+      ],
+      "started_at": "2026-10-04T02:31:39.476Z",
+      "completed_at": "2026-10-04T02:31:46.484Z",
+      "duration_ms": 7007,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e87f658d79ce7cab0c3553cf450dd8c27dcdc625c97bd411e30fd4140a9e951f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 74,
+        "stderr_bytes": 0,
+        "stdout_preview": "> tsc --noEmit",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "diff-check",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-10-04T02:31:46.484Z",
+      "completed_at": "2026-10-04T02:31:46.499Z",
+      "duration_ms": 14,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stderr_bytes": 0,
+        "stdout_preview": "",
+        "stderr_preview": ""
+      }
+    }
+  ],
+  "waivers": [],
+  "recorded_at": "2026-10-04T02:31:46.552Z",
+  "validation_result": "PASS"
+}

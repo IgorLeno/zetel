@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "revision": 7,
+  "spec": {
+    "id": "SPEC-006-voice-sample-playback",
+    "kind": "mini",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-04T02:28:03.200Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Amostra de voz sem AbortError",
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "STANDARD",
+      "profile_justification": "Fix local de UI cliente + modulo puro novo; sem state machine, escrita atomica, seguranca ou banco",
+      "reviews_requested": 0,
+      "review_justification": "Escopo pequeno coberto por unit e validacao no navegador",
+      "validation": "PASS",
+      "review_result": "NOT_REQUIRED"
+    }
+  ],
+  "session": {
+    "id": "task-001-20261004",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-04T02:28:20.154Z",
+    "execution_profile": "STANDARD",
+    "profile_justification": "Fix local de UI cliente + modulo puro novo; sem state machine, escrita atomica, seguranca ou banco",
+    "reviews_requested": 0,
+    "review_justification": "Escopo pequeno coberto por unit e validacao no navegador",
+    "validating_at": "2026-10-04T02:31:23.954Z",
+    "validation_result": "PASS",
+    "fixed_point": "77d77aabd8e26612c05bfea50925f8de3862126fa8c1112a09494e100311a0e4",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": {},
+    "reviewing_at": "2026-10-04T02:31:46.645Z",
+    "validation": ".agent/specs/SPEC-006-voice-sample-playback/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/voice/sample-player.test.ts",
+          "tests/unit/voice/tts-options.test.ts",
+          "tests/unit/voice/tts-route.test.ts"
+        ]
+      },
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-10-04T02:31:52.629Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "af52e3d02df6577aed2a081eb3f01850bdda8384028e8ced360a8754adca8ebc"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "79278c5fb77d5747f7b717ea24a2ff739ca2975a23b6fdb27cf3e15d60eff4f9"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "2c278564f06aecaa5363dfc51afb47ee6470f016e88bebd3d132599adefe4319"
+        },
+        {
+          "path": "tasks/001-voice-sample-playback.md",
+          "sha256": "dc7325a502fcb81869b120e3522b1e983093c20c0f95fef07d179c4fd24aa603"
+        }
+      ],
+      "digest": "f5afefb36989d4316f518a567a5c946ba142717e1a28147219fa813d4b958184",
+      "kind": "mini",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-04T02:28:03.200Z"
+    }
+  }
+}

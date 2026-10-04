@@ -13,6 +13,7 @@ import {
   ttsModelSupportsInstructions,
   ttsVoiceSupportedBy,
 } from '@/lib/tts-options';
+import { createSamplePlayer } from '@/lib/sample-player';
 
 type Feedback = { kind: 'ok' | 'err'; text: string } | null;
 
@@ -42,7 +43,7 @@ export function VozPanel() {
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
-  const audioRef = useRef<{ audio: HTMLAudioElement; url: string } | null>(null);
+  const playerRef = useRef<ReturnType<typeof createSamplePlayer> | null>(null);
 
   function apply(data: VoiceSettings) {
     setModel(data.tts_model);
@@ -65,16 +66,8 @@ export function VozPanel() {
     return () => controller.abort();
   }, []);
 
-  // Para a amostra e libera a URL do blob ao sair da aba.
-  useEffect(() => () => stopPreview(), []);
-
-  function stopPreview() {
-    const current = audioRef.current;
-    if (!current) return;
-    current.audio.pause();
-    URL.revokeObjectURL(current.url);
-    audioRef.current = null;
-  }
+  // Ao sair da aba: aborta o fetch em voo, para a amostra e libera o blob.
+  useEffect(() => () => playerRef.current?.stop(), []);
 
   const toneSupported = ttsModelSupportsInstructions(model);
   const voiceOk = ttsVoiceSupportedBy(model, voice);
@@ -97,11 +90,11 @@ export function VozPanel() {
 
   async function preview() {
     if (!valid) return;
-    stopPreview();
+    playerRef.current ??= createSamplePlayer();
     setPreviewing(true);
     setFeedback(null);
     try {
-      const res = await fetch('/api/voice/tts', {
+      const result = await playerRef.current.play('/api/voice/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -112,18 +105,15 @@ export function VozPanel() {
           instructions: trimmed || DEFAULT_TTS_INSTRUCTIONS,
         }),
       });
-      if (!res.ok) {
-        setFeedback({ kind: 'err', text: await readError(res, 'Falha ao gerar amostra') });
-        return;
+      // 'stopped' = parada intencional (nova amostra, troca de aba): sem feedback.
+      if (result.kind === 'http-error') {
+        setFeedback({
+          kind: 'err',
+          text: await readError(result.response, 'Falha ao gerar amostra'),
+        });
+      } else if (result.kind === 'play-error') {
+        setFeedback({ kind: 'err', text: 'Não foi possível tocar a amostra.' });
       }
-      const url = URL.createObjectURL(await res.blob());
-      const audio = new Audio(url);
-      audioRef.current = { audio, url };
-      audio.onended = () => stopPreview();
-      await audio.play();
-    } catch {
-      stopPreview();
-      setFeedback({ kind: 'err', text: 'Não foi possível tocar a amostra.' });
     } finally {
       setPreviewing(false);
     }
