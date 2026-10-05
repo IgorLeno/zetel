@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "spec_id": "SPEC-012-web-sources",
+  "task_id": "001",
+  "fixed_point": "f56786f3ed554053e4c18b996042d59a6edcdf1f8ba03405eae43bab63d2190b",
+  "generated_at": "2026-10-05T06:31:30.663Z",
+  "reviews_requested": 1,
+  "axes": [
+    "engineering-quality"
+  ],
+  "report_paths": [
+    ".agent/specs/SPEC-012-web-sources/reviews/001-engineering-quality.md"
+  ],
+  "report_hashes": {
+    ".agent/specs/SPEC-012-web-sources/reviews/001-engineering-quality.md": "e14aae5fa90e3e93e5808a8401ccaa86a81fdad134f410ee8354d4622b8112f4"
+  },
+  "reviewers": [
+    "claude-subagent-security-engineer"
+  ],
+  "review_run_ids": [
+    "review-quality-spec012-001-r4"
+  ],
+  "package_ids": [
+    "pkg_aa727456f8d8fcbc00ac7623"
+  ],
+  "findings_by_severity": {
+    "BLOCKING": 0,
+    "MAJOR": 1,
+    "MINOR": 1,
+    "NIT": 2
+  },
+  "findings_by_status": {
+    "OPEN": 3,
+    "RESOLVED": 1,
+    "NOT_APPLICABLE": 0
+  },
+  "findings": [
+    {
+      "axis": "engineering-quality",
+      "id": "F009",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "title": "Inline code in a table cell escaped '|' but not '\\\\' — a backslash before a pipe split the cell and re-enabled Markdown injection",
+      "location": {
+        "file": "lib/html-to-markdown.ts",
+        "line": 159,
+        "not_applicable_reason": null
+      },
+      "evidence": "Backslash runs directly before a pipe are now doubled and the pipe is escaped, so the GFM tokenizer always sees an escaped pipe. The writer reproduced the original bug, and the new test parses the output with the real remark-gfm and remark-math pipeline: no image node, the code value keeps the injected text, C:\\\\dir stays exact, and the table has 4 cells.",
+      "recommendation": "None. Optionally, add 'remark' and 'unist-util-visit' as explicit devDependencies if they are not already declared, so the test does not rely on hoisting."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F005",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "Recursion and spread-argument limits on hostile HTML give only a generic 'crashed' error, and the conversion runs outside the timeout",
+      "location": {
+        "file": "lib/html-to-markdown.ts",
+        "line": 114,
+        "not_applicable_reason": null
+      },
+      "evidence": "This is unchanged and was left unfixed on purpose. The walker, findFirst, rawText and fromHtml still recurse without a depth bound. Math.max(0, ...arr) and stack.push(...children) still throw RangeError on very large arrays, including the inline-code fence spread. toSnapshot is still unwrapped, so such errors surface as the uncategorised 'web source import crashed'. That is safe: nothing leaks and the process does not crash.",
+      "recommendation": "Use reduce instead of spread, push children in a loop, and wrap htmlToMarkdown in a categorised WebSourceError. Optionally, cap the depth or node count."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F006",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Import route accepts a non-JSON content type (cross-site simple POST)",
+      "location": {
+        "file": "app/api/zetels/[id]/web-sources/import/route.ts",
+        "line": 44,
+        "not_applicable_reason": null
+      },
+      "evidence": "This is unchanged. request.json() parses a text/plain body, so a cross-origin no-cors POST can trigger imports of public URLs if the zetel id is known. Private ranges remain blocked. It follows the existing project pattern.",
+      "recommendation": "Track project-wide: require Content-Type: application/json, or check Origin/Sec-Fetch-Site, on mutating local routes."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F007",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Remaining address/transport policy notes (3fff::/20 part resolved in r2)",
+      "location": {
+        "file": "lib/web-fetch.ts",
+        "line": 143,
+        "not_applicable_reason": null
+      },
+      "evidence": "(b) Redirects from https to http are still followed, which is a silent downgrade that RNF1 does not forbid. (c) The addFile error message is still forwarded to the client on the assumption that it is always generic, and that cannot be verified inside this package.",
+      "recommendation": "Consider rejecting https-to-http redirects. Add a test that addFile failure messages contain neither the filename nor the title."
+    }
+  ],
+  "blocking_findings": 0,
+  "result": "PASS"
+}

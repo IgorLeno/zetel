@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "revision": 18,
+  "spec": {
+    "id": "SPEC-012-web-sources",
+    "kind": "full",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-05T02:31:10.874Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Importar fonte da web por link",
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "FULL",
+      "profile_justification": "Migration, nova superficie de rede (SSRF), rota publica e escrita no vault",
+      "reviews_requested": 1,
+      "review_justification": "Uma revisao engineering-quality focada em SSRF/limites; conformidade coberta por testes",
+      "validation": "PASS",
+      "review_result": "PASS"
+    },
+    {
+      "id": "002",
+      "title": "Pesquisar na web e importar candidatas",
+      "status": "DRAFT",
+      "blocked_by": [
+        "001"
+      ]
+    },
+    {
+      "id": "003",
+      "title": "Configurar lista confiavel e teto diario",
+      "status": "DRAFT",
+      "blocked_by": [
+        "002"
+      ]
+    }
+  ],
+  "session": {
+    "id": "task-001-20261005",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-05T02:31:49.730Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Migration, nova superficie de rede (SSRF), rota publica e escrita no vault",
+    "reviews_requested": 1,
+    "review_justification": "Uma revisao engineering-quality focada em SSRF/limites; conformidade coberta por testes",
+    "validating_at": "2026-10-05T06:23:01.225Z",
+    "validation_result": "PASS",
+    "fixed_point": "f56786f3ed554053e4c18b996042d59a6edcdf1f8ba03405eae43bab63d2190b",
+    "review_aggregate": ".agent/specs/SPEC-012-web-sources/reviews/001-aggregate.json",
+    "aggregated_at": "2026-10-05T06:31:30.663Z",
+    "review_result": {
+      "engineering-quality": "PASS"
+    },
+    "validation": ".agent/specs/SPEC-012-web-sources/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/web-sources",
+          "tests/integration/web-sources"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "reviewing_at": "2026-10-05T06:27:37.973Z",
+    "done_at": "2026-10-05T06:31:40.174Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "764489c5f058ffb838ecaf62a0539316f1b62d835e878f0cc124be895f7da589"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "80c14ae0bf27ac56775f8cfde0868e57ce7d012dac434642f24aef6d689a72fc"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "28dd52fce0c9ff81d45b0527f2d7c95c98e650b9f1e2ceaedfca5b5b1180a578"
+        },
+        {
+          "path": "tasks/001-import-by-link.md",
+          "sha256": "c2dd4b89b2fe257b9d80bc350f0c1aa0315fd4e1267437a143c562fb4cbe5f1c"
+        },
+        {
+          "path": "tasks/002-web-search.md",
+          "sha256": "f2f96a9180ff18855a10d5a56ef9d3ad00cad31c546065c0b6c22805462706f6"
+        },
+        {
+          "path": "tasks/003-search-settings.md",
+          "sha256": "8507506283d1d7a1c665e214b15bc2a40bc8818921b93e7c58c576a977bf86ef"
+        }
+      ],
+      "digest": "55cb47d30028c27b36384787914c215c51d6e5a9a83fc0e47817e2b956479d51",
+      "kind": "full",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-05T02:31:10.874Z"
+    }
+  }
+}

@@ -14,6 +14,10 @@ export interface ZetelFile {
   /** Só PDF processado; `null` para `.md` e PDF ainda não processado. */
   pageCount: number | null;
   extractionStatus: 'ok' | 'no_text' | 'failed' | null;
+  /** Proveniência de fonte importada da web (SPEC-012); `null` em uploads. */
+  sourceUrl: string | null;
+  sourceTitle: string | null;
+  sourceAccessedAt: string | null;
   createdAt: string;
   updatedAt: string;
   /** Campo virtual (não persiste): detectado em tempo de listagem via stat/hash. */

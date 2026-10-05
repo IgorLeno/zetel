@@ -74,6 +74,9 @@ interface ZetelFileRow {
   last_seen_mtime: number | null;
   page_count: number | null;
   extraction_status: ExtractionStatus | null;
+  source_url: string | null;
+  source_title: string | null;
+  source_accessed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -89,6 +92,9 @@ function rowToFile(row: ZetelFileRow): ZetelFile {
     lastSeenMtime: row.last_seen_mtime,
     pageCount: row.page_count,
     extractionStatus: row.extraction_status,
+    sourceUrl: row.source_url,
+    sourceTitle: row.source_title,
+    sourceAccessedAt: row.source_accessed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -160,17 +166,26 @@ function readHead(path: string, bytes: number): Buffer {
   }
 }
 
+/** Proveniência de uma fonte importada da web (SPEC-012 RF4). */
+export interface FileProvenance {
+  url: string;
+  title: string | null;
+  accessedAt: string;
+}
+
 /**
  * Anexa um arquivo `.md` ou `.pdf` ao Zetel: valida extensão (e, para PDF,
  * tamanho ≤ `MAX_PDF_BYTES` e cabeçalho `%PDF-`), copia byte a byte para
  * `arquivos/` sem colisão, registra em `zetel_files` (ainda não processado:
- * hashes nulos) e marca `reading_stale = 1`.
+ * hashes nulos) e marca `reading_stale = 1`. `provenance` (fontes da web,
+ * SPEC-012) é gravada no mesmo INSERT.
  */
 export function addFile(
   db: Database.Database,
   vaultPath: string,
   zetelId: string,
   sourceFilePath: string,
+  provenance?: FileProvenance,
 ): ZetelFile {
   const slug = assertZetelAtivo(db, zetelId);
 
@@ -209,9 +224,20 @@ export function addFile(
   db.transaction(() => {
     db.prepare(
       `INSERT INTO zetel_files
-         (id, zetel_id, filename, order_index, content_hash, size_bytes, last_seen_mtime, created_at, updated_at)
-       VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?)`,
-    ).run(id, zetelId, destName, orderIndex, now, now);
+         (id, zetel_id, filename, order_index, content_hash, size_bytes, last_seen_mtime,
+          source_url, source_title, source_accessed_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      zetelId,
+      destName,
+      orderIndex,
+      provenance?.url ?? null,
+      provenance?.title ?? null,
+      provenance?.accessedAt ?? null,
+      now,
+      now,
+    );
     markStale(db, zetelId);
   })();
 

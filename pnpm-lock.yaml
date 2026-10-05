@@ -11,6 +11,9 @@ importers:
       better-sqlite3:
         specifier: ^11.7.0
         version: 11.10.0
+      hast-util-from-html:
+        specifier: ^2.0.3
+        version: 2.0.3
       hast-util-sanitize:
         specifier: ^5.0.2
         version: 5.0.2

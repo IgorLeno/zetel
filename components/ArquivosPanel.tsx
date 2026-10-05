@@ -6,6 +6,22 @@ import type { ZetelFile } from '@/types/zetel-file';
 import { formatRelative } from '@/lib/relative-time';
 import { formatBytes } from '@/lib/format-utils';
 
+const MAX_LINKS = 5;
+
+type ImportResult = { status: 'ok'; file: ZetelFile } | { status: 'error'; message: string };
+
+/** Site e href de "abrir original", só para http(s) — o servidor já validou, isto é defesa extra. */
+function sourceLink(sourceUrl: string | null): { site: string; href: string } | null {
+  if (!sourceUrl) return null;
+  try {
+    const url = new URL(sourceUrl);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return { site: url.hostname.replace(/^www\./, ''), href: url.href };
+  } catch {
+    return null;
+  }
+}
+
 export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string; onboarding?: boolean }) {
   const router = useRouter();
   const [files, setFiles] = useState<ZetelFile[]>([]);
@@ -17,6 +33,9 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
   const [uploading, setUploading] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkText, setLinkText] = useState('');
+  const [importing, setImporting] = useState(false);
   const dragIndex = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -67,6 +86,55 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
       setUploading(false);
       await load();
       router.refresh(); // badge de status do header (reading_stale)
+    }
+  }
+
+  async function importLinks(e: React.FormEvent) {
+    e.preventDefault();
+    const urls = linkText
+      .split(/\s+/)
+      .map((u) => u.trim())
+      .filter(Boolean);
+    if (urls.length === 0) return;
+    if (urls.length > MAX_LINKS) {
+      setError(`Envie até ${MAX_LINKS} links por vez.`);
+      return;
+    }
+
+    setImporting(true);
+    setError(null);
+    setProcessMsg(null);
+    try {
+      const res = await fetch(`/api/zetels/${zetelId}/web-sources/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? 'Falha ao importar os links.');
+        return;
+      }
+      const results = data.results as ImportResult[];
+      const ok = results.filter((r) => r.status === 'ok').length;
+      const failures = results.flatMap((r, i) => (r.status === 'error' ? [{ url: urls[i]!, message: r.message, n: i + 1 }] : []));
+      if (ok > 0) {
+        // load() limpa o erro; recarrega antes de exibir o resultado.
+        await load();
+        router.refresh();
+        setProcessMsg(`${ok} fonte${ok === 1 ? '' : 's'} importada${ok === 1 ? '' : 's'}. Clique em Processar para atualizar a leitura.`);
+      }
+      if (failures.length > 0) {
+        setError(failures.map((f) => `Link ${f.n}: ${f.message}`).join(' · '));
+        setLinkText(failures.map((f) => f.url).join('\n')); // mantém só os que falharam
+      } else {
+        setLinkText('');
+        setLinkOpen(false);
+      }
+    } catch {
+      setError('Erro de rede ao importar os links.');
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -164,16 +232,26 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
           className="btn primary"
           type="button"
           onClick={() => fileInput.current?.click()}
-          disabled={uploading || processing}
+          disabled={uploading || processing || importing}
         >
           {uploading ? 'Adicionando…' : 'Adicionar arquivos'}
+        </button>
+        <button
+          className="btn"
+          type="button"
+          aria-expanded={linkOpen}
+          aria-controls="web-link-form"
+          onClick={() => setLinkOpen((v) => !v)}
+          disabled={uploading || processing || importing}
+        >
+          Adicionar por link
         </button>
         {(!onboarding || files.length > 0) && (
           <button
             className="btn"
             type="button"
             onClick={processar}
-            disabled={processing || uploading || files.length === 0}
+            disabled={processing || uploading || importing || files.length === 0}
           >
             {processing ? 'Processando…' : 'Processar'}
           </button>
@@ -188,6 +266,36 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
         />
       </div>
 
+      {linkOpen && (
+        <form id="web-link-form" className="web-link-form" onSubmit={importLinks}>
+          <label className="field-label" htmlFor="web-link-input">
+            Links públicos (um por linha, até {MAX_LINKS})
+          </label>
+          <textarea
+            id="web-link-input"
+            className="input web-link-input"
+            rows={3}
+            placeholder="https://pt.wikipedia.org/wiki/Série_de_Fourier"
+            value={linkText}
+            onChange={(e) => setLinkText(e.target.value)}
+            disabled={importing}
+            autoFocus
+          />
+          <p className="field-hint">
+            O Zetel baixa a página e guarda uma cópia em Markdown (ou o PDF) com o link original. Só conteúdo
+            público; páginas com login ou paywall não entram.
+          </p>
+          <div className="web-link-actions">
+            <button className="btn primary" type="submit" disabled={importing || !linkText.trim()}>
+              {importing ? 'Importando…' : 'Importar'}
+            </button>
+            <button className="btn" type="button" onClick={() => setLinkOpen(false)} disabled={importing}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+
       {error && <p className="feedback err">{error}</p>}
       {processMsg && <p className="feedback ok">{processMsg}</p>}
 
@@ -195,7 +303,9 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
         <p className="field-hint">Nenhum arquivo ainda. Adicione um arquivo .md ou .pdf para começar.</p>
       ) : files.length > 0 ? (
         <ul className="file-list">
-          {files.map((f, index) => (
+          {files.map((f, index) => {
+            const source = sourceLink(f.sourceUrl);
+            return (
             <li
               key={f.id}
               className={`file-row${draggingIndex === index ? ' dragging' : ''}`}
@@ -225,6 +335,22 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
                 </span>
                 <span className="file-meta">
                   {formatBytes(f.sizeBytes)} · {formatRelative(f.updatedAt)}
+                  {source && (
+                    <>
+                      {' · '}
+                      <span className="file-source-site">{source.site}</span>
+                      {' · '}
+                      <a
+                        className="file-source-link"
+                        href={source.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Abrir original de ${f.filename} em nova aba`}
+                      >
+                        abrir original
+                      </a>
+                    </>
+                  )}
                 </span>
               </div>
               {f.filename.toLowerCase().endsWith('.pdf') && confirmingRemove !== f.id && (
@@ -262,7 +388,8 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
                 </button>
               )}
             </li>
-          ))}
+            );
+          })}
         </ul>
       ) : (
         <p className="field-hint">Adicione um arquivo .md ou .pdf para criar a primeira fonte.</p>

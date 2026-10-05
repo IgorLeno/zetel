@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runMigrations } from '@/lib/migrate';
-import { seedZetelWithFile } from '@/tests/helpers/temp-env';
+import { createZetel } from '@/lib/zetel-service';
 
 const MIGRATIONS_DIR = join(process.cwd(), 'migrations');
 
@@ -18,6 +18,21 @@ function applyMigrationsBefore(db: Database.Database, stopBefore: string): void 
     db.exec(readFileSync(join(MIGRATIONS_DIR, name), 'utf8'));
     record.run(name, '2026-01-01T00:00:00.000Z');
   }
+}
+
+/**
+ * Linha de arquivo como existia antes da 006: INSERT só com as colunas da 003.
+ * (`addFile` acompanha o schema atual e não serve para simular dado legado.)
+ */
+function seedLegacyFile(db: Database.Database, vaultPath: string): { zetelId: string; fileId: string } {
+  const zetel = createZetel(db, vaultPath, 'Teste');
+  const fileId = 'legacy-file';
+  db.prepare(
+    `INSERT INTO zetel_files
+       (id, zetel_id, filename, order_index, content_hash, size_bytes, last_seen_mtime, created_at, updated_at)
+     VALUES (?, ?, 'doc.md', 0, NULL, NULL, NULL, '2026-01-01', '2026-01-01')`,
+  ).run(fileId, zetel.id);
+  return { zetelId: zetel.id, fileId };
 }
 
 describe('migration 006_pdf_pages sobre banco com dados', () => {
@@ -38,7 +53,7 @@ describe('migration 006_pdf_pages sobre banco com dados', () => {
 
   it('preserva linhas existentes, adiciona colunas nullable e cria tabelas derivadas', () => {
     applyMigrationsBefore(db, '006_');
-    const { zetelId, fileId } = seedZetelWithFile(db, vaultPath, { content: '# A\n\nTexto.\n' });
+    const { zetelId, fileId } = seedLegacyFile(db, vaultPath);
     db.prepare(
       `INSERT INTO zetel_pages (zetel_id, page_index, heading, anchor, content_text, content_hash, created_at)
        VALUES (?, 0, 'A', 'doc--a', 'Texto.', 'h', '2026-01-01')`,
@@ -52,7 +67,15 @@ describe('migration 006_pdf_pages sobre banco com dados', () => {
     expect(names).toContain('006_pdf_pages.sql');
 
     const after = db.prepare('SELECT * FROM zetel_files WHERE id = ?').get(fileId) as Record<string, unknown>;
-    expect(after).toEqual({ ...before, page_count: null, extraction_status: null });
+    // runMigrations aplica até a última: 006 e 011 só adicionam colunas nullable.
+    expect(after).toEqual({
+      ...before,
+      page_count: null,
+      extraction_status: null,
+      source_url: null,
+      source_title: null,
+      source_accessed_at: null,
+    });
     expect(db.prepare('SELECT COUNT(*) AS n FROM zetel_pages').get()).toEqual({ n: 1 });
 
     const cols = (table: string) =>
@@ -63,7 +86,7 @@ describe('migration 006_pdf_pages sobre banco com dados', () => {
 
   it('é idempotente no boot seguinte e aplica CASCADE ao remover o arquivo', () => {
     applyMigrationsBefore(db, '006_');
-    const { fileId } = seedZetelWithFile(db, vaultPath);
+    const { fileId } = seedLegacyFile(db, vaultPath);
     runMigrations(db);
     runMigrations(db); // segundo boot: nada a aplicar
 
