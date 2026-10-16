@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "revision": 3,
+  "spec": {
+    "id": "SPEC-013-openrouter-tts-models",
+    "kind": "mini",
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-16T11:45:27.697Z"
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Catalogo TTS por provedor e roteamento OpenRouter no servidor",
+      "status": "READY",
+      "blocked_by": []
+    },
+    {
+      "id": "002",
+      "title": "Aba Voz com modelos por provedor e tom condicional",
+      "status": "READY",
+      "blocked_by": [
+        "001"
+      ]
+    }
+  ],
+  "session": {
+    "id": null,
+    "agent": null,
+    "task_id": null,
+    "status": null
+  },
+  "approval": {
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "014b0fe119924ec7215e0c6686922973da1c1c3ec6d87ca69fa1105d3659d877"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "9774826449268fff0f0e01dd7e3b7c5d9f5b20ca7850ee5d895840216f371a66"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "a1deff78a4c513593b03eae35410eb287c088e4b8f8cc17a899f019735bb2680"
+        },
+        {
+          "path": "tasks/001-tts-catalog-routing.md",
+          "sha256": "bbe22a0e617f88df5f2962e23473f2e51684c4e5e0556496e8d023b1779e51ad"
+        },
+        {
+          "path": "tasks/002-voz-panel-providers.md",
+          "sha256": "d8489e1d1469b9552c0cf855211596f7515063896e241ac9bff0172f665494ab"
+        }
+      ],
+      "digest": "178614a52e096289a8dd41de9c30b2703115e9024c545e89028262cd613cc133",
+      "kind": "mini",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-16T11:45:27.697Z"
+    }
+  }
+}
