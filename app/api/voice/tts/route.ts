@@ -4,24 +4,48 @@ import {
   DEFAULT_TTS_MODEL,
   DEFAULT_TTS_VOICE,
   MAX_TTS_INSTRUCTIONS_CHARS,
-  hasVoiceKey,
   readVoiceKey,
   synthesizeSpeech,
 } from '@/lib/openai-voice';
+import { readOpenRouterVoiceKey, synthesizeSpeechOpenRouter } from '@/lib/openrouter-voice';
 import { getSetting } from '@/lib/settings';
-import { isTtsModel, isTtsVoice, ttsVoiceSupportedBy } from '@/lib/tts-options';
+import {
+  isTtsModel,
+  isTtsVoice,
+  ttsModelSupportsInstructions,
+  ttsProviderOf,
+  ttsVoiceSupportedBy,
+  type TtsProvider,
+} from '@/lib/tts-options';
 import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
 const MAX_TEXT_CHARS = 4096;
 
-/** POST /api/voice/tts — passthrough do stream MP3 da OpenAI (D32). */
-export async function POST(request: Request) {
-  if (!hasVoiceKey()) {
-    return NextResponse.json({ error: 'tts_unavailable' }, { status: 503 });
+/** Chave do provedor do modelo efetivo, ou null sem lançar (SPEC-013 D5). */
+function providerKey(provider: TtsProvider): string | null {
+  if (provider === 'openrouter') return readOpenRouterVoiceKey();
+  try {
+    return readVoiceKey();
+  } catch {
+    return null;
   }
+}
 
+/** Status HTTP upstream: `status` do erro OpenRouter ou o prefixo `TTS: NNN` da OpenAI. */
+function upstreamStatus(err: unknown): number | null {
+  if (err instanceof Error) {
+    const status = (err as Error & { status?: unknown }).status;
+    if (typeof status === 'number') return status;
+    const match = /TTS: (\d{3})/.exec(err.message);
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
+/** POST /api/voice/tts — MP3 da OpenAI em passthrough (D32); WAV do OpenRouter (SPEC-013 D5). */
+export async function POST(request: Request) {
   let body: { text?: unknown; voice?: unknown; model?: unknown; instructions?: unknown };
   try {
     body = await request.json();
@@ -69,29 +93,35 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const instructions =
-    bodyInstructions || getSetting('tts_instructions') || DEFAULT_TTS_INSTRUCTIONS;
+  const provider = ttsProviderOf(model);
+  // Tom ignorado sem erro em modelo que não o aceita; o salvo segue intacto (D5).
+  const instructions = ttsModelSupportsInstructions(model)
+    ? bodyInstructions || getSetting('tts_instructions') || DEFAULT_TTS_INSTRUCTIONS
+    : undefined;
 
-  // Log só contagem de chars — nunca o texto (D39 / Regra #6).
-  logger.info('voice tts', { chars: text.length });
-
-  let apiKey: string;
-  try {
-    apiKey = readVoiceKey();
-  } catch {
+  const apiKey = providerKey(provider);
+  if (!apiKey) {
     return NextResponse.json({ error: 'tts_unavailable' }, { status: 503 });
   }
 
+  // Log só contagem, provedor e modelo — nunca texto, tom ou chave (D39 / Regra #6).
+  logger.info('voice tts', { chars: text.length, provider, model });
+
   try {
-    const upstream = await synthesizeSpeech({ apiKey, text, voice, model, instructions });
+    const upstream =
+      provider === 'openrouter'
+        ? await synthesizeSpeechOpenRouter({ apiKey, text, voice, model })
+        : await synthesizeSpeech({ apiKey, text, voice, model, instructions });
     return new Response(upstream.body, {
       headers: {
-        'Content-Type': 'audio/mpeg',
+        'Content-Type': provider === 'openrouter' ? 'audio/wav' : 'audio/mpeg',
         'Cache-Control': 'no-store',
       },
     });
   } catch (err) {
-    logger.error('voice tts failed', { error: err instanceof Error ? err.message : 'unknown' });
+    // Nunca a mensagem: a da OpenAI carrega o corpo de erro upstream.
+    const status = upstreamStatus(err);
+    logger.error('voice tts failed', status === null ? { provider, model } : { provider, model, status });
     return NextResponse.json(
       { error: 'Não foi possível sintetizar áudio. Tente novamente.' },
       { status: 502 },

@@ -1,7 +1,8 @@
 /**
- * Opções de voz TTS (SPEC-005 D3): módulo puro, seguro para o cliente.
- * Lista de vozes conferida na doc oficial da OpenAI em 2026-10-03; a API não
- * expõe endpoint de vozes, então a lista é mantida aqui.
+ * Opções de voz TTS (SPEC-005 D3; SPEC-013 D1–D3): módulo puro, seguro para o
+ * cliente. Catálogo estático e curado por provedor: vozes OpenAI conferidas na
+ * doc oficial em 2026-10-03 (a API não expõe endpoint de vozes); vozes do
+ * Gemini conferidas no catálogo público do OpenRouter em 2026-10-16.
  */
 
 export const DEFAULT_TTS_MODEL = 'gpt-4o-mini-tts';
@@ -18,13 +19,10 @@ export const DEFAULT_TTS_INSTRUCTIONS = [
   'Soe como uma conversa entre colegas de estudo, nunca como locução.',
 ].join(' ');
 
-export const TTS_MODELS = [
-  { id: 'gpt-4o-mini-tts', label: 'gpt-4o-mini-tts — natural, aceita tom' },
-  { id: 'tts-1', label: 'tts-1 — rápido, ignora o tom' },
-  { id: 'tts-1-hd', label: 'tts-1-hd — mais qualidade, ignora o tom' },
-] as const;
+export const TTS_PROVIDERS = ['openai', 'openrouter'] as const;
+export type TtsProvider = (typeof TTS_PROVIDERS)[number];
 
-/** `legacy`: também existe em `tts-1`/`tts-1-hd`. */
+/** Vozes OpenAI. `legacy`: também existe em `tts-1`/`tts-1-hd`. */
 export const TTS_VOICES = [
   { id: 'alloy', legacy: true },
   { id: 'ash', legacy: true },
@@ -41,24 +39,100 @@ export const TTS_VOICES = [
   { id: 'cedar', legacy: false },
 ] as const;
 
+const OPENAI_VOICES: readonly string[] = TTS_VOICES.map((v) => v.id);
+const OPENAI_LEGACY_VOICES: readonly string[] = TTS_VOICES.filter((v) => v.legacy).map((v) => v.id);
+
+/** Vozes do Gemini 3.8 Flash TTS; ids diferenciam maiúsculas (D2, D9). */
+export const GEMINI_TTS_VOICES = [
+  'Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir', 'Leda', 'Orus', 'Aoede', 'Callirrhoe', 'Autonoe',
+  'Enceladus', 'Iapetus', 'Umbriel', 'Algieba', 'Despina', 'Erinome', 'Algenib', 'Rasalgethi',
+  'Laomedeia', 'Achernar', 'Alnilam', 'Schedar', 'Gacrux', 'Pulcherrima', 'Achird', 'Zubenelgenubi',
+  'Vindemiatrix', 'Sadachbia', 'Sadaltager', 'Sulafat',
+] as const;
+
+export interface TtsModelEntry {
+  id: string;
+  provider: TtsProvider;
+  label: string;
+  supportsInstructions: boolean;
+  voices: readonly string[];
+  defaultVoice: string;
+}
+
+/** Cadastrar modelo novo = uma entrada aqui (D2). */
+export const TTS_MODELS: readonly TtsModelEntry[] = [
+  {
+    id: 'gpt-4o-mini-tts',
+    provider: 'openai',
+    label: 'gpt-4o-mini-tts — natural, aceita tom',
+    supportsInstructions: true,
+    voices: OPENAI_VOICES,
+    defaultVoice: DEFAULT_TTS_VOICE,
+  },
+  {
+    id: 'tts-1',
+    provider: 'openai',
+    label: 'tts-1 — rápido, ignora o tom',
+    supportsInstructions: false,
+    voices: OPENAI_LEGACY_VOICES,
+    defaultVoice: 'alloy',
+  },
+  {
+    id: 'tts-1-hd',
+    provider: 'openai',
+    label: 'tts-1-hd — mais qualidade, ignora o tom',
+    supportsInstructions: false,
+    voices: OPENAI_LEGACY_VOICES,
+    defaultVoice: 'alloy',
+  },
+  {
+    id: 'google/gemini-3.8-flash-tts',
+    provider: 'openrouter',
+    label: 'Gemini 3.8 Flash TTS — ignora o tom',
+    // A página e a API do OpenRouter não expõem instruções (D3).
+    supportsInstructions: false,
+    voices: GEMINI_TTS_VOICES,
+    defaultVoice: 'Kore',
+  },
+];
+
+export function ttsModelEntry(model: string): TtsModelEntry | undefined {
+  return TTS_MODELS.find((m) => m.id === model);
+}
+
 export function isTtsModel(model: string): boolean {
-  return TTS_MODELS.some((m) => m.id === model);
+  return ttsModelEntry(model) !== undefined;
 }
 
 export function isTtsVoice(voice: string): boolean {
-  return TTS_VOICES.some((v) => v.id === voice);
+  return TTS_MODELS.some((m) => m.voices.includes(voice));
 }
 
-/** `tts-1` e `tts-1-hd` não aceitam `instructions` (SPEC-004 D3). */
+/** Fora do catálogo = OpenAI (settings legados da SPEC-005). */
+export function ttsProviderOf(model: string): TtsProvider {
+  return ttsModelEntry(model)?.provider ?? 'openai';
+}
+
+/** Catálogo primeiro; fora dele, `tts-1*` não aceita `instructions` (SPEC-004 D3). */
 export function ttsModelSupportsInstructions(model: string): boolean {
-  return !/^tts-1(-|$)/.test(model);
+  return ttsModelEntry(model)?.supportsInstructions ?? !/^tts-1(-|$)/.test(model);
 }
 
-/** Vozes novas (ballad, verse, marin, cedar) só existem nos modelos que aceitam tom. */
+/** Fora do catálogo: vozes novas da OpenAI só nos modelos que aceitam tom. */
+export function ttsVoicesFor(model: string): readonly string[] {
+  const entry = ttsModelEntry(model);
+  if (entry) return entry.voices;
+  return ttsModelSupportsInstructions(model) ? OPENAI_VOICES : OPENAI_LEGACY_VOICES;
+}
+
+export function ttsDefaultVoiceFor(model: string): string {
+  const entry = ttsModelEntry(model);
+  if (entry) return entry.defaultVoice;
+  return ttsModelSupportsInstructions(model) ? DEFAULT_TTS_VOICE : 'alloy';
+}
+
 export function ttsVoiceSupportedBy(model: string, voice: string): boolean {
-  const entry = TTS_VOICES.find((v) => v.id === voice);
-  if (!entry) return false;
-  return entry.legacy || ttsModelSupportsInstructions(model);
+  return ttsVoicesFor(model).includes(voice);
 }
 
 export const TTS_TONE_PRESETS = [

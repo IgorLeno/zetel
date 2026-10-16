@@ -100,4 +100,28 @@ describe('configuração de voz TTS', () => {
       tts_instructions: DEFAULT_TTS_INSTRUCTIONS,
     });
   });
+
+  it('valida pares do Gemini pelo catálogo e preserva o tom na troca de modelo', async () => {
+    const { PUT, GET } = await import('@/app/api/settings/route');
+    const gemini = 'google/gemini-3.8-flash-tts';
+    expect((await PUT(put({ tts_instructions: 'Tom meu.' }))).status).toBe(200);
+
+    expect((await PUT(put({ tts_model: gemini, tts_voice: 'marin' }))).status).toBe(400);
+    expect((await PUT(put({ tts_model: gemini, tts_voice: 'Kore' }))).status).toBe(200);
+    expect(await (await GET()).json()).toMatchObject({
+      tts_model: gemini,
+      tts_voice: 'Kore',
+      tts_instructions: 'Tom meu.',
+    });
+
+    expect((await PUT(put({ tts_voice: 'cedar' }))).status).toBe(400);
+    expect((await PUT(put({ tts_model: 'gpt-4o-mini-tts', tts_voice: 'Kore' }))).status).toBe(400);
+    expect((await PUT(put({ tts_model: 'google/gemini-3.8-flash-lite-tts', tts_voice: 'Kore' }))).status).toBe(400);
+    expect((await PUT(put({ tts_model: 'gpt-4o-mini-tts', tts_voice: 'cedar' }))).status).toBe(200);
+    expect(await (await GET()).json()).toMatchObject({
+      tts_model: 'gpt-4o-mini-tts',
+      tts_voice: 'cedar',
+      tts_instructions: 'Tom meu.',
+    });
+  });
 });

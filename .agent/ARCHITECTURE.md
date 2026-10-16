@@ -61,15 +61,27 @@ Interfaces e dados). Em divergência, a SPEC prevalece.
   proveniência.
 - Citações (D10): `[fonte:ID]` restritas aos IDs enviados no turno; evento
   `[SOURCES]` mapeia ID → documento/página; TTS remove marcadores.
-- Voz (D11–D12): sem troca de provedor na V1; `/api/voice/status` →
-  `{ tts, sttServer }`. Parar aborta áudio e stream; o servidor persiste a
+- Voz (D11–D12, revistas pela SPEC-013 D1): TTS com provedor por modelo
+  (`openai` | `openrouter`); STT continua só Whisper/OpenAI. `/api/voice/status`
+  → `{ tts, sttServer, providers: { openai, openrouter } }` (`tts` segue o
+  provedor do modelo efetivo; `sttServer` a chave OpenAI). Parar aborta áudio e stream; o servidor persiste a
   narrativa parcial com `meta.interrupted = true`. TTS padrão
   `gpt-4o-mini-tts`/`marin` com instrução de tom em `tts_instructions`
   (omitida para `tts-1*`; SPEC-004). Modelos, vozes e compatibilidade vivem
   em `lib/tts-options.ts`; `PUT /api/settings` rejeita `tts_model`/`tts_voice`
   fora da lista ou par incompatível, e `/api/voice/tts` aceita
   `model`/`voice`/`instructions` validados no corpo para a amostra da aba Voz
-  (SPEC-005).
+  (SPEC-005). O catálogo estático (`id`, `provider`, `supportsInstructions`,
+  `voices`, `defaultVoice`) inclui `google/gemini-3.8-flash-tts` (OpenRouter,
+  30 vozes, sem tom); modelo fora do catálogo = OpenAI com a regra antiga.
+  `lib/openrouter-voice.ts` chama `POST /api/v1/audio/speech` com
+  `response_format: "pcm"` (o Gemini rejeita `mp3` com 400; desvio da D4
+  aprovado pelo Igor em 2026-10-16) e devolve WAV `audio/wav` com cabeçalho de
+  44 bytes (16-bit mono, taxa do `rate=` ou 24 kHz; sem streaming), sem
+  `instructions`, chave via
+  `resolveOpenRouterCredential()`; tom ignorado sem erro e nunca apagado na
+  troca de modelo; sem chave do provedor efetivo → 503 `tts_unavailable`; logs
+  só `chars`, `provider`, `model` e status (SPEC-013).
 - Starters (D13): `starter` enumerado; turno persiste mensagem canônica com
   `meta.starter`.
 

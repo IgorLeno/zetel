@@ -1,14 +1,18 @@
 ---
 id: "001"
 title: "Catalogo TTS por provedor e roteamento OpenRouter no servidor"
-status: READY
+status: DONE
 blocked_by: []
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: STANDARD
+profile_justification: "Poucos módulos de voz, validação de entrada e contrato aditivo de status; usa o resolvedor de chave existente sem alterá-lo; sem state machine, escrita atômica, schema, banco ou migração."
+validation: PASS
+validated_at: "2026-10-16T21:56:15.823Z"
 ---
 
 ## Objetivo

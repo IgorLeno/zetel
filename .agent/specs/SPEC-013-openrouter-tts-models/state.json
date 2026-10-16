@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 3,
+  "revision": 10,
   "spec": {
     "id": "SPEC-013-openrouter-tts-models",
     "kind": "mini",
@@ -13,8 +13,13 @@
     {
       "id": "001",
       "title": "Catalogo TTS por provedor e roteamento OpenRouter no servidor",
-      "status": "READY",
-      "blocked_by": []
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "STANDARD",
+      "profile_justification": "Poucos módulos de voz, validação de entrada e contrato aditivo de status; usa o resolvedor de chave existente sem alterá-lo; sem state machine, escrita atômica, schema, banco ou migração.",
+      "reviews_requested": 1,
+      "validation": "PASS",
+      "review_result": "PASS"
     },
     {
       "id": "002",
@@ -26,10 +31,62 @@
     }
   ],
   "session": {
-    "id": null,
-    "agent": null,
-    "task_id": null,
-    "status": null
+    "id": "task-001-20261016",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-16T12:42:32.754Z",
+    "execution_profile": "STANDARD",
+    "profile_justification": "Poucos módulos de voz, validação de entrada e contrato aditivo de status; usa o resolvedor de chave existente sem alterá-lo; sem state machine, escrita atômica, schema, banco ou migração.",
+    "reviews_requested": 1,
+    "validating_at": "2026-10-16T21:54:34.244Z",
+    "validation_result": "PASS",
+    "fixed_point": "674fdc7f2e1d92473d108ce1cdf197f421542b9c3b900a4da5929fa5a3e32965",
+    "review_aggregate": ".agent/specs/SPEC-013-openrouter-tts-models/reviews/001-aggregate.json",
+    "aggregated_at": "2026-10-16T21:58:25.793Z",
+    "review_result": {
+      "engineering-quality": "PASS"
+    },
+    "reviewing_at": "2026-10-16T21:56:15.823Z",
+    "validation": ".agent/specs/SPEC-013-openrouter-tts-models/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/voice/",
+          "tests/integration/tts-settings.test.ts"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-10-16T21:58:26.428Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
   },
   "approval": {
     "spec": true,

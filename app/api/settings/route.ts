@@ -252,7 +252,8 @@ export async function PUT(request: Request) {
     updated.push('study_guide_timeout_s');
   }
 
-  // Voz e modelo TTS (SPEC-005 D1): só valores da lista e par efetivo compatível.
+  // Voz e modelo TTS (SPEC-005 D1; SPEC-013 D6): só valores do catálogo e par
+  // efetivo compatível com as vozes do modelo; troca de modelo não toca o tom.
   // Vazio apaga a chave (volta ao padrão). Valida tudo antes de gravar, inclusive
   // a instrução, para a aba Voz nunca deixar gravação parcial das três chaves.
   if (
