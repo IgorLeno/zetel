@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { ZetelFile } from '@/types/zetel-file';
 import { formatRelative } from '@/lib/relative-time';
 import { formatBytes } from '@/lib/format-utils';
+import { WebSourcesDialog } from './WebSourcesDialog';
 
 const MAX_LINKS = 5;
 
@@ -36,6 +37,7 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [importing, setImporting] = useState(false);
+  const [webSearchOpen, setWebSearchOpen] = useState(false);
   const dragIndex = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -60,6 +62,12 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
   useEffect(() => {
     load();
   }, [load]);
+
+  const closeWebSearch = useCallback(() => setWebSearchOpen(false), []);
+  const onWebImported = useCallback(async () => {
+    await load();
+    router.refresh(); // badge de status do header (reading_stale)
+  }, [load, router]);
 
   async function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(e.target.files ?? []);
@@ -224,17 +232,20 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
         <div className="source-acquisition-intro">
           <p className="source-acquisition-step">Primeiro passo · Fontes</p>
           <h1>Adicione fontes para começar</h1>
-          <p>Seu Zetel ganha contexto a partir das fontes que você adicionar.</p>
+          <p>
+            Seu Zetel ganha contexto a partir das fontes que você adicionar. Pesquise um tema na web, cole um link ou
+            envie arquivos .md e .pdf.
+          </p>
         </div>
       )}
       <div className="list-toolbar source-acquisition-actions">
         <button
           className="btn primary"
           type="button"
-          onClick={() => fileInput.current?.click()}
+          onClick={() => setWebSearchOpen(true)}
           disabled={uploading || processing || importing}
         >
-          {uploading ? 'Adicionando…' : 'Adicionar arquivos'}
+          Pesquisar na web
         </button>
         <button
           className="btn"
@@ -245,6 +256,14 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
           disabled={uploading || processing || importing}
         >
           Adicionar por link
+        </button>
+        <button
+          className="btn"
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          disabled={uploading || processing || importing}
+        >
+          {uploading ? 'Adicionando…' : 'Adicionar arquivos'}
         </button>
         {(!onboarding || files.length > 0) && (
           <button
@@ -265,6 +284,10 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
           onChange={onPickFiles}
         />
       </div>
+
+      {webSearchOpen && (
+        <WebSourcesDialog zetelId={zetelId} onClose={closeWebSearch} onImported={onWebImported} />
+      )}
 
       {linkOpen && (
         <form id="web-link-form" className="web-link-form" onSubmit={importLinks}>
@@ -392,7 +415,7 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
           })}
         </ul>
       ) : (
-        <p className="field-hint">Adicione um arquivo .md ou .pdf para criar a primeira fonte.</p>
+        <p className="field-hint">Escolha uma das opções acima para criar a primeira fonte.</p>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 18,
+  "revision": 30,
   "spec": {
     "id": "SPEC-012-web-sources",
     "kind": "full",
@@ -13,7 +13,7 @@
     {
       "id": "001",
       "title": "Importar fonte da web por link",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [],
       "execution_profile": "FULL",
       "profile_justification": "Migration, nova superficie de rede (SSRF), rota publica e escrita no vault",
@@ -25,10 +25,16 @@
     {
       "id": "002",
       "title": "Pesquisar na web e importar candidatas",
-      "status": "DRAFT",
+      "status": "DONE",
       "blocked_by": [
         "001"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "Nova rota publica com chamada OpenRouter paga, cache em processo, teto diario e variante de import com fallback de trecho",
+      "reviews_requested": 1,
+      "review_justification": "Uma revisao engineering-quality focada em custo/limites, cache e regra 3; conformidade coberta por testes",
+      "validation": "PASS",
+      "review_result": "PASS"
     },
     {
       "id": "003",
@@ -40,24 +46,25 @@
     }
   ],
   "session": {
-    "id": "task-001-20261005",
+    "id": "task-002-20261007",
     "agent": "claude-code",
-    "task_id": "001",
+    "task_id": "002",
     "status": "DONE",
-    "started_at": "2026-10-05T02:31:49.730Z",
+    "started_at": "2026-10-07T14:09:38.631Z",
     "execution_profile": "FULL",
-    "profile_justification": "Migration, nova superficie de rede (SSRF), rota publica e escrita no vault",
+    "profile_justification": "Nova rota publica com chamada OpenRouter paga, cache em processo, teto diario e variante de import com fallback de trecho",
     "reviews_requested": 1,
-    "review_justification": "Uma revisao engineering-quality focada em SSRF/limites; conformidade coberta por testes",
-    "validating_at": "2026-10-05T06:23:01.225Z",
+    "review_justification": "Uma revisao engineering-quality focada em custo/limites, cache e regra 3; conformidade coberta por testes",
+    "validating_at": "2026-10-16T09:35:22.398Z",
     "validation_result": "PASS",
-    "fixed_point": "f56786f3ed554053e4c18b996042d59a6edcdf1f8ba03405eae43bab63d2190b",
-    "review_aggregate": ".agent/specs/SPEC-012-web-sources/reviews/001-aggregate.json",
-    "aggregated_at": "2026-10-05T06:31:30.663Z",
+    "fixed_point": "76d63d7b16b02f7fa98babd853ed8c0e249aba9e411afcc80f67ba1b0f64a384",
+    "review_aggregate": ".agent/specs/SPEC-012-web-sources/reviews/002-aggregate.json",
+    "aggregated_at": "2026-10-16T09:45:15.078Z",
     "review_result": {
       "engineering-quality": "PASS"
     },
-    "validation": ".agent/specs/SPEC-012-web-sources/evidence/001-validation.json",
+    "reviewing_at": "2026-10-16T09:42:10.534Z",
+    "validation": ".agent/specs/SPEC-012-web-sources/evidence/002-validation.json",
     "gates_plan": [
       {
         "category": "focused",
@@ -107,8 +114,7 @@
         ]
       }
     ],
-    "reviewing_at": "2026-10-05T06:27:37.973Z",
-    "done_at": "2026-10-05T06:31:40.174Z",
+    "done_at": "2026-10-16T09:45:19.676Z",
     "active_task_cleared": true,
     "external_checks": "pending-not-waited"
   },

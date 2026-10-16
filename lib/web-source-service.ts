@@ -38,7 +38,7 @@ export class WebSourceError extends Error {
 
 export interface WebImportResult {
   file: ZetelFile;
-  extraction: 'full' | 'pdf';
+  extraction: 'full' | 'excerpt' | 'pdf';
 }
 
 function siteOf(url: URL): string {
@@ -81,7 +81,7 @@ function decodeText(body: Buffer, charset: string | null, sniffHtml: boolean): s
   }
 }
 
-function frontmatter(url: URL, title: string, accessedAt: string): string {
+function frontmatter(url: URL, title: string, accessedAt: string, extraction: 'full' | 'excerpt'): string {
   // JSON.stringify gera strings YAML double-quoted válidas (escapa aspas e \).
   return [
     '---',
@@ -89,7 +89,7 @@ function frontmatter(url: URL, title: string, accessedAt: string): string {
     `source_title: ${JSON.stringify(title)}`,
     `source_site: ${JSON.stringify(siteOf(url))}`,
     `accessed_at: ${JSON.stringify(accessedAt)}`,
-    'extraction: full',
+    `extraction: ${extraction}`,
     '---',
     '',
   ].join('\n');
@@ -169,11 +169,25 @@ export async function importWebSource(
     }
     title = snap.title;
     filename = `web-${fileSlug(title, site)}.md`;
-    content = `${frontmatter(res.url, title, accessedAt)}# ${escapeMarkdownText(title)}\n\n${snap.body}`;
+    content = `${frontmatter(res.url, title, accessedAt, 'full')}# ${escapeMarkdownText(title)}\n\n${snap.body}`;
   }
 
+  const file = storeFile(db, vaultPath, zetelId, filename, content, { url: res.url.href, title, accessedAt });
+  const extraction = res.kind === 'pdf' ? 'pdf' : 'full';
+  logger.info('web source imported', { zetelId, fileId: file.id, kind: extraction, bytes: res.body.length });
+  return { file, extraction };
+}
+
+/** Grava `content` num temporário e anexa via `addFile` com a proveniência no mesmo INSERT. */
+function storeFile(
+  db: Database.Database,
+  vaultPath: string,
+  zetelId: string,
+  filename: string,
+  content: Buffer | string,
+  source: { url: string; title: string; accessedAt: string },
+): ZetelFile {
   const tmp = mkdtempSync(join(tmpdir(), 'zetel-web-'));
-  let file: ZetelFile;
   try {
     const path = join(tmp, filename);
     try {
@@ -183,7 +197,7 @@ export async function importWebSource(
       fail(zetelId, 'store', 'Falha ao preparar o arquivo importado.');
     }
     try {
-      file = addFile(db, vaultPath, zetelId, path, { url: res.url.href, title, accessedAt });
+      return addFile(db, vaultPath, zetelId, path, source);
     } catch (err) {
       // addFile só lança mensagens genéricas (regra #6), seguras para a UI.
       fail(zetelId, 'store', (err as Error).message);
@@ -191,8 +205,47 @@ export async function importWebSource(
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
+}
 
-  const extraction = res.kind === 'pdf' ? 'pdf' : 'full';
-  logger.info('web source imported', { zetelId, fileId: file.id, kind: extraction, bytes: res.body.length });
-  return { file, extraction };
+/**
+ * Fallback de trecho (SPEC-012 RF6 / D6): grava como snapshot o resumo que o
+ * próprio servidor recebeu da busca, marcado `extraction: excerpt`. Quem chama
+ * passa a candidata lida do cache em processo — nunca texto do cliente
+ * (regra #3). Nada é baixado aqui.
+ */
+export function importWebExcerpt(
+  db: Database.Database,
+  vaultPath: string,
+  zetelId: string,
+  candidate: { url: string; title: string; snippet: string },
+): WebImportResult {
+  assertZetelAtivo(db, zetelId);
+  let url: URL;
+  try {
+    url = new URL(candidate.url);
+  } catch {
+    fail(zetelId, 'invalid_url', new WebFetchError('invalid_url').message);
+  }
+  const snippet = candidate.snippet.replace(/\s+/g, ' ').trim();
+  if (!snippet) fail(zetelId, 'no_text', 'Esta fonte não trouxe trecho para importar.');
+
+  const site = siteOf(url);
+  const title = cleanTitle(candidate.title) || site;
+  const accessedAt = new Date().toISOString();
+  const content = [
+    `${frontmatter(url, title, accessedAt, 'excerpt')}# ${escapeMarkdownText(title)}`,
+    '',
+    '> Trecho recebido da busca na web; a página completa não pôde ser baixada.',
+    '',
+    escapeMarkdownText(snippet),
+    '',
+  ].join('\n');
+
+  const file = storeFile(db, vaultPath, zetelId, `web-${fileSlug(title, site)}.md`, content, {
+    url: url.href,
+    title,
+    accessedAt,
+  });
+  logger.info('web source imported', { zetelId, fileId: file.id, kind: 'excerpt', bytes: Buffer.byteLength(content) });
+  return { file, extraction: 'excerpt' };
 }

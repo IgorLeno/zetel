@@ -1,14 +1,18 @@
 ---
 id: "002"
 title: "Pesquisar na web e importar candidatas"
-status: DRAFT
+status: DONE
 blocked_by: ["001"]
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: FULL
+profile_justification: "Nova rota publica com chamada OpenRouter paga, cache em processo, teto diario e variante de import com fallback de trecho"
+validation: PASS
+validated_at: "2026-10-16T09:42:10.534Z"
 ---
 
 ## Objetivo

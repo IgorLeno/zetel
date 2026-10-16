@@ -1,14 +1,14 @@
 ---
 id: "001"
 title: "Importar fonte da web por link"
-status: DONE
+status: SESSION_CLOSED
 blocked_by: []
 writer: null
 reviewer: null
-commit: null
-push: null
+commit: a05333be39807292d1c55332b699537a437cf8f1
+push: origin/main
 review_result: PASS
-handoff: null
+handoff: .agent/specs/SPEC-012-web-sources/handoffs/001-import-by-link-a05333b.md
 execution_profile: FULL
 profile_justification: "Migration, nova superficie de rede (SSRF), rota publica e escrita no vault"
 validation: PASS
