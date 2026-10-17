@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "revision": 1,
+  "revision": 2,
   "spec": {
     "id": "SPEC-016-live-mode",
     "kind": "full",
-    "status": "READY_FOR_APPROVAL",
-    "approved_by": null,
-    "approved_at": null
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-17T12:28:32.256Z"
   },
   "active_task": null,
   "tasks": [
@@ -48,9 +48,48 @@
     "status": null
   },
   "approval": {
-    "spec": false,
-    "plan": false,
-    "tasks": false,
-    "architecture_decisions": false
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "efebfca2f0f48a78796e60052e6b82264e0e788c315c1a6bf4426401b3772850"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "806d16ebbfcce41a7a8405ca7933ac410d6cd9021112f185ebb494a6f9842e9b"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "1a354c05edaf3569a6b9b06cf7ca911b2966217224d52a060cb56a7fb290f4e9"
+        },
+        {
+          "path": "tasks/001-gemini-key-voice-status.md",
+          "sha256": "a7c0f05acbc13cdf5ccbc69beba6ac61b69d7480e344ae0016129835030f29ad"
+        },
+        {
+          "path": "tasks/002-live-ephemeral-token.md",
+          "sha256": "9d24a45c44c42fd18f5600430e18080f41df62d5681cb1878e2f986f882b31b3"
+        },
+        {
+          "path": "tasks/003-live-client.md",
+          "sha256": "3b5c200f80bbed0635f416d06c1ed3148cc57a8444dc5fd7e042e02ada2277b2"
+        },
+        {
+          "path": "tasks/004-live-transcript-persistence.md",
+          "sha256": "f0922b876df39cb2f10dcddbd8141f8f4e15eefcbc11f8ea7c0e4f8e625a963f"
+        }
+      ],
+      "digest": "242b1afd54fae1723fadc0c9cd0748fa0d914320457700e8541b6a3112f10f5c",
+      "kind": "full",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-17T12:28:32.256Z"
+    }
   }
 }
