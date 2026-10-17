@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOpenRouterModel, getVoiceKey, writeConfig } from '@/lib/config';
+import { getOpenRouterModel, getVoiceKey, isSafeConfigValue, writeConfig } from '@/lib/config';
 import { deleteSetting, getSetting, setSetting } from '@/lib/settings';
 import {
   DEFAULT_STUDY_GUIDE_MAX_TOKENS,
@@ -10,6 +10,7 @@ import {
   STUDY_GUIDE_TIMEOUT_S_MIN,
 } from '@/lib/study-guide-constants';
 import { logger } from '@/lib/logger';
+import { requireSameOriginJson } from '@/lib/request-guard';
 import {
   DEFAULT_TTS_INSTRUCTIONS,
   DEFAULT_TTS_MODEL,
@@ -88,6 +89,9 @@ export async function GET() {
 
 /** PUT /api/settings — campos parciais */
 export async function PUT(request: Request) {
+  const rejected = requireSameOriginJson(request);
+  if (rejected) return rejected;
+
   let body: {
     default_model?: unknown;
     study_guide_model?: unknown;
@@ -109,6 +113,15 @@ export async function PUT(request: Request) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 });
+  }
+
+  // Valores espelhados em ~/.zetel/config: writeConfig recusa CR/LF/NUL, e a
+  // recusa no meio do handler deixaria settings do SQLite já gravados.
+  if (typeof body.default_model === 'string' && !isSafeConfigValue(body.default_model.trim())) {
+    return NextResponse.json({ error: 'Modelo padrão inválido.' }, { status: 400 });
+  }
+  if (typeof body.openai_tts_key === 'string' && !isSafeConfigValue(body.openai_tts_key.trim())) {
+    return NextResponse.json({ error: 'Chave OpenAI inválida.' }, { status: 400 });
   }
 
   const updated: string[] = [];

@@ -1,14 +1,18 @@
 ---
 id: "001"
 title: "Guarda same-origin/JSON nas rotas mutantes e validacao antecipada em settings"
-status: READY
+status: DONE
 blocked_by: []
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: FULL
+profile_justification: "Altera seguranca de rotas (middleware novo) e lib/config.ts; sempre FULL pelo adapter."
+validation: PASS
+validated_at: "2026-10-17T17:05:37.512Z"
 ---
 
 ## Objetivo

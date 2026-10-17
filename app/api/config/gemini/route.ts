@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveGeminiCredential, writeConfig } from '@/lib/config';
 import { logger } from '@/lib/logger';
+import { requireSameOriginJson } from '@/lib/request-guard';
 
 export const runtime = 'nodejs';
 
@@ -17,6 +18,8 @@ export async function GET() {
  * na resposta nem logada (regras 6 e 9).
  */
 export async function POST(request: Request) {
+  const rejected = requireSameOriginJson(request);
+  if (rejected) return rejected;
   let body: unknown;
   try {
     body = await request.json();

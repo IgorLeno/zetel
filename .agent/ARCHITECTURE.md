@@ -112,6 +112,14 @@ Invariantes adicionais:
   conteúdo do usuário, tokens, chaves ou segredos.
 - Rotas com filesystem impedem path traversal e permanecem no runtime Node.
 - Escritas do workflow usam lock, revisão esperada, temp + fsync + rename.
+- CSRF (SPEC-017): `middleware.ts` (runtime Node, matcher `/api/:path*`)
+  recusa com 403 mutações com `Sec-Fetch-Site` fora de `same-origin`/`none`,
+  `Origin` de host diferente do `Host` ou `Host` fora de loopback +
+  `ZETEL_ALLOWED_HOSTS`. Sem `Origin` e sem `Sec-Fetch-Site` passa (cliente
+  não navegador). Rotas de segredo (`/api/config`, `/api/config/gemini`,
+  `PUT /api/settings`) repetem a guarda e exigem `application/json` (415),
+  via `lib/request-guard.ts`. Risco residual: `GET` não é filtrado, então DNS
+  rebinding ainda pode ler dados não secretos.
 
 ## Gates e ambiente
 

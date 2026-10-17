@@ -43,6 +43,11 @@ function serialize(config: Record<string, string>): string {
   );
 }
 
+/** CR, LF ou NUL criariam linhas extras no formato `chave=valor`. */
+export function isSafeConfigValue(value: string): boolean {
+  return !/[\r\n\0]/.test(value);
+}
+
 /**
  * Serializa o read-modify-write entre processos e publica por rename no mesmo
  * diretório. O lock evita perder outro campo salvo simultaneamente.
@@ -50,7 +55,7 @@ function serialize(config: Record<string, string>): string {
 export function writeConfig(key: string, value: string): void {
   // O formato é uma linha por `chave=valor`: quebra de linha ou NUL num valor
   // criaria entradas extras e poderia sobrescrever outra chave (SPEC-016 review).
-  if (/[\r\n\0]/.test(key) || /[\r\n\0]/.test(value) || !key.trim() || key.includes('=')) {
+  if (!isSafeConfigValue(key) || !isSafeConfigValue(value) || !key.trim() || key.includes('=')) {
     throw new Error('Valor de configuração inválido.');
   }
   mkdirSync(ZETEL_HOME, { recursive: true, mode: 0o700 });

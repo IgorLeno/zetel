@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveOpenRouterCredential, writeConfig } from '@/lib/config';
 import { logger } from '@/lib/logger';
+import { requireSameOriginJson } from '@/lib/request-guard';
 
 export const runtime = 'nodejs';
 
@@ -15,6 +16,8 @@ export async function GET() {
  * A chave NUNCA é devolvida na resposta nem logada (regras #6 e #13).
  */
 export async function POST(request: Request) {
+  const rejected = requireSameOriginJson(request);
+  if (rejected) return rejected;
   let body: { apiKey?: unknown; model?: unknown };
   try {
     body = await request.json();

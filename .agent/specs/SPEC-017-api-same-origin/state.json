@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 2,
+  "revision": 7,
   "spec": {
     "id": "SPEC-017-api-same-origin",
     "kind": "mini",
@@ -13,15 +13,92 @@
     {
       "id": "001",
       "title": "Guarda same-origin/JSON nas rotas mutantes e validacao antecipada em settings",
-      "status": "READY",
-      "blocked_by": []
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "FULL",
+      "profile_justification": "Altera seguranca de rotas (middleware novo) e lib/config.ts; sempre FULL pelo adapter.",
+      "reviews_requested": 1,
+      "review_justification": "Um eixo engineering-quality com foco em seguranca basta: mudanca pequena e coberta por testes de matriz.",
+      "validation": "PASS",
+      "review_result": "PASS"
     }
   ],
   "session": {
-    "id": null,
-    "agent": null,
-    "task_id": null,
-    "status": null
+    "id": "task-001-20261017",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-17T16:54:25.530Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Altera seguranca de rotas (middleware novo) e lib/config.ts; sempre FULL pelo adapter.",
+    "reviews_requested": 1,
+    "review_justification": "Um eixo engineering-quality com foco em seguranca basta: mudanca pequena e coberta por testes de matriz.",
+    "validating_at": "2026-10-17T16:58:22.382Z",
+    "validation_result": "PASS",
+    "fixed_point": "35192ef5c9622e8a676c866227f2875d44e4d5416bde24198d72f25006071623",
+    "review_aggregate": ".agent/specs/SPEC-017-api-same-origin/reviews/001-aggregate.json",
+    "aggregated_at": "2026-10-17T17:10:22.957Z",
+    "review_result": {
+      "engineering-quality": "PASS"
+    },
+    "reviewing_at": "2026-10-17T17:05:37.512Z",
+    "validation": ".agent/specs/SPEC-017-api-same-origin/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/security",
+          "tests/integration/api-same-origin.test.ts",
+          "tests/integration/gemini-credential.test.ts",
+          "tests/integration/config-credential.test.ts",
+          "tests/integration/tts-settings.test.ts",
+          "tests/integration/live-settings.test.ts"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-10-17T17:10:23.635Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
   },
   "approval": {
     "spec": true,
