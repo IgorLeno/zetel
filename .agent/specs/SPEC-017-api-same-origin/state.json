@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "revision": 1,
+  "revision": 2,
   "spec": {
     "id": "SPEC-017-api-same-origin",
     "kind": "mini",
-    "status": "READY_FOR_APPROVAL",
-    "approved_by": null,
-    "approved_at": null
+    "status": "APPROVED",
+    "approved_by": "Igor Fernandes",
+    "approved_at": "2026-10-17T16:54:19.451Z"
   },
   "active_task": null,
   "tasks": [
@@ -24,9 +24,36 @@
     "status": null
   },
   "approval": {
-    "spec": false,
-    "plan": false,
-    "tasks": false,
-    "architecture_decisions": false
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "6a2fa53a35fe9ec6177f50131de0cad9e3c315b087462607b2c0ada6554dd675"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "17ae208c67d4972062b108bfe79a267dd0fa628ecd60cb584a9e495bca455b5e"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "eb2f7830969685790e350978929c77676395e75d6ac085d3addd98fc30f9a34b"
+        },
+        {
+          "path": "tasks/001-same-origin-guard.md",
+          "sha256": "5318899e9e4d30f641630fecbe4f9e873cd76b050d7f52032f9153dff6b0e551"
+        }
+      ],
+      "digest": "3d03eff81511c6f91d77dafaf5179c850acf183a3cc406a96cdcf9a80a336927",
+      "kind": "mini",
+      "confirmed_human": true,
+      "approved_by": "Igor Fernandes",
+      "approved_at": "2026-10-17T16:54:19.451Z"
+    }
   }
 }
