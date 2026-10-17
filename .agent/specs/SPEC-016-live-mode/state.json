@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "revision": 1,
+  "spec": {
+    "id": "SPEC-016-live-mode",
+    "kind": "full",
+    "status": "READY_FOR_APPROVAL",
+    "approved_by": null,
+    "approved_at": null
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Chave Gemini, voz Live e status no servidor e em Configuracoes",
+      "status": "READY",
+      "blocked_by": []
+    },
+    {
+      "id": "002",
+      "title": "Token efemero Live com contexto travado no servidor",
+      "status": "READY",
+      "blocked_by": [
+        "001"
+      ]
+    },
+    {
+      "id": "003",
+      "title": "Cliente Live no chat: audio em tempo real, interrupcao e limite",
+      "status": "READY",
+      "blocked_by": [
+        "002"
+      ]
+    },
+    {
+      "id": "004",
+      "title": "Transcricao Live salva por turno na sessao de estudo",
+      "status": "READY",
+      "blocked_by": [
+        "003"
+      ]
+    }
+  ],
+  "session": {
+    "id": null,
+    "agent": null,
+    "task_id": null,
+    "status": null
+  },
+  "approval": {
+    "spec": false,
+    "plan": false,
+    "tasks": false,
+    "architecture_decisions": false
+  }
+}
