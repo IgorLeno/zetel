@@ -3,7 +3,8 @@
 ## Persistência
 
 - `~/.zetel/zetel.db`: SQLite operacional, permissão restrita.
-- `~/.zetel/config`: chave OpenRouter, fora de SQLite, vault e Git.
+- `~/.zetel/config`: chaves OpenRouter e Gemini (`GEMINI_API_KEY`, SPEC-016;
+  env homônima como fallback), fora de SQLite, vault e Git.
 - `<vault>/zetels/<slug>/`: Markdown original, notas, imagens e artefatos.
 - `<vault>/parceiro/memoria/`: memória global em Markdown, lida a cada turno.
 - Migrations são SQL numeradas, transacionais e sem down automática.
@@ -82,6 +83,17 @@ Interfaces e dados). Em divergência, a SPEC prevalece.
   `resolveOpenRouterCredential()`; tom ignorado sem erro e nunca apagado na
   troca de modelo; sem chave do provedor efetivo → 503 `tts_unavailable`; logs
   só `chars`, `provider`, `model` e status (SPEC-013).
+- Live (SPEC-016, D1–D11): modo separado por botão no chat, com Gemini Live
+  (`gemini-3.8-live`, constantes em `lib/live-options.ts`); fora dele,
+  Whisper + TTS seguem iguais. Chave Gemini só no servidor
+  (`resolveGeminiCredential()`; `GET|POST /api/config/gemini` expõe só
+  `configured`/`source`); o navegador recebe token efêmero (`uses: 1`) com
+  modelo, voz, transcrição e system instruction travados. Contexto: parceira +
+  `zetel_pages.content_text` da página + memória global lida ao criar o token
+  (regra 5 adaptada: por sessão Live). Teto de 15 min, reconexão por
+  `sessionResumption`. Voz `live_voice` (30 vozes Gemini, padrão `Kore`),
+  independente de `tts_voice`; `/api/voice/status` inclui `live`. Turnos
+  viram `chat_messages` com `meta.live`; sem ferramentas na V1.
 - Starters (D13): `starter` enumerado; turno persiste mensagem canônica com
   `meta.starter`.
 

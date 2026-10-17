@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 2,
+  "revision": 9,
   "spec": {
     "id": "SPEC-016-live-mode",
     "kind": "full",
@@ -13,8 +13,14 @@
     {
       "id": "001",
       "title": "Chave Gemini, voz Live e status no servidor e em Configuracoes",
-      "status": "READY",
-      "blocked_by": []
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "FULL",
+      "profile_justification": "Altera lib/config.ts e o armazenamento de chaves (sempre FULL pelo adapter); nova chave Gemini, setting live_voice e contrato aditivo de status.",
+      "reviews_requested": 1,
+      "review_justification": "Uma revisao engineering-quality com foco em seguranca de chave cobre o risco material; spec-compliance coberta pelos criterios focados.",
+      "validation": "PASS",
+      "review_result": "PASS"
     },
     {
       "id": "002",
@@ -42,10 +48,81 @@
     }
   ],
   "session": {
-    "id": null,
-    "agent": null,
-    "task_id": null,
-    "status": null
+    "id": "task-001-20261017",
+    "agent": "claude",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-17T12:28:49.150Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Altera lib/config.ts e o armazenamento de chaves (sempre FULL pelo adapter); nova chave Gemini, setting live_voice e contrato aditivo de status.",
+    "reviews_requested": 1,
+    "review_justification": "Uma revisao engineering-quality com foco em seguranca de chave cobre o risco material; spec-compliance coberta pelos criterios focados.",
+    "validating_at": "2026-10-17T12:41:56.805Z",
+    "validation_result": "PASS",
+    "fixed_point": "a3d245cf8216e81eac59199bfabaa57031606c5ea906c8c8e14baf1c4e71b96c",
+    "review_aggregate": ".agent/specs/SPEC-016-live-mode/reviews/001-aggregate.json",
+    "aggregated_at": "2026-10-17T12:51:20.796Z",
+    "review_result": {
+      "engineering-quality": "PASS"
+    },
+    "reviewing_at": "2026-10-17T12:48:15.579Z",
+    "validation": ".agent/specs/SPEC-016-live-mode/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/integration/gemini-credential.test.ts",
+          "tests/integration/live-settings.test.ts",
+          "tests/unit/voice/live-options.test.ts",
+          "tests/unit/voice/status-route.test.ts",
+          "tests/integration/config-credential.test.ts",
+          "tests/integration/tts-settings.test.ts"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-10-17T12:51:21.402Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
   },
   "approval": {
     "spec": true,

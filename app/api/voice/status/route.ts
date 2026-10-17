@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { resolveGeminiCredential } from '@/lib/config';
 import { hasVoiceKey } from '@/lib/openai-voice';
 import { hasOpenRouterVoiceKey } from '@/lib/openrouter-voice';
 import { getSetting } from '@/lib/settings';
@@ -10,6 +11,7 @@ export const runtime = 'nodejs';
  * GET /api/voice/status — `tts` segue o provedor do modelo efetivo; o STT de
  * servidor continua Whisper/OpenAI (SPEC-013 D7, contrato aditivo).
  * O microfone Web Speech é do navegador e não entra nesta resposta.
+ * `live` = chave Gemini presente (SPEC-016 RF3, aditivo).
  */
 export async function GET() {
   const providers = { openai: hasVoiceKey(), openrouter: hasOpenRouterVoiceKey() };
@@ -18,5 +20,6 @@ export async function GET() {
     tts: providers[ttsProviderOf(model)],
     sttServer: providers.openai,
     providers,
+    live: resolveGeminiCredential().configured,
   });
 }

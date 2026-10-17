@@ -18,6 +18,7 @@ import {
 } from '@/lib/openai-voice';
 import { parseModelHistory, prependModelHistory } from '@/lib/model-history';
 import { isTtsModel, isTtsVoice, ttsVoiceSupportedBy } from '@/lib/tts-options';
+import { DEFAULT_LIVE_VOICE, isLiveVoice } from '@/lib/live-options';
 
 export const runtime = 'nodejs';
 
@@ -69,6 +70,7 @@ function readSettingsPayload() {
     tts_voice: getSetting('tts_voice') ?? DEFAULT_TTS_VOICE,
     tts_model: getSetting('tts_model') ?? DEFAULT_TTS_MODEL,
     tts_instructions: getSetting('tts_instructions') ?? DEFAULT_TTS_INSTRUCTIONS,
+    live_voice: getSetting('live_voice') ?? DEFAULT_LIVE_VOICE,
     openai_tts_key: maskKey(getVoiceKey()),
   };
 }
@@ -100,6 +102,7 @@ export async function PUT(request: Request) {
     tts_voice?: unknown;
     tts_model?: unknown;
     tts_instructions?: unknown;
+    live_voice?: unknown;
     openai_tts_key?: unknown;
   };
   try {
@@ -266,6 +269,18 @@ export async function PUT(request: Request) {
       { status: 400 },
     );
   }
+  // Voz do modo Live (SPEC-016 D10): só vozes Gemini; validada antes de
+  // qualquer gravação de voz para não deixar gravação parcial.
+  let liveVoice: string | undefined;
+  if (body.live_voice !== undefined) {
+    if (typeof body.live_voice !== 'string') {
+      return NextResponse.json({ error: 'live_voice inválido.' }, { status: 400 });
+    }
+    liveVoice = body.live_voice.trim();
+    if (liveVoice && !isLiveVoice(liveVoice)) {
+      return NextResponse.json({ error: 'Voz Live desconhecida.' }, { status: 400 });
+    }
+  }
   let ttsVoice: string | undefined;
   let ttsModel: string | undefined;
   if (body.tts_voice !== undefined) {
@@ -307,6 +322,12 @@ export async function PUT(request: Request) {
     if (ttsModel) setSetting('tts_model', ttsModel);
     else deleteSetting('tts_model');
     updated.push('tts_model');
+  }
+
+  if (liveVoice !== undefined) {
+    if (liveVoice) setSetting('live_voice', liveVoice);
+    else deleteSetting('live_voice');
+    updated.push('live_voice');
   }
 
   // Tipo e limite já validados acima, antes das gravações de voz/modelo.

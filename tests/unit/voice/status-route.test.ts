@@ -5,7 +5,11 @@ const hasOpenRouterVoiceKey = vi.hoisted(() => vi.fn(() => false));
 const settings = vi.hoisted(() => new Map<string, string>());
 vi.mock('@/lib/openai-voice', () => ({ hasVoiceKey }));
 vi.mock('@/lib/openrouter-voice', () => ({ hasOpenRouterVoiceKey }));
+const geminiConfigured = vi.hoisted(() => ({ value: false }));
 vi.mock('@/lib/settings', () => ({ getSetting: (key: string) => settings.get(key) ?? null }));
+vi.mock('@/lib/config', () => ({
+  resolveGeminiCredential: () => ({ configured: geminiConfigured.value, source: null, key: null }),
+}));
 
 const { GET } = await import('@/app/api/voice/status/route');
 
@@ -14,12 +18,13 @@ describe('GET /api/voice/status', () => {
     hasVoiceKey.mockReset();
     hasOpenRouterVoiceKey.mockReset();
     settings.clear();
+    geminiConfigured.value = false;
   });
 
   it('separa TTS da chave e não reporta o microfone do navegador', async () => {
     hasVoiceKey.mockReturnValue(true);
     const body = await (await GET()).json() as { tts: boolean; sttServer: boolean; stt?: boolean };
-    expect(body).toEqual({ tts: true, sttServer: true, providers: { openai: true, openrouter: false } });
+    expect(body).toEqual({ tts: true, sttServer: true, providers: { openai: true, openrouter: false }, live: false });
     expect(body.stt).toBeUndefined();
   });
 
@@ -29,6 +34,7 @@ describe('GET /api/voice/status', () => {
       tts: false,
       sttServer: false,
       providers: { openai: false, openrouter: false },
+      live: false,
     });
   });
 
@@ -40,10 +46,16 @@ describe('GET /api/voice/status', () => {
       tts: true,
       sttServer: false,
       providers: { openai: false, openrouter: true },
+      live: false,
     });
 
     hasVoiceKey.mockReturnValue(true);
     hasOpenRouterVoiceKey.mockReturnValue(false);
     expect(await (await GET()).json()).toMatchObject({ tts: false, sttServer: true });
+  });
+
+  it('live segue só a chave Gemini (SPEC-016 RF3)', async () => {
+    geminiConfigured.value = true;
+    expect(await (await GET()).json()).toMatchObject({ live: true, tts: false, sttServer: false });
   });
 });

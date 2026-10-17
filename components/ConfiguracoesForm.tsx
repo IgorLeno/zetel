@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { GeminiLiveSettings } from './GeminiLiveSettings';
 import { DEFAULT_OPENROUTER_MODEL } from '@/lib/openrouter-constants';
 import {
   STUDY_GUIDE_MAX_TOKENS_MAX,
@@ -774,6 +775,8 @@ export function ConfiguracoesForm({
         {testKeyFeedback && <p className={`feedback ${testKeyFeedback.kind}`}>{testKeyFeedback.text}</p>}
         {testFeedback && <p className={`feedback ${testFeedback.kind}`}>{testFeedback.text}</p>}
       </div>
+
+      <GeminiLiveSettings />
 
       {/* ── Configuração de Modelos ── */}
       <div className="section-title">Configuração de Modelos</div>

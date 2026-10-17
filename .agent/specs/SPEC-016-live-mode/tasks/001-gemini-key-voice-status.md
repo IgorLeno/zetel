@@ -1,14 +1,18 @@
 ---
 id: "001"
 title: "Chave Gemini, voz Live e status no servidor e em Configuracoes"
-status: READY
+status: DONE
 blocked_by: []
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: FULL
+profile_justification: "Altera lib/config.ts e o armazenamento de chaves (sempre FULL pelo adapter); nova chave Gemini, setting live_voice e contrato aditivo de status."
+validation: PASS
+validated_at: "2026-10-17T12:48:15.579Z"
 ---
 
 ## Objetivo

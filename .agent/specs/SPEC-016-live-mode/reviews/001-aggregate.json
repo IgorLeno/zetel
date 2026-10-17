@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "spec_id": "SPEC-016-live-mode",
+  "task_id": "001",
+  "fixed_point": "a3d245cf8216e81eac59199bfabaa57031606c5ea906c8c8e14baf1c4e71b96c",
+  "generated_at": "2026-10-17T12:51:20.796Z",
+  "reviews_requested": 1,
+  "axes": [
+    "engineering-quality"
+  ],
+  "report_paths": [
+    ".agent/specs/SPEC-016-live-mode/reviews/001-engineering-quality.md"
+  ],
+  "report_hashes": {
+    ".agent/specs/SPEC-016-live-mode/reviews/001-engineering-quality.md": "251a5b9ff9f0dce122b58952c2ce48adf952e82bfc622f1897865ffbe706f598"
+  },
+  "reviewers": [
+    "claude-subagent-security-engineer"
+  ],
+  "review_run_ids": [
+    "review-quality-spec016-001-r2"
+  ],
+  "package_ids": [
+    "pkg_5b0069dd88c62c78d8bdd59f"
+  ],
+  "findings_by_severity": {
+    "BLOCKING": 0,
+    "MAJOR": 0,
+    "MINOR": 1,
+    "NIT": 3
+  },
+  "findings_by_status": {
+    "OPEN": 4,
+    "RESOLVED": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "findings": [
+    {
+      "axis": "engineering-quality",
+      "id": "EQ-001",
+      "severity": "MINOR",
+      "title": "writeConfig can now throw in PUT /api/settings and the call is not caught",
+      "recommendation": "Reject CR/LF/NUL in these fields during validation, or wrap writeConfig and return 400. Add a test.",
+      "status": "OPEN",
+      "evidence": "default_model (line 122, after setSetting) and openai_tts_key (line 349, after the voice writes) call writeConfig without a try/catch. A value with an embedded CR/LF/NUL gives an unhandled 500 and a partial SQLite write. Injection is still prevented and no secret leaks. Same family as the known pre-existing write-before-validate behavior.",
+      "location": {
+        "file": "app/api/settings/route.ts",
+        "line": 122,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "EQ-002",
+      "severity": "NIT",
+      "title": "writeConfig key format is not strictly constrained",
+      "recommendation": "Enforce /^[A-Za-z_][A-Za-z0-9_]*$/ for keys.",
+      "status": "OPEN",
+      "evidence": "A key starting with '#' or with surrounding whitespace is dropped or normalised by readConfig. All current callers use constant keys, so this is not exploitable today.",
+      "location": {
+        "file": "lib/config.ts",
+        "line": 53,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "EQ-003",
+      "severity": "NIT",
+      "title": "No same-origin/content-type guard on the local key-write POST (pre-existing pattern)",
+      "recommendation": "In a later task, add an app-wide Origin/Sec-Fetch-Site or Content-Type: application/json check on mutating routes.",
+      "status": "OPEN",
+      "evidence": "request.json() accepts a text/plain cross-site simple POST, so a malicious page could replace the Gemini key with an attacker's key. /api/config has the same issue; this predates the change.",
+      "location": {
+        "file": "app/api/config/gemini/route.ts",
+        "line": 21,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "EQ-004",
+      "severity": "NIT",
+      "title": "Untracked local launch config present",
+      "recommendation": "Keep it out of the commit (gitignore or leave untracked).",
+      "status": "OPEN",
+      "evidence": "Known and out of scope: a local dev file that must not be committed.",
+      "location": {
+        "file": ".claude/launch.json",
+        "line": 1,
+        "not_applicable_reason": null
+      }
+    }
+  ],
+  "blocking_findings": 0,
+  "result": "PASS"
+}

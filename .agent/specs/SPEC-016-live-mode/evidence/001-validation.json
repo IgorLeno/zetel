@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "task_id": "001",
+  "execution_profile": "FULL",
+  "state_revision": 6,
+  "git_head": "9b413f529daeccf1e148f5c95ae265c223c9c08a",
+  "tree_fingerprint": "9b02832de81f88a9cad31d484905e733ec672f87f0ea7d76469f7d6546c2abe0",
+  "tracked_diff_sha256": "13b28bd914bc53461bfcf58dd9faf06305fd815127b2a7178f097e51d548a35f",
+  "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "untracked_sha256": "cf2d061ddcbe152ac16058948da7c463d303fcd0c494475a0ccaeaecb8bcdc23",
+  "task_fingerprint": "a7c0f05acbc13cdf5ccbc69beba6ac61b69d7480e344ae0016129835030f29ad",
+  "plan_fingerprint": "0269cc5a3468a6b41a387afe605071f544cdfe379f3745fd7187748fccd92313",
+  "fixed_point": "a3d245cf8216e81eac59199bfabaa57031606c5ea906c8c8e14baf1c4e71b96c",
+  "commands": [
+    {
+      "category": "focused",
+      "argv": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "tests/integration/gemini-credential.test.ts",
+        "tests/integration/live-settings.test.ts",
+        "tests/unit/voice/live-options.test.ts",
+        "tests/unit/voice/status-route.test.ts",
+        "tests/integration/config-credential.test.ts",
+        "tests/integration/tts-settings.test.ts"
+      ],
+      "started_at": "2026-10-17T12:41:56.823Z",
+      "completed_at": "2026-10-17T12:42:05.571Z",
+      "duration_ms": 8743,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "fb71366882ab18cb736928340bd38bde6aaf4cd0252964b077e8afca23891b97",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 1084,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  5.31s (transform 1.63s, setup 458ms, collect 1.15s, tests 6.52s, environment 5ms, prepare 2.39s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "build",
+      "argv": [
+        "pnpm",
+        "build"
+      ],
+      "started_at": "2026-10-17T12:42:05.571Z",
+      "completed_at": "2026-10-17T12:45:29.883Z",
+      "duration_ms": 204311,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "248fc71c1960c5ad4d6467cb4e696cf294e567afdb809b4e6ceb721a13c0bf30",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 4008,
+        "stderr_bytes": 0,
+        "stdout_preview": "ƒ  (Dynamic)  server-rendered on demand",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "test-ci",
+      "argv": [
+        "pnpm",
+        "test:ci"
+      ],
+      "started_at": "2026-10-17T12:45:29.883Z",
+      "completed_at": "2026-10-17T12:46:51.996Z",
+      "duration_ms": 82111,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "5484706d09ea0539cffd6be8aabe7747f24b6a5119b721b46caf01169a7fa53e",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 123637,
+        "stderr_bytes": 0,
+        "stdout_preview": "   Duration  9.41s (transform 7.76s, setup 2.50s, collect 33.64s, tests 36.76s, environment 38ms, prepare 12.57s)",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "coverage",
+      "argv": [
+        "pnpm",
+        "test:coverage"
+      ],
+      "started_at": "2026-10-17T12:46:51.996Z",
+      "completed_at": "2026-10-17T12:48:05.934Z",
+      "duration_ms": 73937,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "b85f6d46ed6ae1b3726d84a45c739c6dc7bd219ce85041e2f8617007f297617b",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 20299,
+        "stderr_bytes": 0,
+        "stdout_preview": "-------------------|---------|----------|---------|---------|-------------------",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "typecheck",
+      "argv": [
+        "pnpm",
+        "typecheck"
+      ],
+      "started_at": "2026-10-17T12:48:05.934Z",
+      "completed_at": "2026-10-17T12:48:15.435Z",
+      "duration_ms": 9499,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e87f658d79ce7cab0c3553cf450dd8c27dcdc625c97bd411e30fd4140a9e951f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 74,
+        "stderr_bytes": 0,
+        "stdout_preview": "> tsc --noEmit",
+        "stderr_preview": ""
+      }
+    },
+    {
+      "category": "diff-check",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-10-17T12:48:15.435Z",
+      "completed_at": "2026-10-17T12:48:15.449Z",
+      "duration_ms": 14,
+      "exit_code": 0,
+      "result": "PASS",
+      "output": {
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 0,
+        "stderr_bytes": 0,
+        "stdout_preview": "",
+        "stderr_preview": ""
+      }
+    }
+  ],
+  "waivers": [],
+  "recorded_at": "2026-10-17T12:48:15.514Z",
+  "validation_result": "PASS"
+}

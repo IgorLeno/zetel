@@ -48,6 +48,11 @@ function serialize(config: Record<string, string>): string {
  * diretório. O lock evita perder outro campo salvo simultaneamente.
  */
 export function writeConfig(key: string, value: string): void {
+  // O formato é uma linha por `chave=valor`: quebra de linha ou NUL num valor
+  // criaria entradas extras e poderia sobrescrever outra chave (SPEC-016 review).
+  if (/[\r\n\0]/.test(key) || /[\r\n\0]/.test(value) || !key.trim() || key.includes('=')) {
+    throw new Error('Valor de configuração inválido.');
+  }
   mkdirSync(ZETEL_HOME, { recursive: true, mode: 0o700 });
   const lockPath = CONFIG_PATH + '.lock';
   let lockFd: number | undefined;
@@ -92,6 +97,23 @@ export function resolveOpenRouterCredential(): {
   const fromConfig = readConfig().OPENROUTER_API_KEY?.trim();
   if (fromConfig) return { configured: true, source: 'config', key: fromConfig };
   const fromEnvironment = process.env.OPENROUTER_API_KEY?.trim();
+  if (fromEnvironment) return { configured: true, source: 'environment', key: fromEnvironment };
+  return { configured: false, source: null, key: null };
+}
+
+/**
+ * Chave Gemini (AI Studio) do modo Live (SPEC-016 D7): arquivo antes de env,
+ * como a OpenRouter. Só o servidor a usa para emitir tokens efêmeros; apenas
+ * `configured` e `source` podem sair do servidor.
+ */
+export function resolveGeminiCredential(): {
+  configured: boolean;
+  source: 'config' | 'environment' | null;
+  key: string | null;
+} {
+  const fromConfig = readConfig().GEMINI_API_KEY?.trim();
+  if (fromConfig) return { configured: true, source: 'config', key: fromConfig };
+  const fromEnvironment = process.env.GEMINI_API_KEY?.trim();
   if (fromEnvironment) return { configured: true, source: 'environment', key: fromEnvironment };
   return { configured: false, source: null, key: null };
 }
