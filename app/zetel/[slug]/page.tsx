@@ -49,6 +49,10 @@ export default async function ZetelDetailPage({
   }
 
   const hasSources = Boolean(db.prepare('SELECT 1 FROM zetel_files WHERE zetel_id = ? LIMIT 1').get(zetel.id));
+  // "Original" abre o primeiro PDF (ordem das fontes); sem PDF, o Documento Técnico do Markdown.
+  const firstPdf = db.prepare(
+    "SELECT id FROM zetel_files WHERE zetel_id = ? AND lower(filename) LIKE '%.pdf' ORDER BY order_index LIMIT 1",
+  ).get(zetel.id) as { id: string } | undefined;
 
   return (
     <>
@@ -65,6 +69,7 @@ export default async function ZetelDetailPage({
         <ZetelWorkspace
           zetelId={zetel.id}
           hasSources={hasSources}
+          originalPdfId={firstPdf?.id ?? null}
           readingStale={zetel.readingStale}
           lastBuiltAt={zetel.lastBuiltAt}
         />

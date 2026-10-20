@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ZetelFile } from '@/types/zetel-file';
@@ -8,6 +9,7 @@ import type { StudySession } from '@/types/study-session';
 import { ChatPanel } from './ChatPanel';
 import type { PartnerColor } from '@/lib/partner-identity';
 import { StudyShell } from './StudyShell';
+import { guideReadingQuery } from '@/lib/reading-links';
 import type { PdfSelection } from './PdfReader';
 
 // Só no cliente: no SSR o servidor carregaria o build de navegador do pdf.js
@@ -103,6 +105,8 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
     }).catch(() => setFocusError('Não foi possível guardar a página.'));
   }, [activeSessionId, fileId, zetelId]);
 
+  const guiaHref = `${pathname}?${guideReadingQuery(searchParams.toString())}`;
+
   if (error) return <p className="feedback err">{error}</p>;
   if (!file) return <div className="empty-state">Carregando…</div>;
 
@@ -117,7 +121,13 @@ export function PdfStudyView({ zetelId, fileId }: { zetelId: string; fileId: str
       )}
       {focusError && <p className="feedback err">{focusError}</p>}
       <StudyShell materialLabel="PDF" partnerColor={partnerColor}
-        materialTabs={<span className="material-title" title={file.filename}>{file.filename}</span>}
+        materialTabs={
+          <nav className="material-seg" aria-label="Material de leitura">
+            <Link href={guiaHref}>Guia de estudo</Link>
+            <Link href={`${pathname}?${searchParams.toString()}`} className="on" aria-current="page">Original</Link>
+            <span className="material-title" title={file.filename}>{file.filename}</span>
+          </nav>
+        }
         reader={<PdfReader
           zetelId={zetelId}
           fileId={file.id}

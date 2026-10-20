@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { PartnerColor } from '@/lib/partner-identity';
 import { ChatPanel } from './ChatPanel';
 import { StudyShell } from './StudyShell';
+import { originalReadingQuery } from '@/lib/reading-links';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
 
@@ -57,12 +58,15 @@ export function LeituraPanel({
   lastBuiltAt,
   selectedMode,
   chatActive = true,
+  originalPdfId = null,
 }: {
   zetelId: string;
   readingStale: boolean;
   lastBuiltAt: string | null;
   selectedMode: ReadingMode;
   chatActive?: boolean;
+  /** Primeiro PDF do Zetel: é o "Original". Sem PDF, o original é o Documento Técnico. */
+  originalPdfId?: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -102,6 +106,8 @@ export function LeituraPanel({
     params.set('view', mode);
     return `${pathname}?${params.toString()}`;
   }
+
+  const originalHref = `${pathname}?${originalReadingQuery(searchParams.toString(), originalPdfId)}`;
 
   const iframeSrc = (() => {
     const params = new URLSearchParams();
@@ -227,8 +233,8 @@ export function LeituraPanel({
           <nav className="material-seg" aria-label="Material de leitura">
             <Link href={modeHref('guia-estudo')} className={selectedMode === 'guia-estudo' ? 'on' : ''}
               aria-current={selectedMode === 'guia-estudo' ? 'page' : undefined}>Guia de estudo</Link>
-            <Link href={modeHref('tecnico')} className={selectedMode === 'tecnico' ? 'on' : ''}
-              aria-current={selectedMode === 'tecnico' ? 'page' : undefined}>Documento</Link>
+            <Link href={originalHref} className={selectedMode === 'tecnico' ? 'on' : ''}
+              aria-current={selectedMode === 'tecnico' ? 'page' : undefined}>Original</Link>
             {readingStale && selectedMode === 'tecnico' && tecnicoBuilt && !building && (
               <span className="pill warn" title="As fontes mudaram desde a última montagem">Fontes mudaram</span>
             )}
