@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "revision": 2,
+  "spec": {
+    "id": "SPEC-018-chatgpt-curator",
+    "kind": "full",
+    "status": "READY_FOR_APPROVAL",
+    "approved_by": null,
+    "approved_at": null
+  },
+  "active_task": null,
+  "tasks": [
+    {
+      "id": "001",
+      "title": "Contratos do curador e template do Relatorio Zetel",
+      "status": "DRAFT",
+      "blocked_by": []
+    },
+    {
+      "id": "002",
+      "title": "Formato do relatorio: parser e validacao deterministicos",
+      "status": "DRAFT",
+      "blocked_by": [
+        "001"
+      ]
+    },
+    {
+      "id": "003",
+      "title": "Importacao idempotente da caixa de entrada local",
+      "status": "DRAFT",
+      "blocked_by": [
+        "002"
+      ]
+    },
+    {
+      "id": "004",
+      "title": "Canal GitHub: sincronizar clone local por fast-forward",
+      "status": "DRAFT",
+      "blocked_by": [
+        "003"
+      ]
+    },
+    {
+      "id": "005",
+      "title": "Curadoria por IA: candidatos validados no servidor",
+      "status": "DRAFT",
+      "blocked_by": [
+        "003"
+      ]
+    },
+    {
+      "id": "006",
+      "title": "Revisao humana dos candidatos e gravacao no vault",
+      "status": "DRAFT",
+      "blocked_by": [
+        "005"
+      ]
+    },
+    {
+      "id": "007",
+      "title": "Contexto de volta: CONTEXTO.md e publicacao explicita",
+      "status": "DRAFT",
+      "blocked_by": [
+        "004",
+        "006"
+      ]
+    },
+    {
+      "id": "008",
+      "title": "Fluxo integrado, E2E nao-live e validacao humana",
+      "status": "DRAFT",
+      "blocked_by": [
+        "007"
+      ]
+    }
+  ],
+  "session": {
+    "id": null,
+    "agent": null,
+    "task_id": null,
+    "status": null
+  },
+  "approval": {
+    "spec": false,
+    "plan": false,
+    "tasks": false,
+    "architecture_decisions": false
+  }
+}
