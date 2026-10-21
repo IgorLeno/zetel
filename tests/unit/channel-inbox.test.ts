@@ -16,6 +16,7 @@ import {
   detectImageType,
   loadReportImages,
   MAX_IMAGE_BYTES,
+  MAX_INBOX_FILES,
   MAX_INBOX_REPORTS,
   scanZetelInbox,
 } from '@/lib/channel-inbox';
@@ -179,12 +180,34 @@ describe('scanZetelInbox / loadReportImages', () => {
     expect(seen).toEqual(['inbox/termo/a.md']);
   });
 
-  it(`lê no máximo ${MAX_INBOX_REPORTS} relatórios por importação`, () => {
+  it(`analisa no máximo ${MAX_INBOX_REPORTS} relatórios novos por importação`, () => {
     for (let i = 0; i <= MAX_INBOX_REPORTS; i += 1) {
-      writeFileSync(join(dir, `r${String(i).padStart(3, '0')}.md`), '# x');
+      writeFileSync(join(dir, `r${String(i).padStart(4, '0')}.md`), '# x');
+    }
+    const scan = scanZetelInbox(channel, 'termo');
+    expect(scan.invalid).toHaveLength(MAX_INBOX_REPORTS + 1);
+    expect(scan.invalid.filter((reason) => reason === 'too_many_reports')).toEqual(['too_many_reports']);
+    expect(scan.invalid.at(-1)).toBe('too_many_reports');
+  });
+
+  it(`relatórios conhecidos não consomem o teto de ${MAX_INBOX_REPORTS}`, () => {
+    for (let i = 0; i <= MAX_INBOX_REPORTS; i += 1) {
+      writeFileSync(join(dir, `r${String(i).padStart(4, '0')}.md`), `# antigo ${i}`);
+    }
+    // Nome com data ordena por último: o relatório mais novo vem depois dos importados.
+    writeFileSync(join(dir, 'r9999.md'), report('termo'));
+    const scan = scanZetelInbox(channel, 'termo', (path) => path !== 'inbox/termo/r9999.md');
+    expect(scan.known).toBe(MAX_INBOX_REPORTS + 1);
+    expect(scan.invalid).toEqual([]);
+    expect(scan.reports.map((r) => r.fileName)).toEqual(['r9999.md']);
+  });
+
+  it(`lê e calcula hash de no máximo ${MAX_INBOX_FILES} relatórios por importação`, () => {
+    for (let i = 0; i <= MAX_INBOX_FILES; i += 1) {
+      writeFileSync(join(dir, `r${String(i).padStart(4, '0')}.md`), '# x');
     }
     const scan = scanZetelInbox(channel, 'termo', () => true);
-    expect(scan.known).toBe(MAX_INBOX_REPORTS);
+    expect(scan.known).toBe(MAX_INBOX_FILES);
     expect(scan.invalid).toEqual(['too_many_reports']);
   });
 

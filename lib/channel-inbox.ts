@@ -31,8 +31,14 @@ import {
 } from './report-format';
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-/** Teto de relatórios lidos por importação: cada parse de 1 MB custa segundos de event loop. */
+/** Teto de relatórios novos analisados por importação: cada parse de 1 MB custa segundos de event loop. */
 export const MAX_INBOX_REPORTS = 200;
+/**
+ * Teto de relatórios lidos e hasheados por importação. Conhecidos não passam
+ * pelo parse, então não gastam `MAX_INBOX_REPORTS`; este limite maior só evita
+ * que uma pasta com milhares de arquivos de 1 MB prenda a leitura (sha256 ≈ 2 GB).
+ */
+export const MAX_INBOX_FILES = 2000;
 
 /** Nome de relatório no canal: minúsculas, dígitos e hífens (`AAAA-MM-DD-assunto.md`). */
 const REPORT_NAME_RE = /^[a-z0-9][a-z0-9-]{0,119}\.md$/;
@@ -159,8 +165,9 @@ const UTF8 = new TextDecoder('utf-8', { fatal: true });
 /**
  * Lista e valida os relatórios de `inbox/<slug>/`, em ordem de nome. O hash
  * vem antes do parse: relatório já conhecido (`isKnown`) é contado em `known`
- * sem passar pelo remark. Acima de `MAX_INBOX_REPORTS` lidos, o resto é
- * recusado.
+ * sem passar pelo remark e sem gastar `MAX_INBOX_REPORTS`, que limita só os
+ * relatórios novos analisados. Acima de `MAX_INBOX_FILES` lidos ou de
+ * `MAX_INBOX_REPORTS` analisados, o resto é recusado.
  */
 export function scanZetelInbox(channelDir: string, slug: string, isKnown: KnownReport = () => false): InboxScan {
   let dir: string | null;
@@ -172,6 +179,7 @@ export function scanZetelInbox(channelDir: string, slug: string, isKnown: KnownR
   }
   const scan: InboxScan = { reports: [], invalid: [], known: 0 };
   let read = 0;
+  let parsed = 0;
   if (!dir) return scan;
 
   const entries = readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1));
@@ -191,25 +199,41 @@ export function scanZetelInbox(channelDir: string, slug: string, isKnown: KnownR
       scan.invalid.push('bad_name');
       continue;
     }
-    if (read >= MAX_INBOX_REPORTS) {
+    if (read >= MAX_INBOX_FILES) {
       scan.invalid.push('too_many_reports');
       continue;
     }
     read += 1;
-    const result = readReport(dir, name, slug, isKnown);
-    if (result === 'known') scan.known += 1;
-    else if ('reason' in result) scan.invalid.push(result.reason);
+    const raw = readReportBytes(dir, name, slug);
+    if ('reason' in raw) {
+      scan.invalid.push(raw.reason);
+      continue;
+    }
+    if (isKnown(raw.channelPath, raw.contentHash)) {
+      scan.known += 1;
+      continue;
+    }
+    // Só relatório novo gasta o teto: senão os já importados empurram os mais novos para fora.
+    if (parsed >= MAX_INBOX_REPORTS) {
+      scan.invalid.push('too_many_reports');
+      continue;
+    }
+    parsed += 1;
+    const result = parseInboxReport(raw, slug);
+    if ('reason' in result) scan.invalid.push(result.reason);
     else scan.reports.push(result);
   }
   return scan;
 }
 
-function readReport(
-  dir: string,
-  fileName: string,
-  slug: string,
-  isKnown: KnownReport,
-): InboxReport | 'known' | { reason: InboxInvalidReason } {
+interface RawReport {
+  fileName: string;
+  channelPath: string;
+  contentHash: string;
+  bytes: Buffer;
+}
+
+function readReportBytes(dir: string, fileName: string, slug: string): RawReport | { reason: InboxInvalidReason } {
   let bytes: Buffer;
   try {
     bytes = readBounded(join(dir, fileName), MAX_REPORT_BYTES);
@@ -218,11 +242,15 @@ function readReport(
     // Sumir entre a listagem e a abertura equivale a não ser arquivo regular.
     return { reason: error.reason === 'missing' ? 'not_regular_file' : error.reason };
   }
-
   const channelPath = `inbox/${slug}/${fileName}`;
   const contentHash = createHash('sha256').update(bytes).digest('hex');
-  if (isKnown(channelPath, contentHash)) return 'known';
+  return { fileName, channelPath, contentHash, bytes };
+}
 
+function parseInboxReport(
+  { fileName, channelPath, contentHash, bytes }: RawReport,
+  slug: string,
+): InboxReport | { reason: InboxInvalidReason } {
   let markdown: string;
   try {
     markdown = UTF8.decode(bytes);
