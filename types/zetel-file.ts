@@ -18,6 +18,10 @@ export interface ZetelFile {
   sourceUrl: string | null;
   sourceTitle: string | null;
   sourceAccessedAt: string | null;
+  /** Relatório do canal do curador (SPEC-018 D7): `'chatgpt_report'`; `null` nos demais. */
+  sourceKind: string | null;
+  /** Caminho do relatório no clone do canal (`inbox/<slug>/<arquivo>`). */
+  sourcePath: string | null;
   createdAt: string;
   updatedAt: string;
   /** Campo virtual (não persiste): detectado em tempo de listagem via stat/hash. */

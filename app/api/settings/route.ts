@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getOpenRouterModel, getVoiceKey, isSafeConfigValue, writeConfig } from '@/lib/config';
-import { deleteSetting, getSetting, setSetting } from '@/lib/settings';
+import { deleteSetting, getSetting, setSetting, validateChannelDir } from '@/lib/settings';
 import {
   DEFAULT_STUDY_GUIDE_MAX_TOKENS,
   DEFAULT_STUDY_GUIDE_TIMEOUT_S,
@@ -72,6 +72,7 @@ function readSettingsPayload() {
     tts_model: getSetting('tts_model') ?? DEFAULT_TTS_MODEL,
     tts_instructions: getSetting('tts_instructions') ?? DEFAULT_TTS_INSTRUCTIONS,
     live_voice: getSetting('live_voice') ?? DEFAULT_LIVE_VOICE,
+    channel_dir: getSetting('channel_dir'),
     openai_tts_key: maskKey(getVoiceKey()),
   };
 }
@@ -108,6 +109,7 @@ export async function PUT(request: Request) {
     tts_instructions?: unknown;
     live_voice?: unknown;
     openai_tts_key?: unknown;
+    channel_dir?: unknown;
   };
   try {
     body = await request.json();
@@ -122,6 +124,22 @@ export async function PUT(request: Request) {
   }
   if (typeof body.openai_tts_key === 'string' && !isSafeConfigValue(body.openai_tts_key.trim())) {
     return NextResponse.json({ error: 'Chave OpenAI inválida.' }, { status: 400 });
+  }
+
+  // Clone do canal do curador (SPEC-018 RF2): validado antes de qualquer
+  // gravação; vazio desliga o canal.
+  let channelDir: string | undefined;
+  if (body.channel_dir !== undefined) {
+    if (typeof body.channel_dir !== 'string') {
+      return NextResponse.json({ error: 'channel_dir inválido.' }, { status: 400 });
+    }
+    if (body.channel_dir.trim()) {
+      const channel = validateChannelDir(body.channel_dir, getSetting('vault_path'));
+      if (!channel.ok) return NextResponse.json({ error: channel.error }, { status: 400 });
+      channelDir = channel.path;
+    } else {
+      channelDir = '';
+    }
   }
 
   const updated: string[] = [];
@@ -361,6 +379,13 @@ export async function PUT(request: Request) {
     // Nunca logada nem devolvida crua (D30 / Regra #13).
     writeConfig('openai_tts_key', body.openai_tts_key.trim());
     updated.push('openai_tts_key');
+  }
+
+  // Gravado só depois de todas as validações: um 400 em outro campo não deixa o canal trocado.
+  if (channelDir !== undefined) {
+    if (channelDir) setSetting('channel_dir', channelDir);
+    else deleteSetting('channel_dir');
+    updated.push('channel_dir');
   }
 
   if (updated.length === 0) {

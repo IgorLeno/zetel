@@ -67,7 +67,7 @@ describe('migration 006_pdf_pages sobre banco com dados', () => {
     expect(names).toContain('006_pdf_pages.sql');
 
     const after = db.prepare('SELECT * FROM zetel_files WHERE id = ?').get(fileId) as Record<string, unknown>;
-    // runMigrations aplica até a última: 006 e 011 só adicionam colunas nullable.
+    // runMigrations aplica até a última: 006, 011 e 012 só adicionam colunas nullable.
     expect(after).toEqual({
       ...before,
       page_count: null,
@@ -75,6 +75,8 @@ describe('migration 006_pdf_pages sobre banco com dados', () => {
       source_url: null,
       source_title: null,
       source_accessed_at: null,
+      source_kind: null,
+      source_path: null,
     });
     expect(db.prepare('SELECT COUNT(*) AS n FROM zetel_pages').get()).toEqual({ n: 1 });
 

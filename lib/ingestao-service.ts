@@ -8,6 +8,7 @@ import {
   openSync,
   readFileSync,
   readSync,
+  renameSync,
   rmSync,
   statSync,
 } from 'node:fs';
@@ -77,6 +78,8 @@ interface ZetelFileRow {
   source_url: string | null;
   source_title: string | null;
   source_accessed_at: string | null;
+  source_kind: string | null;
+  source_path: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -95,6 +98,8 @@ function rowToFile(row: ZetelFileRow): ZetelFile {
     sourceUrl: row.source_url,
     sourceTitle: row.source_title,
     sourceAccessedAt: row.source_accessed_at,
+    sourceKind: row.source_kind,
+    sourcePath: row.source_path,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -137,7 +142,7 @@ export function assertZetelAtivo(db: Database.Database, zetelId: string): string
  * tenta `<stem>-2.ext`, `<stem>-3.ext`… até -99. Determinístico para um dado
  * estado do diretório. Usado por addFile e pela cópia de imagens.
  */
-function resolveSemColisao(dir: string, name: string): string {
+export function resolveSemColisao(dir: string, name: string): string {
   if (!existsSync(join(dir, name))) return name;
 
   const ext = extname(name);
@@ -173,12 +178,25 @@ export interface FileProvenance {
   accessedAt: string;
 }
 
+/** Relatório do canal do curador (SPEC-018 D7): subpasta de `arquivos/` e origem. */
+export interface ChannelProvenance {
+  /** Um segmento só (`relatorios`); o arquivo fica em `arquivos/<subdir>/`. */
+  subdir: string;
+  sourceKind: 'chatgpt_report';
+  /** Caminho relativo ao clone do canal (`inbox/<slug>/<arquivo>`). */
+  sourcePath: string;
+}
+
+const SUBDIR_RE = /^[a-z0-9-]+$/;
+
 /**
  * Anexa um arquivo `.md` ou `.pdf` ao Zetel: valida extensão (e, para PDF,
  * tamanho ≤ `MAX_PDF_BYTES` e cabeçalho `%PDF-`), copia byte a byte para
- * `arquivos/` sem colisão, registra em `zetel_files` (ainda não processado:
- * hashes nulos) e marca `reading_stale = 1`. `provenance` (fontes da web,
- * SPEC-012) é gravada no mesmo INSERT.
+ * `arquivos/` sem colisão (temporário + rename, para nunca expor arquivo pela
+ * metade), registra em `zetel_files` (ainda não processado: hashes nulos) e
+ * marca `reading_stale = 1`. `provenance` (fontes da web, SPEC-012) e
+ * `channel` (relatório do canal, SPEC-018) são gravadas no mesmo INSERT. Se o
+ * INSERT falhar, a cópia é removida.
  */
 export function addFile(
   db: Database.Database,
@@ -186,6 +204,7 @@ export function addFile(
   zetelId: string,
   sourceFilePath: string,
   provenance?: FileProvenance,
+  channel?: ChannelProvenance,
 ): ZetelFile {
   const slug = assertZetelAtivo(db, zetelId);
 
@@ -202,16 +221,27 @@ export function addFile(
     }
   }
 
-  const dir = arquivosDir(vaultPath, slug);
-  mkdirSync(dir, { recursive: true });
-
-  const destName = resolveSemColisao(dir, basename(sourceFilePath));
-  try {
-    copyFileSync(sourceFilePath, join(dir, destName));
-  } catch {
-    // Regra #6: o erro de fs traz o caminho (com filename) — não o propagamos.
-    throw new Error('Falha ao copiar o arquivo para o vault.');
+  if (channel && !SUBDIR_RE.test(channel.subdir)) {
+    throw new Error('Subpasta de arquivos inválida.');
   }
+  const dir = channel ? join(arquivosDir(vaultPath, slug), channel.subdir) : arquivosDir(vaultPath, slug);
+  // Regra #6: o erro de fs traz o caminho (com filename) — não o propagamos.
+  const copyFailed = () => new Error('Falha ao copiar o arquivo para o vault.');
+  try {
+    mkdirSync(dir, { recursive: true });
+  } catch {
+    throw copyFailed();
+  }
+  const destName = resolveSemColisao(dir, basename(sourceFilePath));
+  const tmpPath = join(dir, `.tmp-${randomUUID()}`);
+  try {
+    copyFileSync(sourceFilePath, tmpPath);
+    renameSync(tmpPath, join(dir, destName));
+  } catch {
+    rmSync(tmpPath, { force: true });
+    throw copyFailed();
+  }
+  const filename = channel ? `${channel.subdir}/${destName}` : destName;
 
   const maxRow = db
     .prepare('SELECT MAX(order_index) AS m FROM zetel_files WHERE zetel_id = ?')
@@ -221,25 +251,32 @@ export function addFile(
   const now = new Date().toISOString();
   const id = randomUUID();
 
-  db.transaction(() => {
-    db.prepare(
-      `INSERT INTO zetel_files
-         (id, zetel_id, filename, order_index, content_hash, size_bytes, last_seen_mtime,
-          source_url, source_title, source_accessed_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?)`,
-    ).run(
-      id,
-      zetelId,
-      destName,
-      orderIndex,
-      provenance?.url ?? null,
-      provenance?.title ?? null,
-      provenance?.accessedAt ?? null,
-      now,
-      now,
-    );
-    markStale(db, zetelId);
-  })();
+  try {
+    db.transaction(() => {
+      db.prepare(
+        `INSERT INTO zetel_files
+           (id, zetel_id, filename, order_index, content_hash, size_bytes, last_seen_mtime,
+            source_url, source_title, source_accessed_at, source_kind, source_path, created_at, updated_at)
+         VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        id,
+        zetelId,
+        filename,
+        orderIndex,
+        provenance?.url ?? null,
+        provenance?.title ?? null,
+        provenance?.accessedAt ?? null,
+        channel?.sourceKind ?? null,
+        channel?.sourcePath ?? null,
+        now,
+        now,
+      );
+      markStale(db, zetelId);
+    })();
+  } catch (err) {
+    rmSync(join(dir, destName), { force: true });
+    throw err;
+  }
 
   logger.info('zetel file added', { id, zetelId });
   return rowToFile(

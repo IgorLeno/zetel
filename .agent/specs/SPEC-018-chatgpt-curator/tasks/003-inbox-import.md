@@ -1,14 +1,18 @@
 ---
 id: "003"
 title: "Importacao idempotente da caixa de entrada local"
-status: DRAFT
+status: DONE
 blocked_by: ["002"]
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: FULL
+profile_justification: "Migration nova (012), leitura de filesystem com entrada externa hostil (canal) e escrita no vault."
+validation: PASS
+validated_at: "2026-10-21T14:53:32.730Z"
 ---
 
 ## Objetivo

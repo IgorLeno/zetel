@@ -37,6 +37,7 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [importing, setImporting] = useState(false);
+  const [importingReports, setImportingReports] = useState(false);
   const [webSearchOpen, setWebSearchOpen] = useState(false);
   const dragIndex = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -146,6 +147,38 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
     }
   }
 
+  /** Relatórios do ChatGPT em `inbox/<slug>/` do canal (SPEC-018); o servidor só devolve contagens. */
+  async function importReports() {
+    setImportingReports(true);
+    setError(null);
+    setProcessMsg(null);
+    try {
+      const res = await fetch(`/api/zetels/${zetelId}/reports/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? 'Falha ao importar os relatórios.');
+        return;
+      }
+      const { imported, skipped, invalid } = data as { imported: number; skipped: number; invalid: number };
+      if (imported > 0) {
+        await load();
+        router.refresh();
+      }
+      const parts = [`${imported} relatório${imported === 1 ? '' : 's'} importado${imported === 1 ? '' : 's'}`];
+      if (skipped) parts.push(`${skipped} já importado${skipped === 1 ? '' : 's'}`);
+      if (invalid) parts.push(`${invalid} recusado${invalid === 1 ? '' : 's'} (fora do formato ou dos limites)`);
+      setProcessMsg(parts.join(' · '));
+    } catch {
+      setError('Erro de rede ao importar os relatórios.');
+    } finally {
+      setImportingReports(false);
+    }
+  }
+
   async function remove(fileId: string) {
     setError(null);
     setConfirmingRemove(null);
@@ -243,7 +276,7 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
           className="btn primary"
           type="button"
           onClick={() => setWebSearchOpen(true)}
-          disabled={uploading || processing || importing}
+          disabled={uploading || processing || importing || importingReports}
         >
           Pesquisar na web
         </button>
@@ -253,7 +286,7 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
           aria-expanded={linkOpen}
           aria-controls="web-link-form"
           onClick={() => setLinkOpen((v) => !v)}
-          disabled={uploading || processing || importing}
+          disabled={uploading || processing || importing || importingReports}
         >
           Adicionar por link
         </button>
@@ -261,16 +294,24 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
           className="btn"
           type="button"
           onClick={() => fileInput.current?.click()}
-          disabled={uploading || processing || importing}
+          disabled={uploading || processing || importing || importingReports}
         >
           {uploading ? 'Adicionando…' : 'Adicionar arquivos'}
+        </button>
+        <button
+          className="btn"
+          type="button"
+          onClick={importReports}
+          disabled={uploading || processing || importing || importingReports}
+        >
+          {importingReports ? 'Importando…' : 'Importar relatórios'}
         </button>
         {(!onboarding || files.length > 0) && (
           <button
             className="btn"
             type="button"
             onClick={processar}
-            disabled={processing || uploading || importing || files.length === 0}
+            disabled={processing || uploading || importing || importingReports || files.length === 0}
           >
             {processing ? 'Processando…' : 'Processar'}
           </button>

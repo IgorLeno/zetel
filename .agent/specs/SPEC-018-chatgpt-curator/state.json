@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 21,
+  "revision": 33,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -24,7 +24,7 @@
     {
       "id": "002",
       "title": "Formato do relatorio: parser e validacao deterministicos",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "001"
       ],
@@ -37,10 +37,15 @@
     {
       "id": "003",
       "title": "Importacao idempotente da caixa de entrada local",
-      "status": "DRAFT",
+      "status": "DONE",
       "blocked_by": [
         "002"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "Migration nova (012), leitura de filesystem com entrada externa hostil (canal) e escrita no vault.",
+      "reviews_requested": 2,
+      "validation": "PASS",
+      "review_result": "PASS"
     },
     {
       "id": "004",
@@ -85,24 +90,24 @@
     }
   ],
   "session": {
-    "id": "task-002-20261021",
+    "id": "task-003-20261021",
     "agent": "claude-code",
-    "task_id": "002",
+    "task_id": "003",
     "status": "DONE",
-    "started_at": "2026-10-21T13:27:43.945Z",
-    "execution_profile": "STANDARD",
-    "profile_justification": "Modulo puro novo (lib/report-format.ts) com testes unitarios; sem persistencia, banco, seguranca de runtime ou state machine.",
-    "reviews_requested": 1,
-    "validating_at": "2026-10-21T13:36:17.882Z",
+    "started_at": "2026-10-21T14:18:06.591Z",
+    "execution_profile": "FULL",
+    "profile_justification": "Migration nova (012), leitura de filesystem com entrada externa hostil (canal) e escrita no vault.",
+    "reviews_requested": 2,
+    "validating_at": "2026-10-21T14:48:51.562Z",
     "validation_result": "PASS",
-    "fixed_point": "701a7642f71eab8e6723e346d1c086a52adff46f109617766347a38ce5c8b163",
-    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/002-aggregate.json",
-    "aggregated_at": "2026-10-21T14:11:56.832Z",
+    "fixed_point": "efaef9baaa89af2c0c8737016e1a36cce2615e4ca070513a5502994ada1a17e1",
+    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/003-aggregate.json",
+    "aggregated_at": "2026-10-21T14:57:51.325Z",
     "review_result": {
-      "engineering-quality": "PASS"
+      "engineering-quality": "PASS",
+      "spec-compliance": "PASS"
     },
-    "reviewing_at": "2026-10-21T13:36:35.766Z",
-    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/002-validation.json",
+    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/003-validation.json",
     "gates_plan": [
       {
         "category": "focused",
@@ -111,7 +116,31 @@
           "exec",
           "vitest",
           "run",
-          "tests/unit/report-format.test.ts"
+          "tests/unit/channel-inbox.test.ts",
+          "tests/unit/channel-dir-setting.test.ts",
+          "tests/integration/report-import.test.ts",
+          "tests/integration/report-import-route.test.ts"
+        ]
+      },
+      {
+        "category": "build",
+        "argv": [
+          "pnpm",
+          "build"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
+        ]
+      },
+      {
+        "category": "coverage",
+        "argv": [
+          "pnpm",
+          "test:coverage"
         ]
       },
       {
@@ -130,7 +159,8 @@
         ]
       }
     ],
-    "done_at": "2026-10-21T14:11:57.459Z",
+    "reviewing_at": "2026-10-21T14:53:32.730Z",
+    "done_at": "2026-10-21T14:57:54.313Z",
     "active_task_cleared": true,
     "external_checks": "pending-not-waited"
   },

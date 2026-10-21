@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "spec_id": "SPEC-018-chatgpt-curator",
+  "task_id": "003",
+  "fixed_point": "efaef9baaa89af2c0c8737016e1a36cce2615e4ca070513a5502994ada1a17e1",
+  "generated_at": "2026-10-21T14:57:51.325Z",
+  "reviews_requested": 2,
+  "axes": [
+    "engineering-quality",
+    "spec-compliance"
+  ],
+  "report_paths": [
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/003-engineering-quality.md",
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/003-spec-compliance.md"
+  ],
+  "report_hashes": {
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/003-engineering-quality.md": "180893e24105d32579983a7c7f2b0981072fbc434c09e937be5ca8e1841b2196",
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/003-spec-compliance.md": "12e4ea067f7bb279b4f7079d993dfee967556cb16dfbfb1bff8a0da45624fd24"
+  },
+  "reviewers": [
+    "claude-subagent-code-reviewer",
+    "claude-subagent-code-reviewer"
+  ],
+  "review_run_ids": [
+    "review-quality-spec018-003-r2",
+    "review-spec-spec018-003-r1"
+  ],
+  "package_ids": [
+    "pkg_568cc329da64a95b775a785e",
+    "pkg_a7b703a333618e33c9b54357"
+  ],
+  "findings_by_severity": {
+    "BLOCKING": 0,
+    "MAJOR": 0,
+    "MINOR": 5,
+    "NIT": 5
+  },
+  "findings_by_status": {
+    "OPEN": 7,
+    "RESOLVED": 3,
+    "NOT_APPLICABLE": 0
+  },
+  "findings": [
+    {
+      "axis": "engineering-quality",
+      "id": "F001",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "Full parse before idempotency check, no cap on reports",
+      "location": {
+        "file": "lib/channel-inbox.ts",
+        "line": 224,
+        "not_applicable_reason": null
+      },
+      "evidence": "readReport now computes the sha256 and calls isKnown(channelPath, hash) before UTF-8 decoding and parseReport. The service passes a prepared SELECT on channel_imports. scanZetelInbox enforces MAX_INBOX_REPORTS=200. Tests cover known-skip without parse and the cap.",
+      "recommendation": "None. See F006 for a side effect of how the cap is counted."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F002",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "Missing tests for rollback after addFile, hard link, FIFO, boundaries",
+      "location": {
+        "file": "tests/integration/report-import.test.ts",
+        "line": 171,
+        "not_applicable_reason": null
+      },
+      "evidence": "The test 'falha depois do addFile (INSERT em channel_imports)' uses a BEFORE INSERT trigger and asserts no zetel_files row, empty arquivos/relatorios and imagens/relatorios, and that the simulated error text is absent from logs. channel-inbox.test.ts covers hard link, FIFO and the exact 20 images / 10 MB boundary.",
+      "recommendation": "None."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F003",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "PUT /api/settings saved channel_dir before other fields were validated",
+      "location": {
+        "file": "app/api/settings/route.ts",
+        "line": 381,
+        "not_applicable_reason": null
+      },
+      "evidence": "channel_dir is validated early into a local variable and written only after all other validations, right before the 'Nada a salvar' check. A test confirms a 400 on another field leaves channel_dir untouched.",
+      "recommendation": "None."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F004",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Intermediate-directory TOCTOU between zetelInboxDir and file open (accepted residual)",
+      "location": {
+        "file": "lib/channel-inbox.ts",
+        "line": 109,
+        "not_applicable_reason": null
+      },
+      "evidence": "inbox/ and inbox/<slug>/ are verified by lstat/realpath and files are then opened by joined path; O_NOFOLLOW protects only the final component. Swapping a directory for a symlink in between requires local write access to the clone, which is already a trusted boundary.",
+      "recommendation": "Optionally open the directory with O_DIRECTORY|O_NOFOLLOW and use openat-style access; Node does not expose this directly, so accepting the residual is reasonable."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F005",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Revert to older hash is skipped while a newer version stays current; DB slug failing the regex gives 500",
+      "location": {
+        "file": "lib/channel-inbox.ts",
+        "line": 106,
+        "not_applicable_reason": null
+      },
+      "evidence": "The identity (zetel_id, channel_path, content_hash) is deliberately permanent per D6, so reverting a file to older content is skipped; documented by a test. zetelInboxDir throws a generic Error for a slug failing SLUG_RE, which the route turns into a 500; DB slugs come from slugify, so this cannot happen in practice.",
+      "recommendation": "Keep as documented behavior; optionally count an invalid slug instead of throwing."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F006",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "Report cap counts already-imported reports, so new reports can be permanently refused after 200",
+      "location": {
+        "file": "lib/channel-inbox.ts",
+        "line": 198,
+        "not_applicable_reason": null
+      },
+      "evidence": "In scanZetelInbox, read += 1 runs before readReport, so reports already known (skipped by hash) consume the MAX_INBOX_REPORTS budget. Entries are sorted by name and date-prefixed names put the newest last, so once inbox/<slug>/ holds more than 200 report files every later report is marked too_many_reports on every run.",
+      "recommendation": "Count against the cap only reports that go through parse, with a separate larger bound for hash-only reads, and update the test."
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F007",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Worst-case per-request cost remains high: up to 200 unknown 1 MB reports parsed synchronously and held in memory",
+      "location": {
+        "file": "lib/channel-inbox.ts",
+        "line": 202,
+        "not_applicable_reason": null
+      },
+      "evidence": "Each unknown valid 1 MB report takes about 2 s of remark time and scan.reports keeps every markdown string and parsed result until the import loop finishes. Impact is limited: the attacker needs control of the repo the user chose to clone, in a local single-user app.",
+      "recommendation": "Optionally process reports lazily one at a time and lower the per-run parse budget, reporting the remainder as deferred."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "S001",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "addFile alterado para todos os uploads (temp+rename, tratamento de erro) alem do necessario para subpasta de canal",
+      "location": {
+        "file": "lib/ingestao-service.ts",
+        "line": 204,
+        "not_applicable_reason": null
+      },
+      "evidence": "O Escopo da tarefa 003 nao lista lib/ingestao-service.ts. A mudanca era necessaria para aceitar subdir/sourceKind/sourcePath (RF4/D7), mas tambem reescreveu o caminho comum de upload: copia via .tmp-<uuid> + rename, mkdirSync com erro generico, remocao da copia se o INSERT falhar, e exportou resolveSemColisao. Ha teste de nao regressao ('upload comum (sem canal) segue em arquivos/ sem temporario sobrando'), e os gates FULL passaram, entao nao ha defeito observado, apenas ampliacao de superficie em codigo FULL (escrita atomica).",
+      "recommendation": "Aceitar, registrando no handoff que a atomicidade de addFile foi estendida a todos os uploads por necessidade do rollback por relatorio (Riscos da tarefa). Nao requer retrabalho."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "S002",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Alteracoes fora da lista de escopo: timeout de teste em report-format e thresholds em vitest.config.ts",
+      "location": {
+        "file": "tests/unit/report-format.test.ts",
+        "line": 72,
+        "not_applicable_reason": null
+      },
+      "evidence": "O diff eleva o timeout do teste de 1 MB da tarefa 002 para 20 s (justificado em comentario: flakiness em test:ci paralelo), exporta IMAGE_NAME_RE em lib/report-format.ts e adiciona thresholds de cobertura por arquivo em vitest.config.ts. Nenhum aparece no Escopo da tarefa, mas todos sao de suporte direto (gate de cobertura FULL e estabilidade do gate), sem mudar comportamento de producao.",
+      "recommendation": "Nenhuma acao. Mencionar no handoff como suporte aos gates."
+    },
+    {
+      "axis": "spec-compliance",
+      "id": "S003",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Sem UI para configurar channel_dir; botao Importar relatorios retorna erro textual quando o canal nao esta configurado",
+      "location": {
+        "file": "components/ArquivosPanel.tsx",
+        "line": 294,
+        "not_applicable_reason": null
+      },
+      "evidence": "channel_dir so pode ser definido via PUT /api/settings (campo aceito e validado). O Escopo da tarefa 003 pede apenas o botao na aba Arquivos e lib/settings.ts, nao uma tela de configuracao. A SPEC (Rollout) preve 'Configurar canal' na UI do curador, que pertence a tarefa posterior (painel Curadoria). Sem canal, a rota devolve 400 com mensagem clara, exibida pelo botao.",
+      "recommendation": "Garantir que a tarefa 006 (ou outra) entregue a configuracao de canal na UI; nada a fazer na 003."
+    }
+  ],
+  "blocking_findings": 0,
+  "result": "PASS"
+}

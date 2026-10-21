@@ -69,7 +69,8 @@ describe('parseReport — tamanho', () => {
     const padTo = (bytes: number) => VALID + 'x'.repeat(bytes - Buffer.byteLength(VALID, 'utf8'));
     expect(parseReport(padTo(MAX_REPORT_BYTES)).ok).toBe(true);
     expect(reasonOf(parseReport(padTo(MAX_REPORT_BYTES + 1)))).toBe('too_large');
-  });
+    // Parse remark de 1 MB leva ~2 s isolado e passa de 5 s com o test:ci em paralelo.
+  }, 20_000);
 });
 
 describe('parseReport — frontmatter', () => {

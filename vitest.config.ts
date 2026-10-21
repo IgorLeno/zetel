@@ -38,6 +38,9 @@ export default defineConfig({
         'lib/source-index.ts': { lines: 80, functions: 80, branches: 70 },
         'lib/format-utils.ts': { lines: 90, functions: 90 },
         'lib/relative-time.ts': { lines: 80, functions: 80 },
+        // Curador (SPEC-018): entrada hostil do canal e escrita no vault.
+        'lib/channel-inbox.ts': { lines: 90, functions: 90, branches: 80 },
+        'lib/report-import-service.ts': { lines: 90, functions: 90, branches: 80 },
       },
     },
   },
