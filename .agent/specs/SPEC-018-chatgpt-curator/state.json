@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 8,
+  "revision": 21,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -13,7 +13,7 @@
     {
       "id": "001",
       "title": "Contratos do curador e template do Relatorio Zetel",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [],
       "execution_profile": "FAST",
       "profile_justification": "Somente documentacao (arquitetura, contexto, template); nenhum codigo de produto, banco ou seguranca.",
@@ -24,10 +24,15 @@
     {
       "id": "002",
       "title": "Formato do relatorio: parser e validacao deterministicos",
-      "status": "DRAFT",
+      "status": "DONE",
       "blocked_by": [
         "001"
-      ]
+      ],
+      "execution_profile": "STANDARD",
+      "profile_justification": "Modulo puro novo (lib/report-format.ts) com testes unitarios; sem persistencia, banco, seguranca de runtime ou state machine.",
+      "reviews_requested": 1,
+      "validation": "PASS",
+      "review_result": "PASS"
     },
     {
       "id": "003",
@@ -80,30 +85,40 @@
     }
   ],
   "session": {
-    "id": "task-001-20261021",
+    "id": "task-002-20261021",
     "agent": "claude-code",
-    "task_id": "001",
+    "task_id": "002",
     "status": "DONE",
-    "started_at": "2026-10-21T13:07:14.419Z",
-    "execution_profile": "FAST",
-    "profile_justification": "Somente documentacao (arquitetura, contexto, template); nenhum codigo de produto, banco ou seguranca.",
-    "reviews_requested": 0,
-    "validating_at": "2026-10-21T13:08:12.149Z",
+    "started_at": "2026-10-21T13:27:43.945Z",
+    "execution_profile": "STANDARD",
+    "profile_justification": "Modulo puro novo (lib/report-format.ts) com testes unitarios; sem persistencia, banco, seguranca de runtime ou state machine.",
+    "reviews_requested": 1,
+    "validating_at": "2026-10-21T13:36:17.882Z",
     "validation_result": "PASS",
-    "fixed_point": "8488aed0cd93aa5fb290fa86b409b512026112007536cf4a5ac855ad7abd00fd",
-    "review_aggregate": null,
-    "aggregated_at": null,
-    "review_result": {},
-    "reviewing_at": "2026-10-21T13:08:12.367Z",
-    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/001-validation.json",
+    "fixed_point": "701a7642f71eab8e6723e346d1c086a52adff46f109617766347a38ce5c8b163",
+    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/002-aggregate.json",
+    "aggregated_at": "2026-10-21T14:11:56.832Z",
+    "review_result": {
+      "engineering-quality": "PASS"
+    },
+    "reviewing_at": "2026-10-21T13:36:35.766Z",
+    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/002-validation.json",
     "gates_plan": [
       {
         "category": "focused",
         "argv": [
-          "git",
-          "diff",
-          "--cached",
-          "--check"
+          "pnpm",
+          "exec",
+          "vitest",
+          "run",
+          "tests/unit/report-format.test.ts"
+        ]
+      },
+      {
+        "category": "typecheck",
+        "argv": [
+          "pnpm",
+          "typecheck"
         ]
       },
       {
@@ -115,7 +130,7 @@
         ]
       }
     ],
-    "done_at": "2026-10-21T13:08:15.733Z",
+    "done_at": "2026-10-21T14:11:57.459Z",
     "active_task_cleared": true,
     "external_checks": "pending-not-waited"
   },

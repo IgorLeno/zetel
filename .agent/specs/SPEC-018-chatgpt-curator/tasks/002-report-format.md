@@ -1,14 +1,18 @@
 ---
 id: "002"
 title: "Formato do relatorio: parser e validacao deterministicos"
-status: DRAFT
+status: DONE
 blocked_by: ["001"]
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: STANDARD
+profile_justification: "Modulo puro novo (lib/report-format.ts) com testes unitarios; sem persistencia, banco, seguranca de runtime ou state machine."
+validation: PASS
+validated_at: "2026-10-21T13:36:35.766Z"
 ---
 
 ## Objetivo
