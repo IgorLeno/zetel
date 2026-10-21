@@ -13,4 +13,4 @@ privado separado do vault, via `git` do sistema (sem credencial no Zetel).
 Chat/voz/Live intocados aqui; SPEC-019 os esconde atrás de flag (D11).
 D1, D3 e D11 decididos pelo Igor em 2026-10-20.
 
-OPEN_QUESTION: D13 (emenda de produto: prd-v6 ou emenda na visão) aguarda o Igor.
+D13 decidida (2026-10-21): emenda no topo de `docs/PRODUCT_VISION.md`.

@@ -205,6 +205,6 @@ voz/chat é proposta em D11 e tratada em spec própria.
 - D12: `git` só via `execFile`, args fixos, `fetch` + `merge --ff-only`,
   `GIT_TERMINAL_PROMPT=0`, timeout 30 s, sem submódulos; erro → mensagem
   genérica, saída do git nunca logada.
-- D13 (produto): OPEN_QUESTION: Igor aprova emenda de produto (`prd-v6.md` curto
-  ou emenda em `docs/PRODUCT_VISION.md`) definindo o Zetel como curador; até
-  lá, esta spec registra o conflito acima.
+- D13 (produto, Igor 2026-10-21): emenda no topo de `docs/PRODUCT_VISION.md`
+  define o Zetel como curador; onde a visão anterior ou `prd-v5.md`
+  conflitarem com esta spec, prevalece a emenda. Sem `prd-v6.md`.

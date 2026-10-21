@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "revision": 2,
+  "revision": 3,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
-    "status": "READY_FOR_APPROVAL",
-    "approved_by": null,
-    "approved_at": null
+    "status": "APPROVED",
+    "approved_by": "Igor Leno de Souza Fernandes",
+    "approved_at": "2026-10-21T13:06:34.914Z"
   },
   "active_task": null,
   "tasks": [
@@ -81,9 +81,64 @@
     "status": null
   },
   "approval": {
-    "spec": false,
-    "plan": false,
-    "tasks": false,
-    "architecture_decisions": false
+    "spec": true,
+    "plan": true,
+    "tasks": true,
+    "architecture_decisions": true,
+    "integrity": {
+      "algorithm": "SHA-256",
+      "format_version": 1,
+      "manifest": [
+        {
+          "path": "PLAN.md",
+          "sha256": "28f335fb62293d25f39415a3688f3f57a535b12391cfcceded0d685f74ade22b"
+        },
+        {
+          "path": "SPEC.md",
+          "sha256": "353c16ea4dc2e8b5697346ce0994e7bcd08ae584f00f49fd65e6c5dd5cd69806"
+        },
+        {
+          "path": "TASKS.md",
+          "sha256": "d816e6c0f9f39408c7bedcd82166d41eaf78e9fcf5a84743191edbcbd5bbd1fa"
+        },
+        {
+          "path": "tasks/001-contratos-template.md",
+          "sha256": "821f9b0769aa162d0727a604ba8561fd2f63d40c0d99955ffa9f98a7eb9e9412"
+        },
+        {
+          "path": "tasks/002-report-format.md",
+          "sha256": "6a5515d5cc2897644bbafcbbd9a3db4383bd048a7955e82b0117a719b1e2fc0c"
+        },
+        {
+          "path": "tasks/003-inbox-import.md",
+          "sha256": "ff15e50ccacc39b770dc2d88f4fb8c61bdb4d734453667cbcb2c3b65cadca0d2"
+        },
+        {
+          "path": "tasks/004-github-sync.md",
+          "sha256": "d42d4a4fac906aea559d006c959efa1487ba2802d3adce65d5538eec5e5cd4ac"
+        },
+        {
+          "path": "tasks/005-ai-curation.md",
+          "sha256": "bfcf967767fc0f047c78e7834e43a1a5b2ed47d9637fd8c17ce60f791ed82e96"
+        },
+        {
+          "path": "tasks/006-curation-review.md",
+          "sha256": "53359d930839e1386dd57b157471796d82a649c1e22afc3b9f7a4a3c6587e845"
+        },
+        {
+          "path": "tasks/007-context-export.md",
+          "sha256": "4acb6968cae225907a0faaa8f77a29693e714c854f945cf63ede9d49ac6bc5b4"
+        },
+        {
+          "path": "tasks/008-integration-validation.md",
+          "sha256": "76d0bc384d487f4d1a80aebe762973999f6e2368317b5c9d324be21723e433f1"
+        }
+      ],
+      "digest": "364286d5a38528546e13101b0d2f4b32edb8e7f2b80b8602b914814eb4a0c15d",
+      "kind": "full",
+      "confirmed_human": true,
+      "approved_by": "Igor Leno de Souza Fernandes",
+      "approved_at": "2026-10-21T13:06:34.914Z"
+    }
   }
 }

@@ -1,5 +1,39 @@
 # Zetel — Visão Oficial do Produto
 
+> **Emenda de 2026-10-21 — Zetel curador (`SPEC-018-chatgpt-curator`, D13).**
+> Decisão do Igor (2026-10-20, aprovada em 2026-10-21): a conversa de estudo
+> passa a acontecer no ChatGPT, cuja cota Plus já cobre voz e texto com
+> qualidade. O Zetel deixa de ser o lugar da conversa e passa a ser o lugar
+> que **cura, estrutura e guarda** o estudo:
+>
+> ```text
+> CONVERSA (ChatGPT)
+>    ↓  Relatório Zetel + imagens, via canal
+> IMPORTAÇÃO
+>    ↓
+> CURADORIA (IA sugere candidatos)
+>    ↓  confirmação humana
+> MEMÓRIA (vault)
+>    ↓
+> CONTEXTO.md  →  PRÓXIMA CONVERSA MELHOR
+> ```
+>
+> Efeitos sobre este documento:
+>
+> - §1 (definição), §4 (North Star), §10–§13 (leitura conversacional,
+>   iniciativa, voice-first, interrupção) e os princípios 1–2 de §22 deixam de
+>   ser o núcleo do produto. Chat, voz e Live ficam escondidos atrás de flag,
+>   com código mantido (D11; deprecação em spec própria).
+> - Continuam válidos: o Zetel como unidade de estudo (§5), fontes rastreáveis
+>   (§6), conceitos e relações com confirmação humana (§15–§16), memória
+>   inspecionável (§17) e os princípios 3, 5, 6, 7, 9 e 10 de §22.
+> - O critério de sucesso (§23) passa a ser: uma conversa real no ChatGPT vira
+>   relatório importado, candidatos curados e confirmados no vault, e a
+>   conversa seguinte no ChatGPT retoma o estudo a partir do `CONTEXTO.md`.
+>
+> O texto abaixo é preservado como registro da visão anterior; onde conflitar
+> com esta emenda, prevalece a emenda.
+
 ## 1. Definição
 
 **Zetel é um ambiente pessoal de aprendizagem conversacional, orientado principalmente por voz, no qual materiais escolhidos pelo usuário se tornam o contexto de uma parceira de estudos que ensina, pergunta, conecta conceitos, acompanha a compreensão e constrói uma memória de conhecimento rastreável ao longo do tempo.**
