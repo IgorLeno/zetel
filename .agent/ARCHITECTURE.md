@@ -105,6 +105,57 @@ Invariantes adicionais:
 - Proveniência (página, hash, trecho, sessão) nunca vem do cliente.
 - Conceito permanente só é criado ou alterado com confirmação humana.
 
+## Curador (SPEC-018)
+
+Fluxo: ChatGPT (conversa) → Relatório Zetel no canal → importação →
+curadoria por IA → confirmação humana → vault → `CONTEXTO.md` → ChatGPT.
+Fonte completa: `.agent/specs/SPEC-018-chatgpt-curator/SPEC.md`.
+
+- Canal (D1, D2): repositório GitHub privado, separado do vault, clonado em
+  `channel_dir` (setting validado). Layout `inbox/<slug>/` (entrada) e
+  `contexto/<slug>/` (saída). Núcleo agnóstico de canal: importação e
+  curadoria operam só sobre a pasta local; o adaptador apenas a sincroniza.
+- Formato (D3): Markdown com frontmatter `zetel_report: 1`, `zetel`, `title`,
+  `date` (ISO), `images[]` opcional; seções fixas `## Resumo`, `## Tópicos`,
+  `## Passo a passo`, `## Conceitos`, `## Dúvidas em aberto`, `## Questões`.
+  Imagens no mesmo diretório, nome `[a-z0-9-]+\.(png|jpg|webp)`. Parser
+  determinístico, sem LLM; inválido é recusado inteiro, com motivo. Template:
+  `docs/CHATGPT_REPORT_TEMPLATE.md`.
+- Entrada manual (D4): o Igor envia relatório e imagens ao canal; o Zetel não
+  depende de o ChatGPT escrever no repositório. Arquivo copiado para `inbox/`
+  no clone é aceito sem commit.
+- Saída (D5): o ChatGPT lê `contexto/<slug>/CONTEXTO.md` pelo app GitHub,
+  somente leitura; fallback é anexar o arquivo ao Project do tema.
+- Idempotência (D6): identidade `(zetel_id, channel_path, content_hash)`.
+  Mesmo hash = skip; mesmo caminho com hash novo = nova versão e anterior
+  `superseded`; pendentes da anterior viram `rejected`, confirmados ficam.
+- Armazenamento (D7): relatório é material comum via `addFile` em
+  `zetels/<slug>/arquivos/relatorios/`, com `source_kind = 'chatgpt_report'`
+  e `source_path`; imagens em `zetels/<slug>/imagens/relatorios/` com links
+  relativos reescritos. Slug/pasta imutáveis.
+- Curadoria (D8, D9): catálogo de blocos (`anchor`, `content_hash`) → JSON da
+  LLM → validação server-side (tipo `nota | passo_a_passo | conceito |
+  questao`, só blocos existentes, limites, ≤ 12 candidatos). JSON inválido =
+  zero candidatos e `curation_failed` reexecutável. Modelo em
+  `curation_model`, resolvido no servidor. Nada vai ao vault sem confirmação;
+  proveniência reconstruída no servidor.
+- Contexto (D10): `CONTEXTO.md` renderizado sem LLM, só com conteúdo
+  confirmado, ≤ 200 KB. Commit local automático restrito a `contexto/`; push
+  apenas pelo botão "Publicar contexto", com prévia.
+- Voz/chat (D11): chat, TTS/STT, barge-in e Live ficam atrás de flag, com
+  código mantido; deprecação em spec própria (SPEC-019).
+- Git (D12, RNF1, RNF6): só `execFile` com argumentos fixos, sem shell,
+  `GIT_TERMINAL_PROMPT=0`, timeout 30 s, sem submódulos; sync = `fetch` +
+  `merge --ff-only`, nunca merge/rebase/reset automático; divergência = erro
+  genérico com clone intocado. O Zetel não guarda credencial do canal; usa
+  SSH/credential helper do sistema. Saída do git e URL do remoto nunca vão a
+  logs.
+- Limites (RNF4): relatório ≤ 1 MB; imagem ≤ 10 MB; ≤ 20 imagens; PNG/JPEG/
+  WebP por magic bytes; SVG, symlink, traversal e slug inexistente recusados e
+  contados.
+- Logs (RNF2): apenas contagens `imported`, `skipped`, `invalid`,
+  `candidates`, `confirmed` e IDs.
+
 ## Segurança e observabilidade
 
 - Sanitização HTML usa allowlist explícita; imagens externas são bloqueadas.

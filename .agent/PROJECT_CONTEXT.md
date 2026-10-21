@@ -12,6 +12,14 @@ proveniência). A direção anterior ("prompts editáveis em runtime + modo
 internet") foi substituída em 2026-09-26 e permanece candidata a versões
 posteriores.
 
+**Mudança de rumo (2026-10-21, emenda no topo de `docs/PRODUCT_VISION.md`):**
+a conversa de estudo passa para o ChatGPT; o Zetel vira o **curador** que
+importa o Relatório Zetel por um canal GitHub privado, propõe candidatos por
+IA, grava no vault só o que o Igor confirma e devolve um `CONTEXTO.md`
+determinístico. Spec ativa: `SPEC-018-chatgpt-curator`; contratos em
+`.agent/ARCHITECTURE.md` ("Curador"). Chat/voz/Live ficam atrás de flag
+(SPEC-019). Onde o PRD v5 conflitar com a emenda, prevalece a emenda.
+
 ## Stack aprovada
 
 - Next.js App Router, React e TypeScript strict.

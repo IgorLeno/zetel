@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 3,
+  "revision": 8,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -13,8 +13,13 @@
     {
       "id": "001",
       "title": "Contratos do curador e template do Relatorio Zetel",
-      "status": "DRAFT",
-      "blocked_by": []
+      "status": "DONE",
+      "blocked_by": [],
+      "execution_profile": "FAST",
+      "profile_justification": "Somente documentacao (arquitetura, contexto, template); nenhum codigo de produto, banco ou seguranca.",
+      "reviews_requested": 0,
+      "validation": "PASS",
+      "review_result": "NOT_REQUIRED"
     },
     {
       "id": "002",
@@ -75,10 +80,44 @@
     }
   ],
   "session": {
-    "id": null,
-    "agent": null,
-    "task_id": null,
-    "status": null
+    "id": "task-001-20261021",
+    "agent": "claude-code",
+    "task_id": "001",
+    "status": "DONE",
+    "started_at": "2026-10-21T13:07:14.419Z",
+    "execution_profile": "FAST",
+    "profile_justification": "Somente documentacao (arquitetura, contexto, template); nenhum codigo de produto, banco ou seguranca.",
+    "reviews_requested": 0,
+    "validating_at": "2026-10-21T13:08:12.149Z",
+    "validation_result": "PASS",
+    "fixed_point": "8488aed0cd93aa5fb290fa86b409b512026112007536cf4a5ac855ad7abd00fd",
+    "review_aggregate": null,
+    "aggregated_at": null,
+    "review_result": {},
+    "reviewing_at": "2026-10-21T13:08:12.367Z",
+    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/001-validation.json",
+    "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "git",
+          "diff",
+          "--cached",
+          "--check"
+        ]
+      },
+      {
+        "category": "diff-check",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ]
+      }
+    ],
+    "done_at": "2026-10-21T13:08:15.733Z",
+    "active_task_cleared": true,
+    "external_checks": "pending-not-waited"
   },
   "approval": {
     "spec": true,

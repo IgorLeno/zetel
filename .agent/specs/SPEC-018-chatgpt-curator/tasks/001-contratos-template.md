@@ -1,14 +1,18 @@
 ---
 id: "001"
 title: "Contratos do curador e template do Relatorio Zetel"
-status: DRAFT
+status: DONE
 blocked_by: []
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: NOT_REQUIRED
 handoff: null
+execution_profile: FAST
+profile_justification: "Somente documentacao (arquitetura, contexto, template); nenhum codigo de produto, banco ou seguranca."
+validation: PASS
+validated_at: "2026-10-21T13:08:12.367Z"
 ---
 
 ## Objetivo
