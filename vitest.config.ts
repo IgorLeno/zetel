@@ -41,6 +41,7 @@ export default defineConfig({
         // Curador (SPEC-018): entrada hostil do canal e escrita no vault.
         'lib/channel-inbox.ts': { lines: 90, functions: 90, branches: 80 },
         'lib/report-import-service.ts': { lines: 90, functions: 90, branches: 80 },
+        'lib/channel-git.ts': { lines: 90, functions: 90, branches: 80 },
       },
     },
   },

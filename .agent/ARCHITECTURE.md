@@ -149,7 +149,12 @@ Fonte completa: `.agent/specs/SPEC-018-chatgpt-curator/SPEC.md`.
   `merge --ff-only`, nunca merge/rebase/reset automático; divergência = erro
   genérico com clone intocado. O Zetel não guarda credencial do canal; usa
   SSH/credential helper do sistema. Saída do git e URL do remoto nunca vão a
-  logs.
+  logs. Toda chamada passa `-c core.hooksPath=` (vazio), `core.fsmonitor=false`
+  e `submodule.recurse=false`: hooks e fsmonitor do clone não rodam a partir do
+  servidor. `channel_dir` precisa ter `.git` próprio (subpasta de outro
+  repositório = `not_a_repo`). `POST /api/channel/sync` devolve só
+  `{ status: ok|not_a_repo|diverged|error, fetched }`; alteração local que o
+  fast-forward sobrescreveria também é `diverged`.
 - Limites (RNF4): relatório ≤ 1 MB; imagem ≤ 10 MB; ≤ 20 imagens; PNG/JPEG/
   WebP por magic bytes; SVG, symlink, traversal e slug inexistente recusados e
   contados.

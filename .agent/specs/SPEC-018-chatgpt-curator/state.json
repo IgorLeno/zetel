@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 34,
+  "revision": 42,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -50,10 +50,16 @@
     {
       "id": "004",
       "title": "Canal GitHub: sincronizar clone local por fast-forward",
-      "status": "DRAFT",
+      "status": "DONE",
       "blocked_by": [
         "003"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "Executa processo externo (git) com rede sobre clone do usuario; superficie de seguranca (credenciais, hooks, saida do git) e rota nova.",
+      "reviews_requested": 1,
+      "review_justification": "Tarefa planeja uma revisao de seguranca; escopo pequeno (um modulo, uma rota, um botao).",
+      "validation": "PASS",
+      "review_result": "PASS"
     },
     {
       "id": "005",
@@ -90,24 +96,25 @@
     }
   ],
   "session": {
-    "id": "task-003-20261021",
+    "id": "task-004-20261022",
     "agent": "claude-code",
-    "task_id": "003",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-10-21T14:18:06.591Z",
+    "task_id": "004",
+    "status": "DONE",
+    "started_at": "2026-10-22T19:10:41.854Z",
     "execution_profile": "FULL",
-    "profile_justification": "Migration nova (012), leitura de filesystem com entrada externa hostil (canal) e escrita no vault.",
-    "reviews_requested": 2,
-    "validating_at": "2026-10-21T14:48:51.562Z",
+    "profile_justification": "Executa processo externo (git) com rede sobre clone do usuario; superficie de seguranca (credenciais, hooks, saida do git) e rota nova.",
+    "reviews_requested": 1,
+    "review_justification": "Tarefa planeja uma revisao de seguranca; escopo pequeno (um modulo, uma rota, um botao).",
+    "validating_at": "2026-10-22T19:22:23.340Z",
     "validation_result": "PASS",
-    "fixed_point": "efaef9baaa89af2c0c8737016e1a36cce2615e4ca070513a5502994ada1a17e1",
-    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/003-aggregate.json",
-    "aggregated_at": "2026-10-21T14:57:51.325Z",
+    "fixed_point": "6bfc6d7bf0c77a7f5096eaeb554ba7d4909efe9195b9fe19f9ee229552c9f6ac",
+    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/004-aggregate.json",
+    "aggregated_at": "2026-10-22T19:28:56.431Z",
     "review_result": {
-      "engineering-quality": "PASS",
-      "spec-compliance": "PASS"
+      "engineering-quality": "PASS"
     },
-    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/003-validation.json",
+    "reviewing_at": "2026-10-22T19:27:41.261Z",
+    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/004-validation.json",
     "gates_plan": [
       {
         "category": "focused",
@@ -116,9 +123,7 @@
           "exec",
           "vitest",
           "run",
-          "tests/unit/channel-inbox.test.ts",
-          "tests/unit/channel-dir-setting.test.ts",
-          "tests/integration/report-import.test.ts",
+          "tests/integration/channel-sync.test.ts",
           "tests/integration/report-import-route.test.ts"
         ]
       },
@@ -159,13 +164,9 @@
         ]
       }
     ],
-    "reviewing_at": "2026-10-21T14:53:32.730Z",
-    "done_at": "2026-10-21T14:57:54.313Z",
+    "done_at": "2026-10-22T19:28:57.016Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited",
-    "closed_at": "2026-10-22T19:10:00.000Z",
-    "delivery_commit": "b2015fc4eed713c69b6a9d652bae96675303ff20",
-    "handoff": ".agent/specs/SPEC-018-chatgpt-curator/handoffs/003-inbox-import-b2015fc.md"
+    "external_checks": "pending-not-waited"
   },
   "approval": {
     "spec": true,

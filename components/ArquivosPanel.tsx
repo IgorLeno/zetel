@@ -38,6 +38,7 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
   const [linkText, setLinkText] = useState('');
   const [importing, setImporting] = useState(false);
   const [importingReports, setImportingReports] = useState(false);
+  const [syncingChannel, setSyncingChannel] = useState(false);
   const [webSearchOpen, setWebSearchOpen] = useState(false);
   const dragIndex = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -179,6 +180,35 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
     }
   }
 
+  /** "Buscar do canal" (SPEC-018 RF5): fast-forward do clone local; o servidor só devolve status e contagem. */
+  async function fetchChannel() {
+    setSyncingChannel(true);
+    setError(null);
+    setProcessMsg(null);
+    try {
+      const res = await fetch('/api/channel/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? 'Falha ao buscar do canal.');
+        return;
+      }
+      const { fetched } = data as { fetched: number };
+      setProcessMsg(
+        fetched > 0
+          ? `Canal atualizado (${fetched} commit${fetched === 1 ? '' : 's'} novo${fetched === 1 ? '' : 's'}). Clique em Importar relatórios.`
+          : 'O canal não tem novidades.',
+      );
+    } catch {
+      setError('Erro de rede ao buscar do canal.');
+    } finally {
+      setSyncingChannel(false);
+    }
+  }
+
   async function remove(fileId: string) {
     setError(null);
     setConfirmingRemove(null);
@@ -276,7 +306,7 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
           className="btn primary"
           type="button"
           onClick={() => setWebSearchOpen(true)}
-          disabled={uploading || processing || importing || importingReports}
+          disabled={uploading || processing || importing || importingReports || syncingChannel}
         >
           Pesquisar na web
         </button>
@@ -286,7 +316,7 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
           aria-expanded={linkOpen}
           aria-controls="web-link-form"
           onClick={() => setLinkOpen((v) => !v)}
-          disabled={uploading || processing || importing || importingReports}
+          disabled={uploading || processing || importing || importingReports || syncingChannel}
         >
           Adicionar por link
         </button>
@@ -294,15 +324,23 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
           className="btn"
           type="button"
           onClick={() => fileInput.current?.click()}
-          disabled={uploading || processing || importing || importingReports}
+          disabled={uploading || processing || importing || importingReports || syncingChannel}
         >
           {uploading ? 'Adicionando…' : 'Adicionar arquivos'}
         </button>
         <button
           className="btn"
           type="button"
+          onClick={fetchChannel}
+          disabled={uploading || processing || importing || importingReports || syncingChannel}
+        >
+          {syncingChannel ? 'Buscando…' : 'Buscar do canal'}
+        </button>
+        <button
+          className="btn"
+          type="button"
           onClick={importReports}
-          disabled={uploading || processing || importing || importingReports}
+          disabled={uploading || processing || importing || importingReports || syncingChannel}
         >
           {importingReports ? 'Importando…' : 'Importar relatórios'}
         </button>
@@ -311,7 +349,7 @@ export function ArquivosPanel({ zetelId, onboarding = false }: { zetelId: string
             className="btn"
             type="button"
             onClick={processar}
-            disabled={processing || uploading || importing || importingReports || files.length === 0}
+            disabled={processing || uploading || importing || importingReports || syncingChannel || files.length === 0}
           >
             {processing ? 'Processando…' : 'Processar'}
           </button>

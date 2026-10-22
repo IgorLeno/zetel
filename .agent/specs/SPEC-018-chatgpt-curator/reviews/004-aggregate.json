@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "spec_id": "SPEC-018-chatgpt-curator",
+  "task_id": "004",
+  "fixed_point": "6bfc6d7bf0c77a7f5096eaeb554ba7d4909efe9195b9fe19f9ee229552c9f6ac",
+  "generated_at": "2026-10-22T19:28:56.431Z",
+  "reviews_requested": 1,
+  "axes": [
+    "engineering-quality"
+  ],
+  "report_paths": [
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/004-engineering-quality.md"
+  ],
+  "report_hashes": {
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/004-engineering-quality.md": "f2979e30350f7e1081061454b78bb4a21744337e8c9bfe2899329245cc0c7d51"
+  },
+  "reviewers": [
+    "claude-subagent-code-reviewer"
+  ],
+  "review_run_ids": [
+    "review-quality-spec018-004-r2"
+  ],
+  "package_ids": [
+    "pkg_7276d2189538605661887c3f"
+  ],
+  "findings_by_severity": {
+    "BLOCKING": 0,
+    "MAJOR": 0,
+    "MINOR": 2,
+    "NIT": 1
+  },
+  "findings_by_status": {
+    "OPEN": 1,
+    "RESOLVED": 2,
+    "NOT_APPLICABLE": 0
+  },
+  "findings": [
+    {
+      "axis": "engineering-quality",
+      "id": "F001",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "Ambiente do git herda variaveis GIT_* do processo do servidor",
+      "evidence": "Corrigido: lib/channel-git.ts agora monta o env por gitEnv(), que apaga as chaves casadas por REPO_REDIRECT_ENV (GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE, GIT_OBJECT_DIRECTORY, GIT_ALTERNATE_OBJECT_DIRECTORIES, GIT_COMMON_DIR, GIT_NAMESPACE, GIT_CONFIG_PARAMETERS, GIT_CONFIG_COUNT, GIT_CONFIG_KEY_n, GIT_CONFIG_VALUE_n). O teste 'ignora GIT_DIR/GIT_WORK_TREE herdados do servidor' confirma que o clone alheio permanece em HEAD~1 e o canal avanca.",
+      "recommendation": "Nenhuma acao pendente.",
+      "location": {
+        "file": "lib/channel-git.ts",
+        "line": 241,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F002",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "Qualquer falha do merge --ff-only vira diverged, inclusive lock e timeout",
+      "evidence": "Corrigido: na linha do merge, exitCode null (timeout, ENOENT) retorna error e exit numerico segue diverged. syncChannel passa a encadear as execucoes numa fila (queue.then(syncOnce)), eliminando a disputa de index.lock entre chamadas do proprio processo. O teste 'chamadas concorrentes sao serializadas' espera [ok/1, ok/0].",
+      "recommendation": "Nenhuma acao pendente. Lock disputado por processo externo (ex.: IDE com git aberto) continua mapeando para diverged por limitacao do exit code do git; aceitavel.",
+      "location": {
+        "file": "lib/channel-git.ts",
+        "line": 326,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F003",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Ramo de timeout e comportamento de GIT_TERMINAL_PROMPT sem teste",
+      "evidence": "Foi adicionado o teste 'git ausente no PATH → error', que cobre o ramo sem exit code. Continuam sem prova o timeout de 30 s (GIT_TIMEOUT_MS e constante fixa, sem injecao) e um remoto que pede credencial falhando sem travar. O limiar de cobertura por arquivo passou, entao o risco e baixo.",
+      "recommendation": "Opcional: tornar o timeout parametrizavel (argumento com default GIT_TIMEOUT_MS) e testar com um hook de transporte lento ou remoto https inexistente. Pode ficar para tarefa futura.",
+      "location": {
+        "file": "tests/integration/channel-sync.test.ts",
+        "line": 509,
+        "not_applicable_reason": null
+      }
+    }
+  ],
+  "blocking_findings": 0,
+  "result": "PASS"
+}
