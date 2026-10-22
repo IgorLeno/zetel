@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 42,
+  "revision": 43,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -50,7 +50,7 @@
     {
       "id": "004",
       "title": "Canal GitHub: sincronizar clone local por fast-forward",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "003"
       ],
@@ -99,7 +99,7 @@
     "id": "task-004-20261022",
     "agent": "claude-code",
     "task_id": "004",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-10-22T19:10:41.854Z",
     "execution_profile": "FULL",
     "profile_justification": "Executa processo externo (git) com rede sobre clone do usuario; superficie de seguranca (credenciais, hooks, saida do git) e rota nova.",
@@ -166,7 +166,10 @@
     ],
     "done_at": "2026-10-22T19:28:57.016Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "closed_at": "2026-10-22T19:29:21.000Z",
+    "delivery_commit": "c44e86cc3c1d7a4d9b43864016eeb44e40994e67",
+    "handoff": ".agent/specs/SPEC-018-chatgpt-curator/handoffs/004-github-sync-c44e86c.md"
   },
   "approval": {
     "spec": true,
