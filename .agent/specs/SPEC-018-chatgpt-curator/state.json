@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 33,
+  "revision": 34,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -37,7 +37,7 @@
     {
       "id": "003",
       "title": "Importacao idempotente da caixa de entrada local",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "002"
       ],
@@ -93,7 +93,7 @@
     "id": "task-003-20261021",
     "agent": "claude-code",
     "task_id": "003",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-10-21T14:18:06.591Z",
     "execution_profile": "FULL",
     "profile_justification": "Migration nova (012), leitura de filesystem com entrada externa hostil (canal) e escrita no vault.",
@@ -162,7 +162,10 @@
     "reviewing_at": "2026-10-21T14:53:32.730Z",
     "done_at": "2026-10-21T14:57:54.313Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "closed_at": "2026-10-22T19:10:00.000Z",
+    "delivery_commit": "b2015fc4eed713c69b6a9d652bae96675303ff20",
+    "handoff": ".agent/specs/SPEC-018-chatgpt-curator/handoffs/003-inbox-import-b2015fc.md"
   },
   "approval": {
     "spec": true,
