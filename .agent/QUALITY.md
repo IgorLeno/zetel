@@ -41,3 +41,8 @@ focados durante o ciclo, gates aplicaveis uma vez no fixed point e
   finito e positivo e autorizacao humana explicita; roda fora dos gates padrao
   e nunca e executado automaticamente pela CI padrao.
 - Checks externos pendentes nao mantem a sessao aberta.
+- E2E do curador (SPEC-018): `pnpm test:e2e:curator` roda offline (fetch da
+  OpenRouter mockado, outros hosts recusados, chave falsa), com `next dev`
+  proprio na porta 3005, `ZETEL_HOME` temporario e distDir `.next-e2e` (nao
+  toca o dev server nem `~/.zetel`). Exige Google Chrome do sistema e a porta
+  3005 livre; fica fora dos gates padrao e nao e E2E live.

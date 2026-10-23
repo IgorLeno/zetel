@@ -12,8 +12,11 @@ const isLive = process.env.ZETEL_E2E_LIVE === '1' && process.env.ZETEL_E2E_CURAT
 // E2E não-live do curador (SPEC-018 tarefa 008): servidor próprio, sem rede.
 const isCurator = process.env.ZETEL_E2E_CURATOR === '1';
 const CURATOR_PORT = 3005;
-if (isCurator && !process.env.ZETEL_E2E_CURATOR_ROOT) {
-  process.env.ZETEL_E2E_CURATOR_ROOT = join(tmpdir(), `zetel-e2e-curator-${Date.now()}`);
+// Sempre um diretório novo em tmpdir: o spec apaga a raiz no fim, então ela
+// não pode vir de fora. Workers herdam o valor já fixado pelo runner.
+const CURATOR_ROOT_PREFIX = join(tmpdir(), 'zetel-e2e-curator-');
+if (isCurator && !process.env.ZETEL_E2E_CURATOR_ROOT?.startsWith(CURATOR_ROOT_PREFIX)) {
+  process.env.ZETEL_E2E_CURATOR_ROOT = `${CURATOR_ROOT_PREFIX}${Date.now()}`;
 }
 const curatorRoot = process.env.ZETEL_E2E_CURATOR_ROOT ?? '';
 
@@ -100,6 +103,9 @@ export default defineConfig({
       GIT_AUTHOR_EMAIL: 'e2e@example.invalid',
       GIT_COMMITTER_NAME: 'Zetel E2E',
       GIT_COMMITTER_EMAIL: 'e2e@example.invalid',
+      // Git hermético: nada do ~/.gitconfig (gpgsign, insteadOf, hooks globais).
+      GIT_CONFIG_GLOBAL: '/dev/null',
+      GIT_CONFIG_NOSYSTEM: '1',
     },
   }] : [
     // ── Servidor legado (porta 3000) — omitido no modo live ─────────────────

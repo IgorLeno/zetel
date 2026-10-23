@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 
@@ -22,6 +23,7 @@ const GIT_ENV = {
   GIT_COMMITTER_NAME: 'Teste',
   GIT_COMMITTER_EMAIL: 'teste@example.invalid',
   GIT_CONFIG_NOSYSTEM: '1',
+  GIT_CONFIG_GLOBAL: '/dev/null',
 };
 
 function git(cwd: string, ...args: string[]): string {
@@ -69,7 +71,8 @@ test.beforeAll(() => {
 
 // Vault, banco e repositórios do teste ficam só no diretório temporário da run.
 test.afterAll(() => {
-  rmSync(ROOT, { recursive: true, force: true });
+  // Defesa extra: só apaga a raiz que o playwright.config criou em tmpdir.
+  if (ROOT.startsWith(join(tmpdir(), 'zetel-e2e-curator-'))) rmSync(ROOT, { recursive: true, force: true });
 });
 
 test('relatório do canal → curadoria → vault → CONTEXTO.md no canal', async ({ page, request }) => {
