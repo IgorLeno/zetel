@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 62,
+  "revision": 63,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -78,7 +78,7 @@
     {
       "id": "006",
       "title": "Revisao humana dos candidatos e gravacao no vault",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "005"
       ],
@@ -111,7 +111,7 @@
     "id": "task-006-20261023",
     "agent": "claude-code",
     "task_id": "006",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-10-23T03:31:07.463Z",
     "execution_profile": "FULL",
     "profile_justification": "Eleva o STANDARD planejado: a gravacao de candidatos exige mudar os servicos de escrita no vault (origem relatorio em notes-service e concepts-service) e cria escrita nova em passo-a-passo/ e questoes/.",
@@ -182,7 +182,10 @@
     ],
     "done_at": "2026-10-23T03:50:21.785Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "closed_at": "2026-10-23T03:50:39.186Z",
+    "delivery_commit": "29d01b2146b73c1d56b62c98eb5ae8ddb4ae6897",
+    "handoff": ".agent/specs/SPEC-018-chatgpt-curator/handoffs/006-curation-review-29d01b2.md"
   },
   "approval": {
     "spec": true,
