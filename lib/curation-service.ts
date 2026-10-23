@@ -221,16 +221,21 @@ function text(value: unknown, max: number): string {
   return normalized;
 }
 
+/** Título/nome: uma linha só, pois vira `# título` e nome de arquivo no vault. */
+function line(value: unknown, max: number): string {
+  return text(value, max).replace(/\s+/g, ' ');
+}
+
 function payloadOf(kind: CurationKind, raw: Record<string, unknown>): CandidatePayload {
   switch (kind) {
     case 'nota':
-      return { kind, titulo: text(raw.titulo, LIMITS.titulo), corpo: text(raw.corpo, LIMITS.corpo) };
+      return { kind, titulo: line(raw.titulo, LIMITS.titulo), corpo: text(raw.corpo, LIMITS.corpo) };
     case 'conceito':
-      return { kind, nome: text(raw.nome, LIMITS.nome), definicao: text(raw.definicao, LIMITS.definicao) };
+      return { kind, nome: line(raw.nome, LIMITS.nome), definicao: text(raw.definicao, LIMITS.definicao) };
     case 'passo_a_passo': {
       const passos = raw.passos;
       if (!Array.isArray(passos) || passos.length === 0 || passos.length > LIMITS.passos) fail();
-      return { kind, titulo: text(raw.titulo, LIMITS.titulo), passos: passos.map((step) => text(step, LIMITS.passo)) };
+      return { kind, titulo: line(raw.titulo, LIMITS.titulo), passos: passos.map((step) => line(step, LIMITS.passo)) };
     }
     case 'questao':
       return {
@@ -238,6 +243,20 @@ function payloadOf(kind: CurationKind, raw: Record<string, unknown>): CandidateP
         enunciado: text(raw.enunciado, LIMITS.enunciado),
         resposta: raw.resposta === null || raw.resposta === undefined ? null : text(raw.resposta, LIMITS.resposta),
       };
+  }
+}
+
+/**
+ * Valida campos de um tipo com as mesmas regras da LLM; usado pela revisão
+ * humana (tarefa 006) para a edição vinda do cliente. `null` = inválido.
+ */
+export function parseCandidatePayload(kind: CurationKind, raw: unknown): CandidatePayload | null {
+  if (!isPlainObject(raw)) return null;
+  try {
+    return payloadOf(kind, raw);
+  } catch (error) {
+    if (error instanceof InvalidCandidates) return null;
+    throw error;
   }
 }
 

@@ -1,14 +1,18 @@
 ---
 id: "006"
 title: "Revisao humana dos candidatos e gravacao no vault"
-status: DRAFT
+status: DONE
 blocked_by: ["005"]
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: FULL
+profile_justification: "Eleva o STANDARD planejado: a gravacao de candidatos exige mudar os servicos de escrita no vault (origem relatorio em notes-service e concepts-service) e cria escrita nova em passo-a-passo/ e questoes/."
+validation: PASS
+validated_at: "2026-10-23T03:48:46.395Z"
 ---
 
 ## Objetivo

@@ -7,6 +7,7 @@ import { ArquivosPanel } from './ArquivosPanel';
 import { LeituraPanel } from './LeituraPanel';
 import { ArtefatosPanel } from './ArtefatosPanel';
 import { NotasPanel } from './NotasPanel';
+import { CuradoriaPanel } from './CuradoriaPanel';
 import { PdfStudyView } from './PdfStudyView';
 import { PartnerSheet } from './PartnerSheet';
 
@@ -17,10 +18,11 @@ export type DrawerView =
   | 'notas-literatura'
   | 'notas-elaboradas'
   | 'notas-do-usuario'
+  | 'curadoria'
   | 'artefatos';
 
 const DRAWER_VIEWS: readonly DrawerView[] = [
-  'arquivos', 'notas-rapidas', 'notas-literatura', 'notas-elaboradas', 'notas-do-usuario', 'artefatos',
+  'arquivos', 'notas-rapidas', 'notas-literatura', 'notas-elaboradas', 'notas-do-usuario', 'curadoria', 'artefatos',
 ];
 
 const NOTE_TABS: { view: DrawerView; label: string; tipo: 'rapida' | 'literatura' | 'elaborada' | 'minha-nota' }[] = [
@@ -104,6 +106,7 @@ function WorkspaceView({
           <nav className="drawer-tabs" aria-label="Seções do estudo">
             <Link replace scroll={false} href={drawerHref('arquivos')} className={drawer === 'arquivos' ? 'on' : ''}>Fontes</Link>
             <Link replace scroll={false} href={drawerHref(noteTab ? noteTab.view : 'notas-rapidas')} className={noteTab ? 'on' : ''}>Notas</Link>
+            <Link replace scroll={false} href={drawerHref('curadoria')} className={drawer === 'curadoria' ? 'on' : ''}>Curadoria</Link>
             <Link replace scroll={false} href={drawerHref('artefatos')} className={drawer === 'artefatos' ? 'on' : ''}>Artefatos</Link>
           </nav>
           {noteTab && (
@@ -122,6 +125,7 @@ function WorkspaceView({
                 <NotasPanel key={noteTab.tipo} zetelId={zetelId} tipo={noteTab.tipo} />
               </div>
             )}
+            {drawer === 'curadoria' && <CuradoriaPanel zetelId={zetelId} />}
             {drawer === 'artefatos' && <ArtefatosPanel zetelId={zetelId} />}
           </div>
         </PartnerSheet>

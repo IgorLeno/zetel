@@ -25,6 +25,23 @@ export interface ConceptProvenance {
   saved_at: string;
 }
 
+/**
+ * Origem de um conceito confirmado na Curadoria (SPEC-018 RF7): reconstruída
+ * no servidor a partir de `channel_imports` e do candidato, nunca do cliente.
+ */
+export interface ReportConceptProvenance {
+  origin: 'chatgpt_report';
+  zetel_id: string;
+  import_id: string;
+  candidate_id: string;
+  file_id: string | null;
+  filename: string | null;
+  anchor: string;
+  content_hash: string;
+  imported_at: string;
+  saved_at: string;
+}
+
 export function normalizeConceptName(value: string): string {
   return value.normalize('NFD').replace(/\p{Mn}/gu, '').toLocaleLowerCase('pt-BR')
     .replace(/\s+/g, ' ').trim();
@@ -95,16 +112,18 @@ function quote(text: string): string {
 export function renderConceptEntry(
   userFormulation: string | null,
   partnerFormulation: string,
-  provenance: ConceptProvenance,
+  provenance: ConceptProvenance | ReportConceptProvenance,
   sessionTitle: string | null,
 ): string {
+  const fromReport = 'origin' in provenance;
   const label = [provenance.saved_at.slice(0, 10), sessionTitle && `Sessão ${sessionTitle}`,
-    provenance.filename, provenance.page !== null && `p. ${provenance.page}`]
+    provenance.filename, !fromReport && provenance.page !== null && `p. ${provenance.page}`,
+    fromReport && provenance.anchor]
     .filter(Boolean).join(' · ').replace(/[\r\n#]/g, ' ');
   const prov = JSON.stringify(provenance).replace(/-->/g, '--\\u003e');
   return `\n### ${label}\n<!-- zetel:prov ${prov} -->\n\n` +
     (userFormulation ? `**Sua formulação:**\n${quote(userFormulation)}\n\n` : '') +
-    `**Formulação da parceira:**\n${quote(partnerFormulation)}\n`;
+    `**${fromReport ? 'Formulação do relatório' : 'Formulação da parceira'}:**\n${quote(partnerFormulation)}\n`;
 }
 
 export function renderConceptMarkdown(
@@ -165,7 +184,8 @@ export function saveConcept(
   vaultPath: string,
   zetelSlug: string,
   input: { action: 'create' | 'append'; conceptSlug?: string; name: string; aliases: string[];
-    userFormulation: string | null; partnerFormulation: string; provenance: ConceptProvenance;
+    userFormulation: string | null; partnerFormulation: string;
+    provenance: ConceptProvenance | ReportConceptProvenance;
     sessionTitle: string | null },
 ): { slug: string; action: 'create' | 'append' } {
   const dir = conceptDir(vaultPath, zetelSlug);

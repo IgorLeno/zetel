@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "spec_id": "SPEC-018-chatgpt-curator",
+  "task_id": "006",
+  "fixed_point": "883dbf83732f1672e5669312d59f8a8a567348b0133a5f45a2b0c609cb591fc7",
+  "generated_at": "2026-10-23T03:50:21.309Z",
+  "reviews_requested": 1,
+  "axes": [
+    "engineering-quality"
+  ],
+  "report_paths": [
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/006-engineering-quality.md"
+  ],
+  "report_hashes": {
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/006-engineering-quality.md": "8f171b6971dd41a3bacb984dd79713360b3bb7071fe54c84e5cc707bb4a8a778"
+  },
+  "reviewers": [
+    "claude-subagent-code-reviewer"
+  ],
+  "review_run_ids": [
+    "review-quality-spec018-006-r2"
+  ],
+  "package_ids": [
+    "pkg_ce0c7f23a85cb6d01d491c30"
+  ],
+  "findings_by_severity": {
+    "BLOCKING": 0,
+    "MAJOR": 2,
+    "MINOR": 1,
+    "NIT": 3
+  },
+  "findings_by_status": {
+    "OPEN": 3,
+    "RESOLVED": 3,
+    "NOT_APPLICABLE": 0
+  },
+  "findings": [
+    {
+      "axis": "engineering-quality",
+      "id": "F001",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "title": "Um payload corrompido derrubava a lista inteira e o decide devolvia 409 enganoso",
+      "evidence": "Em lib/curation-review-service.ts, listCuration agora envolve readStored em try/catch. Candidatos ilegíveis são descartados com logger.warn({ candidateId }), só o id. decideCandidate lança CurationReviewError('corrupted'), que a rota mapeia para 500 com mensagem própria. O teste 'payload corrompido: some da lista sem derrubar as demais e decide com erro próprio' cobre JSON inválido e payload sem source, e confirma que o status permanece pending.",
+      "recommendation": "Nenhuma ação necessária.",
+      "location": {
+        "file": "lib/curation-review-service.ts",
+        "line": 697,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F002",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "title": "O escape de HTML em títulos e nomes gerava entidades em nomes de arquivo e quebrava a busca de conceito (P&D)",
+      "evidence": "inertLine escapa só '<' e neutraliza '![', preservando '&' e '>'. O corpo continua usando inert, com escape completo. Os testes cobrem '# P&D &lt;b>', 'nome: \"A > B\"' e o append de 'p&d' sobre 'P&D' resultando em um único conceito. A evidência de test:ci e coverage está PASS.",
+      "recommendation": "Nenhuma ação necessária.",
+      "location": {
+        "file": "lib/curation-review-service.ts",
+        "line": 840,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F003",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "Faltavam testes adversariais para corpo de nota e definição de conceito, e rollback de saveConcept",
+      "evidence": "Foram adicionados os testes 'nota e conceito também chegam inertes', 'falha de saveConcept desfaz a decisão' (arquivo no lugar da pasta conceitos, status volta a pending e decided_at fica null) e o de append para P&D.",
+      "recommendation": "Nenhuma ação necessária.",
+      "location": {
+        "file": "tests/integration/curation-review.test.ts",
+        "line": 1058,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F004",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "ARCHITECTURE.md ficou desatualizado em relação ao tratamento de títulos e nomes",
+      "evidence": "A linha adicionada em .agent/ARCHITECTURE.md diz 'Texto vai inerte: HTML escapado, `![` neutralizado'. Pelo código, o corpo escapa &, < e >, enquanto título e nome escapam só '<'. O comentário de inertLine documenta isso, mas o documento de arquitetura não.",
+      "recommendation": "Acrescentar ao documento: 'corpo: &, <, > escapados; título/nome: só <'.",
+      "location": {
+        "file": ".agent/ARCHITECTURE.md",
+        "line": 155,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F005",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Candidato corrompido não pode ser rejeitado nem confirmado e fica pending, invisível",
+      "evidence": "decideCandidate chama readStored antes de olhar a ação, então 'reject' de um candidato corrompido também lança 'corrupted'. Como listCuration já o oculta, a UI não o alcança. Ele só some quando uma nova versão do relatório rejeita os pendentes. O comportamento é inofensivo, mas deixa linhas órfãs.",
+      "recommendation": "Opcional: permitir reject sem validar o payload (resolver a leitura só para confirm).",
+      "location": {
+        "file": "lib/curation-review-service.ts",
+        "line": 735,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F006",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Falta teste de rota para o mapeamento corrupted para 500 e a publicação por link() depende do suporte do filesystem",
+      "evidence": "Os testes de rota cobrem 400, 404 e 409, mas não a ramificação 'corrupted' (500). writeOwnFile usa linkSync (hard link). Em filesystems sem suporte (algumas montagens FAT/exFAT), o erro não é EEXIST e vira o 409 genérico 'Ajuste o nome', o que é enganoso. Em vault local normal isso não ocorre.",
+      "recommendation": "Opcional: adicionar um teste de rota para o 500 e, se desejado, tratar EPERM/ENOTSUP com fallback para escrita com flag 'wx'.",
+      "location": {
+        "file": "lib/curation-review-service.ts",
+        "line": 887,
+        "not_applicable_reason": null
+      }
+    }
+  ],
+  "blocking_findings": 0,
+  "result": "PASS"
+}

@@ -145,6 +145,16 @@ Fonte completa: `.agent/specs/SPEC-018-chatgpt-curator/SPEC.md`.
   nada. `channel_imports.status`: `imported` → `curated` | `curation_failed`
   (reexecutável) → `superseded` na versão seguinte. Uma curadoria por versão
   por vez no processo; resultado gravado só se a versão ainda for curável.
+- Revisão (RF7, `lib/curation-review-service.ts`, painel "Curadoria" na
+  gaveta, `GET|POST|PATCH /api/zetels/[id]/curation`): POST (re)executa a
+  curadoria; PATCH `{ id, action: confirm|reject, edit? }`. Edição revalidada
+  com as regras da curadoria; tipo e anchor não mudam. Confirmar reivindica o
+  candidato (`pending` → `confirmed`) e escreve o vault na mesma transação.
+  Nota → `notas-rapidas/` via `saveNote` com `origem: relatorio` e
+  `pagina_origem: <arquivo>#<anchor>`; conceito → `saveConcept` (cria ou
+  acrescenta) com `ReportConceptProvenance`; passo a passo e questão →
+  `passo-a-passo/` e `questoes/` (temporário + `link`, sem sobrescrever).
+  Texto vai inerte: HTML escapado, `![` neutralizado.
 - Contexto (D10): `CONTEXTO.md` renderizado sem LLM, só com conteúdo
   confirmado, ≤ 200 KB. Commit local automático restrito a `contexto/`; push
   apenas pelo botão "Publicar contexto", com prévia.

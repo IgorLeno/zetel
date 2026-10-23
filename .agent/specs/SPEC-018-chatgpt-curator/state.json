@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 54,
+  "revision": 62,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -78,10 +78,16 @@
     {
       "id": "006",
       "title": "Revisao humana dos candidatos e gravacao no vault",
-      "status": "DRAFT",
+      "status": "DONE",
       "blocked_by": [
         "005"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "Eleva o STANDARD planejado: a gravacao de candidatos exige mudar os servicos de escrita no vault (origem relatorio em notes-service e concepts-service) e cria escrita nova em passo-a-passo/ e questoes/.",
+      "reviews_requested": 1,
+      "review_justification": "Uma revisao engineering-quality planejada pela tarefa; escopo de um servico, uma rota e um painel.",
+      "validation": "PASS",
+      "review_result": "PASS"
     },
     {
       "id": "007",
@@ -102,24 +108,25 @@
     }
   ],
   "session": {
-    "id": "task-005-20261023",
+    "id": "task-006-20261023",
     "agent": "claude-code",
-    "task_id": "005",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-10-23T02:58:21.360Z",
+    "task_id": "006",
+    "status": "DONE",
+    "started_at": "2026-10-23T03:31:07.463Z",
     "execution_profile": "FULL",
-    "profile_justification": "Persistencia nova (candidatos e estados de curadoria em SQLite) e conteudo adversarial do relatorio entrando no prompt da LLM.",
+    "profile_justification": "Eleva o STANDARD planejado: a gravacao de candidatos exige mudar os servicos de escrita no vault (origem relatorio em notes-service e concepts-service) e cria escrita nova em passo-a-passo/ e questoes/.",
     "reviews_requested": 1,
-    "review_justification": "Tarefa planeja uma revisao de seguranca; escopo de um servico e um setting.",
-    "validating_at": "2026-10-23T03:24:10.210Z",
+    "review_justification": "Uma revisao engineering-quality planejada pela tarefa; escopo de um servico, uma rota e um painel.",
+    "validating_at": "2026-10-23T03:43:43.453Z",
     "validation_result": "PASS",
-    "fixed_point": "df6fdf69621bf17f06bae9a6854a3236ad58671a5b453e269affab644ef73b08",
-    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/005-aggregate.json",
-    "aggregated_at": "2026-10-23T03:30:32.797Z",
+    "fixed_point": "883dbf83732f1672e5669312d59f8a8a567348b0133a5f45a2b0c609cb591fc7",
+    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/006-aggregate.json",
+    "aggregated_at": "2026-10-23T03:50:21.309Z",
     "review_result": {
       "engineering-quality": "PASS"
     },
-    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/005-validation.json",
+    "reviewing_at": "2026-10-23T03:48:46.395Z",
+    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/006-validation.json",
     "gates_plan": [
       {
         "category": "focused",
@@ -128,10 +135,12 @@
           "exec",
           "vitest",
           "run",
+          "tests/integration/curation-review.test.ts",
+          "tests/integration/curation-route.test.ts",
+          "tests/integration/concepts.test.ts",
+          "tests/unit/notes-origem.test.ts",
           "tests/unit/curation-service.test.ts",
-          "tests/integration/curation.test.ts",
-          "tests/integration/curation-model-setting.test.ts",
-          "tests/integration/report-import.test.ts"
+          "tests/integration/curation.test.ts"
         ]
       },
       {
@@ -171,13 +180,9 @@
         ]
       }
     ],
-    "reviewing_at": "2026-10-23T03:29:06.027Z",
-    "done_at": "2026-10-23T03:30:33.291Z",
+    "done_at": "2026-10-23T03:50:21.785Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited",
-    "closed_at": "2026-10-23T03:30:56.574Z",
-    "delivery_commit": "76ec98f24bd4e40ad84fbf9d7efb862d40fc23b9",
-    "handoff": ".agent/specs/SPEC-018-chatgpt-curator/handoffs/005-ai-curation-76ec98f.md"
+    "external_checks": "pending-not-waited"
   },
   "approval": {
     "spec": true,

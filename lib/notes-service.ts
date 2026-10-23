@@ -28,6 +28,8 @@ export interface SaveNoteInput {
   modelo: string;
   /** Interpretação do usuário (Módulo 15 — notas ativas). Persiste como seção no corpo e flag no frontmatter. */
   interpretacaoUsuario?: string | null;
+  /** Frontmatter `origem`: `chat` (padrão) ou `relatorio` (Curadoria, SPEC-018 RF7). */
+  origem?: 'chat' | 'relatorio';
 }
 
 export interface SavedNote {
@@ -58,6 +60,7 @@ function buildFrontmatter(opts: {
   modelo: string;
   paginaOrigem: string | null;
   criadaEm: string;
+  origem: 'chat' | 'relatorio';
   /** Indica presença de seção "Minha interpretação" no corpo (Módulo 15). */
   temInterpretacao?: boolean;
 }): string {
@@ -65,7 +68,7 @@ function buildFrontmatter(opts: {
     '---',
     `zetel: ${opts.slug}`,
     `tipo: ${opts.tipo}`,
-    'origem: chat',
+    `origem: ${opts.origem}`,
     `modelo: ${opts.modelo}`,
     `pagina_origem: ${opts.paginaOrigem ?? 'null'}`,
     `criada_em: ${opts.criadaEm}`,
@@ -105,6 +108,7 @@ export function saveNote(vaultPath: string, slug: string, input: SaveNoteInput):
     modelo: input.modelo,
     paginaOrigem: input.paginaOrigem,
     criadaEm,
+    origem: input.origem ?? 'chat',
     temInterpretacao: interpretacao.length > 0,
   });
 
