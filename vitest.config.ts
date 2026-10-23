@@ -42,6 +42,7 @@ export default defineConfig({
         'lib/channel-inbox.ts': { lines: 90, functions: 90, branches: 80 },
         'lib/report-import-service.ts': { lines: 90, functions: 90, branches: 80 },
         'lib/channel-git.ts': { lines: 90, functions: 90, branches: 80 },
+        'lib/curation-service.ts': { lines: 90, functions: 90, branches: 80 },
       },
     },
   },

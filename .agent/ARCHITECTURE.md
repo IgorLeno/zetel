@@ -137,8 +137,14 @@ Fonte completa: `.agent/specs/SPEC-018-chatgpt-curator/SPEC.md`.
   LLM → validação server-side (tipo `nota | passo_a_passo | conceito |
   questao`, só blocos existentes, limites, ≤ 12 candidatos). JSON inválido =
   zero candidatos e `curation_failed` reexecutável. Modelo em
-  `curation_model`, resolvido no servidor. Nada vai ao vault sem confirmação;
-  proveniência reconstruída no servidor.
+  `curation_model`, resolvido no servidor (vazio = modelo efetivo do chat).
+  Nada vai ao vault sem confirmação; proveniência reconstruída no servidor.
+  `lib/curation-service.ts`: catálogo do relatório pela segmentação da
+  ingestão (anchor de bloco `<anchor da página>-b<n>`, `content_hash` =
+  sha256 do texto plano); blocos em `<fonte>` neutralizados; validação tudo ou
+  nada. `channel_imports.status`: `imported` → `curated` | `curation_failed`
+  (reexecutável) → `superseded` na versão seguinte. Uma curadoria por versão
+  por vez no processo; resultado gravado só se a versão ainda for curável.
 - Contexto (D10): `CONTEXTO.md` renderizado sem LLM, só com conteúdo
   confirmado, ≤ 200 KB. Commit local automático restrito a `contexto/`; push
   apenas pelo botão "Publicar contexto", com prévia.

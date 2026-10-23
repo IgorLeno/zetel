@@ -143,7 +143,7 @@ function importOne(
       written.push(join(zetelDir, 'arquivos', file.filename));
 
       const previous = db
-        .prepare("SELECT id FROM channel_imports WHERE zetel_id = ? AND channel_path = ? AND status = 'imported'")
+        .prepare("SELECT id FROM channel_imports WHERE zetel_id = ? AND channel_path = ? AND status <> 'superseded'")
         .all(zetelId, report.channelPath) as { id: string }[];
 
       db.prepare(

@@ -1,14 +1,18 @@
 ---
 id: "005"
 title: "Curadoria por IA: candidatos validados no servidor"
-status: DRAFT
+status: DONE
 blocked_by: ["003"]
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: FULL
+profile_justification: "Persistencia nova (candidatos e estados de curadoria em SQLite) e conteudo adversarial do relatorio entrando no prompt da LLM."
+validation: PASS
+validated_at: "2026-10-23T03:29:06.027Z"
 ---
 
 ## Objetivo

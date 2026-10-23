@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 43,
+  "revision": 53,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -64,10 +64,16 @@
     {
       "id": "005",
       "title": "Curadoria por IA: candidatos validados no servidor",
-      "status": "DRAFT",
+      "status": "DONE",
       "blocked_by": [
         "003"
-      ]
+      ],
+      "execution_profile": "FULL",
+      "profile_justification": "Persistencia nova (candidatos e estados de curadoria em SQLite) e conteudo adversarial do relatorio entrando no prompt da LLM.",
+      "reviews_requested": 1,
+      "review_justification": "Tarefa planeja uma revisao de seguranca; escopo de um servico e um setting.",
+      "validation": "PASS",
+      "review_result": "PASS"
     },
     {
       "id": "006",
@@ -96,25 +102,24 @@
     }
   ],
   "session": {
-    "id": "task-004-20261022",
+    "id": "task-005-20261023",
     "agent": "claude-code",
-    "task_id": "004",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-10-22T19:10:41.854Z",
+    "task_id": "005",
+    "status": "DONE",
+    "started_at": "2026-10-23T02:58:21.360Z",
     "execution_profile": "FULL",
-    "profile_justification": "Executa processo externo (git) com rede sobre clone do usuario; superficie de seguranca (credenciais, hooks, saida do git) e rota nova.",
+    "profile_justification": "Persistencia nova (candidatos e estados de curadoria em SQLite) e conteudo adversarial do relatorio entrando no prompt da LLM.",
     "reviews_requested": 1,
-    "review_justification": "Tarefa planeja uma revisao de seguranca; escopo pequeno (um modulo, uma rota, um botao).",
-    "validating_at": "2026-10-22T19:22:23.340Z",
+    "review_justification": "Tarefa planeja uma revisao de seguranca; escopo de um servico e um setting.",
+    "validating_at": "2026-10-23T03:24:10.210Z",
     "validation_result": "PASS",
-    "fixed_point": "6bfc6d7bf0c77a7f5096eaeb554ba7d4909efe9195b9fe19f9ee229552c9f6ac",
-    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/004-aggregate.json",
-    "aggregated_at": "2026-10-22T19:28:56.431Z",
+    "fixed_point": "df6fdf69621bf17f06bae9a6854a3236ad58671a5b453e269affab644ef73b08",
+    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/005-aggregate.json",
+    "aggregated_at": "2026-10-23T03:30:32.797Z",
     "review_result": {
       "engineering-quality": "PASS"
     },
-    "reviewing_at": "2026-10-22T19:27:41.261Z",
-    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/004-validation.json",
+    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/005-validation.json",
     "gates_plan": [
       {
         "category": "focused",
@@ -123,8 +128,10 @@
           "exec",
           "vitest",
           "run",
-          "tests/integration/channel-sync.test.ts",
-          "tests/integration/report-import-route.test.ts"
+          "tests/unit/curation-service.test.ts",
+          "tests/integration/curation.test.ts",
+          "tests/integration/curation-model-setting.test.ts",
+          "tests/integration/report-import.test.ts"
         ]
       },
       {
@@ -164,12 +171,10 @@
         ]
       }
     ],
-    "done_at": "2026-10-22T19:28:57.016Z",
+    "reviewing_at": "2026-10-23T03:29:06.027Z",
+    "done_at": "2026-10-23T03:30:33.291Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited",
-    "closed_at": "2026-10-22T19:29:21.000Z",
-    "delivery_commit": "c44e86cc3c1d7a4d9b43864016eeb44e40994e67",
-    "handoff": ".agent/specs/SPEC-018-chatgpt-curator/handoffs/004-github-sync-c44e86c.md"
+    "external_checks": "pending-not-waited"
   },
   "approval": {
     "spec": true,

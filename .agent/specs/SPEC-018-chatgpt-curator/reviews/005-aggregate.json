@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "spec_id": "SPEC-018-chatgpt-curator",
+  "task_id": "005",
+  "fixed_point": "df6fdf69621bf17f06bae9a6854a3236ad58671a5b453e269affab644ef73b08",
+  "generated_at": "2026-10-23T03:30:32.797Z",
+  "reviews_requested": 1,
+  "axes": [
+    "engineering-quality"
+  ],
+  "report_paths": [
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/005-engineering-quality.md"
+  ],
+  "report_hashes": {
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/005-engineering-quality.md": "4e645bb9a35963dc4e32582192d7fb742da355e71bac87309deef8b158ac6741"
+  },
+  "reviewers": [
+    "claude-subagent-code-reviewer"
+  ],
+  "review_run_ids": [
+    "review-quality-spec018-005-r2"
+  ],
+  "package_ids": [
+    "pkg_1f80ea027a94f6bc1e16ce40"
+  ],
+  "findings_by_severity": {
+    "BLOCKING": 0,
+    "MAJOR": 2,
+    "MINOR": 1,
+    "NIT": 1
+  },
+  "findings_by_status": {
+    "OPEN": 0,
+    "RESOLVED": 4,
+    "NOT_APPLICABLE": 0
+  },
+  "findings": [
+    {
+      "axis": "engineering-quality",
+      "id": "F001",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "title": "readReport verificava symlink apenas no componente final",
+      "evidence": "No diff, readReport agora chama lstatSync(path).isFile() e exige que relative(realpathSync(arquivosDir), realpathSync(path)) não seja vazio, não comece com '..' e não seja absoluto. Qualquer falha vira CurationError('source_missing'). O teste 'diretório intermediário symlinkado para fora do vault = source_missing' em tests/integration/curation.test.ts substitui relatorios/ por um symlink e confirma que a LLM não é chamada.",
+      "recommendation": "Nenhuma ação necessária.",
+      "location": {
+        "file": "lib/curation-service.ts",
+        "line": 474,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F002",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "title": "catch amplo convertia bugs do validador em request_failed",
+      "evidence": "O try/catch agora envolve somente await requestJson(...), com content inicial null. A validação é feita depois: content === null ? request_failed : validateCandidates(content, visible). O catch não registra a mensagem do erro. O teste de falha de rede confere que o texto do erro não aparece nos logs.",
+      "recommendation": "Nenhuma ação necessária.",
+      "location": {
+        "file": "lib/curation-service.ts",
+        "line": 440,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F003",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "Catálogo vazio ainda chamava a LLM",
+      "evidence": "Quando catalog.length === 0, validation = { ok: true, candidates: [] } sem chamar a LLM, e persist grava curated com 0 candidatos. O teste 'relatório sem blocos citáveis' verifica que mockedRequest não foi chamado e que o resultado é curated com 0.",
+      "recommendation": "Nenhuma ação necessária.",
+      "location": {
+        "file": "lib/curation-service.ts",
+        "line": 430,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F004",
+      "severity": "NIT",
+      "status": "RESOLVED",
+      "title": "Faltavam testes adversariais de atributos de <fonte> e de anchor cortado pelo teto",
+      "evidence": "Foram adicionados 'título de seção com aspas não forja atributos de <fonte>' (tests/unit) e 'anchor existente mas cortado do prompt pelo teto é recusado' (tests/integration). A não deduplicação de candidatos idênticos é decisão declarada e aceitável, pois todos ficam pendentes de confirmação humana.",
+      "recommendation": "Nenhuma ação necessária.",
+      "location": {
+        "file": "tests/unit/curation-service.test.ts",
+        "line": 1021,
+        "not_applicable_reason": null
+      }
+    }
+  ],
+  "blocking_findings": 0,
+  "result": "PASS"
+}
