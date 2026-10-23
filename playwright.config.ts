@@ -7,7 +7,15 @@ import { join } from 'node:path';
 config({ path: '.env.e2e' });
 config({ path: '.env.e2e.live' });
 
-const isLive = process.env.ZETEL_E2E_LIVE === '1';
+// O E2E do curador nunca roda junto com o live, mesmo com .env.e2e.live presente.
+const isLive = process.env.ZETEL_E2E_LIVE === '1' && process.env.ZETEL_E2E_CURATOR !== '1';
+// E2E não-live do curador (SPEC-018 tarefa 008): servidor próprio, sem rede.
+const isCurator = process.env.ZETEL_E2E_CURATOR === '1';
+const CURATOR_PORT = 3005;
+if (isCurator && !process.env.ZETEL_E2E_CURATOR_ROOT) {
+  process.env.ZETEL_E2E_CURATOR_ROOT = join(tmpdir(), `zetel-e2e-curator-${Date.now()}`);
+}
+const curatorRoot = process.env.ZETEL_E2E_CURATOR_ROOT ?? '';
 
 // ─── Ambiente live ──────────────────────────────────────────────────────────
 // Computado uma vez no runner; workers reutilizam env já definido pelo webServer.
@@ -38,12 +46,21 @@ export default defineConfig({
   globalSetup:    isLive ? './e2e/live/global-setup.ts'    : undefined,
   globalTeardown: isLive ? './e2e/live/global-teardown.ts' : undefined,
 
-  projects: [
+  projects: isCurator ? [
+    {
+      name: 'e2e-curator',
+      testDir: './e2e/curator',
+      // `next dev` compila cada rota no primeiro acesso; 5 s não bastam com a máquina carregada.
+      expect: { timeout: 30_000 },
+      // Chrome do sistema: dispensa baixar o Chromium da versão do Playwright.
+      use: { baseURL: `http://localhost:${CURATOR_PORT}`, headless: true, locale: 'pt-BR', channel: 'chrome' },
+    },
+  ] : [
     // ── Projeto legado (sempre presente) ─────────────────────────────────────
     {
       name: 'e2e-legacy',
       testDir: './e2e',
-      testIgnore: '**/live/**',   // exclui e2e/live/ do projeto legado
+      testIgnore: ['**/live/**', '**/curator/**'],   // e2e/live/ e e2e/curator/ têm projeto próprio
       use: {
         baseURL:  'http://localhost:3000',
         headless: true,
@@ -63,7 +80,28 @@ export default defineConfig({
     }] : []),
   ],
 
-  webServer: [
+  webServer: isCurator ? [{
+    // `next dev` com ZETEL_HOME e distDir próprios; o preload troca o fetch da
+    // OpenRouter por um mock e recusa qualquer outro host externo. A chave é
+    // falsa de propósito e nunca sai da máquina.
+    command: `pnpm exec next dev -p ${CURATOR_PORT}`,
+    url: `http://localhost:${CURATOR_PORT}`,
+    reuseExistingServer: false,
+    timeout: 180_000,
+    env: {
+      ...toStringEnv(process.env),
+      ZETEL_HOME: join(curatorRoot, 'home'),
+      ZETEL_NEXT_DIST_DIR: '.next-e2e',
+      OPENROUTER_API_KEY: 'e2e-fake-key',
+      NODE_OPTIONS: '--import ./e2e/curator/mock-openrouter.mjs',
+      NODE_ENV: 'development',
+      // Commit do contexto no clone de teste com autor fixo.
+      GIT_AUTHOR_NAME: 'Zetel E2E',
+      GIT_AUTHOR_EMAIL: 'e2e@example.invalid',
+      GIT_COMMITTER_NAME: 'Zetel E2E',
+      GIT_COMMITTER_EMAIL: 'e2e@example.invalid',
+    },
+  }] : [
     // ── Servidor legado (porta 3000) — omitido no modo live ─────────────────
     ...(!isLive ? [{
       command:             'pnpm dev',

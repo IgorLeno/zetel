@@ -1,14 +1,18 @@
 ---
 id: "008"
 title: "Fluxo integrado, E2E nao-live e validacao humana"
-status: DRAFT
+status: DONE
 blocked_by: ["007"]
 writer: null
 reviewer: null
 commit: null
 push: null
-review_result: pending
+review_result: PASS
 handoff: null
+execution_profile: STANDARD
+profile_justification: "E2E nao-live do ciclo, fixtures e ajustes pequenos; sem mudanca de banco, seguranca ou state machine."
+validation: PASS
+validated_at: "2026-10-23T04:26:36.089Z"
 ---
 
 ## Objetivo

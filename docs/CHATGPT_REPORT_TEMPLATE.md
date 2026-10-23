@@ -115,5 +115,18 @@ ao calor trocado.
 - Reenviar o mesmo arquivo sem mudança não duplica nada; mudar o conteúdo com
   o mesmo nome cria uma nova versão.
 - Nada do relatório vai para o vault sem sua confirmação na tela de curadoria.
+- O exemplo completo acima é fixture do parser (`tests/unit/report-format.test.ts`).
 
-Pendência: o exemplo acima vira fixture do parser na tarefa 002 da SPEC-018.
+## No Zetel, depois de enviar o relatório
+
+1. Abra o Zetel → "Fontes & notas" → Fontes: **Buscar do canal** (só se o
+   relatório foi enviado pelo GitHub) e **Importar relatórios**.
+2. Aba **Curadoria**: **Curar relatórios** pede à IA candidatos (nota,
+   conceito, passo a passo, questão) citando trechos do relatório.
+3. Em cada candidato: edite se quiser e **Confirmar**, ou **Rejeitar**. Só o
+   confirmado vai ao vault.
+4. **Publicar contexto** mostra a prévia do `CONTEXTO.md`; **Confirmar
+   publicação** faz o commit em `contexto/<slug>/` e o push. Se o canal tiver
+   novidades, busque do canal antes.
+5. Na próxima conversa, o ChatGPT lê `contexto/<slug-do-zetel>/CONTEXTO.md`
+   (passo 5 de "Como usar").

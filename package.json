@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:live": "cross-env ZETEL_E2E_LIVE=1 playwright test --project=e2e-live"
+    "test:e2e:live": "cross-env ZETEL_E2E_LIVE=1 playwright test --project=e2e-live",
+    "test:e2e:curator": "cross-env ZETEL_E2E_CURATOR=1 playwright test --project=e2e-curator"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "spec_id": "SPEC-018-chatgpt-curator",
+  "task_id": "008",
+  "fixed_point": "70f3c3768e8bc6b24477ab1cf6dc3991a8c58b8c447adfdc0437269295696d24",
+  "generated_at": "2026-10-23T04:28:11.726Z",
+  "reviews_requested": 1,
+  "axes": [
+    "engineering-quality"
+  ],
+  "report_paths": [
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/008-engineering-quality.md"
+  ],
+  "report_hashes": {
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/008-engineering-quality.md": "2b7218966913db43e9df043c655dde81357f7df7ce041fe9ecb61338525dadb8"
+  },
+  "reviewers": [
+    "claude-subagent-code-reviewer"
+  ],
+  "review_run_ids": [
+    "review-quality-spec018-008-r1"
+  ],
+  "package_ids": [
+    "pkg_75002c7737e4823704f7b642"
+  ],
+  "findings_by_severity": {
+    "BLOCKING": 0,
+    "MAJOR": 0,
+    "MINOR": 2,
+    "NIT": 1
+  },
+  "findings_by_status": {
+    "OPEN": 3,
+    "RESOLVED": 0,
+    "NOT_APPLICABLE": 0
+  },
+  "findings": [
+    {
+      "axis": "engineering-quality",
+      "id": "F001",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "afterAll faz rmSync recursivo em ZETEL_E2E_CURATOR_ROOT, que pode vir do ambiente",
+      "evidence": "playwright.config.ts só gera o diretório temporário quando ZETEL_E2E_CURATOR_ROOT não está definida. Se o desenvolvedor exportar a variável apontando para um diretório existente ou importante, curator.spec.ts executa rmSync(ROOT, { recursive: true, force: true }) no afterAll e apaga esse diretório inteiro. ZETEL_HOME vira join(ROOT,'home') e o vault e os repositórios também ficam sob ROOT.",
+      "recommendation": "Não aceitar ROOT vindo do ambiente. Gerar sempre com mkdtemp em tmpdir() e um prefixo próprio. Se o override for mantido, só fazer rmSync quando o basename começar com 'zetel-e2e-curator-'.",
+      "location": {
+        "file": "e2e/curator/curator.spec.ts",
+        "line": 236,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F002",
+      "severity": "MINOR",
+      "status": "OPEN",
+      "title": "Bloqueio de rede cobre só o fetch global; o git do servidor herda a configuração global do usuário",
+      "evidence": "O mock substitui apenas globalThis.fetch. O servidor herda HOME e ~/.gitconfig, porque só GIT_CONFIG_NOSYSTEM é setado e apenas no processo do teste (GIT_ENV), não no webServer.env. Pelo ambiente do servidor, um commit.gpgsign=true, hooks globais ou um url.insteadOf do desenvolvedor podem fazer o commit/push do 'Publicar contexto' falhar ou tentar rede. O repositório é local, então o risco de rede é baixo. O risco real é o teste ficar frágil por máquina.",
+      "recommendation": "No webServer.env, definir GIT_CONFIG_GLOBAL=/dev/null e GIT_CONFIG_NOSYSTEM=1, e opcionalmente GIT_TERMINAL_PROMPT=0. Isso deixa o E2E hermético quanto ao git.",
+      "location": {
+        "file": "playwright.config.ts",
+        "line": 127,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F003",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "O novo script e o pré-requisito do Chrome do sistema não estão documentados",
+      "evidence": "docs/COMMANDS.md e docs/QUALITY.md não mencionam test:e2e:curator, a porta 3005 nem ZETEL_E2E_CURATOR. O projeto usa channel:'chrome', que exige o Chrome instalado; sem ele o teste falha com erro pouco óbvio. A porta 3005 fica fixa e reuseExistingServer:false, então um processo ocupando a porta derruba a run, o que é intencional mas não está documentado.",
+      "recommendation": "Acrescentar uma linha em COMMANDS.md e QUALITY.md com o comando, a porta, o diretório .next-e2e, o requisito de Chrome do sistema e a nota de que a suíte roda offline e fora dos gates padrão.",
+      "location": {
+        "file": "package.json",
+        "line": 22,
+        "not_applicable_reason": null
+      }
+    }
+  ],
+  "blocking_findings": 0,
+  "result": "PASS"
+}

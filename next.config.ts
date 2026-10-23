@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   // O indicador de dev do Next fica no canto inferior esquerdo, em cima do
   // toggle de tema no fim do trilho (SPEC-010). O overlay de erros continua.
   devIndicators: false,
+  // E2E do curador (SPEC-018 tarefa 008) sobe um `next dev` isolado: com
+  // `.next` próprio ele não apaga o build do dev server do Igor.
+  distDir: process.env.ZETEL_NEXT_DIST_DIR || '.next',
 };
 
 export default nextConfig;

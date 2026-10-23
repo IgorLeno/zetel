@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 73,
+  "revision": 80,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -107,32 +107,43 @@
     {
       "id": "008",
       "title": "Fluxo integrado, E2E nao-live e validacao humana",
-      "status": "DRAFT",
+      "status": "DONE",
       "blocked_by": [
         "007"
-      ]
+      ],
+      "execution_profile": "STANDARD",
+      "profile_justification": "E2E nao-live do ciclo, fixtures e ajustes pequenos; sem mudanca de banco, seguranca ou state machine.",
+      "reviews_requested": 1,
+      "validation": "PASS",
+      "review_result": "PASS"
     }
   ],
   "session": {
-    "id": "task-007-20261023",
+    "id": "task-008-20261023",
     "agent": "claude-code",
-    "task_id": "007",
-    "status": "SESSION_CLOSED",
-    "started_at": "2026-10-23T03:50:42.433Z",
-    "execution_profile": "FULL",
-    "profile_justification": "Envia conteudo do usuario a servico externo (push git) e escreve no clone do canal; superficie de seguranca e vazamento de dado privado.",
+    "task_id": "008",
+    "status": "DONE",
+    "started_at": "2026-10-23T04:15:02.275Z",
+    "execution_profile": "STANDARD",
+    "profile_justification": "E2E nao-live do ciclo, fixtures e ajustes pequenos; sem mudanca de banco, seguranca ou state machine.",
     "reviews_requested": 1,
-    "review_justification": "Uma revisao de seguranca planejada pela tarefa; escopo de um renderizador, uma funcao git e uma rota.",
-    "validating_at": "2026-10-23T04:08:18.596Z",
+    "validating_at": "2026-10-23T04:20:45.113Z",
     "validation_result": "PASS",
-    "fixed_point": "ff7b6d7306bd22857e50629e8bb4f3daef673fa0c9e51500fdf29f14aca24818",
-    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/007-aggregate.json",
-    "aggregated_at": "2026-10-23T04:14:41.849Z",
+    "fixed_point": "70f3c3768e8bc6b24477ab1cf6dc3991a8c58b8c447adfdc0437269295696d24",
+    "review_aggregate": ".agent/specs/SPEC-018-chatgpt-curator/reviews/008-aggregate.json",
+    "aggregated_at": "2026-10-23T04:28:11.726Z",
     "review_result": {
       "engineering-quality": "PASS"
     },
-    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/007-validation.json",
+    "validation": ".agent/specs/SPEC-018-chatgpt-curator/evidence/008-validation.json",
     "gates_plan": [
+      {
+        "category": "focused",
+        "argv": [
+          "pnpm",
+          "test:e2e:curator"
+        ]
+      },
       {
         "category": "focused",
         "argv": [
@@ -140,31 +151,8 @@
           "exec",
           "vitest",
           "run",
-          "tests/unit/context-export.test.ts",
-          "tests/integration/context-publish.test.ts",
-          "tests/integration/channel-sync.test.ts",
-          "tests/integration/curation-review.test.ts"
-        ]
-      },
-      {
-        "category": "build",
-        "argv": [
-          "pnpm",
-          "build"
-        ]
-      },
-      {
-        "category": "test-ci",
-        "argv": [
-          "pnpm",
-          "test:ci"
-        ]
-      },
-      {
-        "category": "coverage",
-        "argv": [
-          "pnpm",
-          "test:coverage"
+          "tests/unit/report-format.test.ts",
+          "tests/integration/context-publish.test.ts"
         ]
       },
       {
@@ -172,6 +160,13 @@
         "argv": [
           "pnpm",
           "typecheck"
+        ]
+      },
+      {
+        "category": "test-ci",
+        "argv": [
+          "pnpm",
+          "test:ci"
         ]
       },
       {
@@ -183,13 +178,10 @@
         ]
       }
     ],
-    "reviewing_at": "2026-10-23T04:13:13.775Z",
-    "done_at": "2026-10-23T04:14:42.405Z",
+    "reviewing_at": "2026-10-23T04:26:36.089Z",
+    "done_at": "2026-10-23T04:28:12.094Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited",
-    "closed_at": "2026-10-23T04:14:59.456Z",
-    "delivery_commit": "366c15e4284e9a535e0c7eba1a158a42bb0e259c",
-    "handoff": ".agent/specs/SPEC-018-chatgpt-curator/handoffs/007-context-export-366c15e.md"
+    "external_checks": "pending-not-waited"
   },
   "approval": {
     "spec": true,
