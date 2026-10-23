@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 53,
+  "revision": 54,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -64,7 +64,7 @@
     {
       "id": "005",
       "title": "Curadoria por IA: candidatos validados no servidor",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "003"
       ],
@@ -105,7 +105,7 @@
     "id": "task-005-20261023",
     "agent": "claude-code",
     "task_id": "005",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-10-23T02:58:21.360Z",
     "execution_profile": "FULL",
     "profile_justification": "Persistencia nova (candidatos e estados de curadoria em SQLite) e conteudo adversarial do relatorio entrando no prompt da LLM.",
@@ -174,7 +174,10 @@
     "reviewing_at": "2026-10-23T03:29:06.027Z",
     "done_at": "2026-10-23T03:30:33.291Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "closed_at": "2026-10-23T03:30:56.574Z",
+    "delivery_commit": "76ec98f24bd4e40ad84fbf9d7efb862d40fc23b9",
+    "handoff": ".agent/specs/SPEC-018-chatgpt-curator/handoffs/005-ai-curation-76ec98f.md"
   },
   "approval": {
     "spec": true,
