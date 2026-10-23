@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 72,
+  "revision": 73,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -92,7 +92,7 @@
     {
       "id": "007",
       "title": "Contexto de volta: CONTEXTO.md e publicacao explicita",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "004",
         "006"
@@ -117,7 +117,7 @@
     "id": "task-007-20261023",
     "agent": "claude-code",
     "task_id": "007",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-10-23T03:50:42.433Z",
     "execution_profile": "FULL",
     "profile_justification": "Envia conteudo do usuario a servico externo (push git) e escreve no clone do canal; superficie de seguranca e vazamento de dado privado.",
@@ -186,7 +186,10 @@
     "reviewing_at": "2026-10-23T04:13:13.775Z",
     "done_at": "2026-10-23T04:14:42.405Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "closed_at": "2026-10-23T04:14:59.456Z",
+    "delivery_commit": "366c15e4284e9a535e0c7eba1a158a42bb0e259c",
+    "handoff": ".agent/specs/SPEC-018-chatgpt-curator/handoffs/007-context-export-366c15e.md"
   },
   "approval": {
     "spec": true,
