@@ -1294,6 +1294,7 @@ svg { stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round
 .curation-report { display: flex; flex-direction: column; gap: 4px; }
 .curation-report .sugg-title { padding: 0; }
 .curation-toolbar { padding: 0; }
+.context-preview { max-height: 360px; overflow: auto; font-size: 12.5px; }
 
 .note-card-edit, .sugg-card-edit, .memory-card-edit, .note-card-field, .note-card-title-input, .memoria-detail-edit {
   display: block;

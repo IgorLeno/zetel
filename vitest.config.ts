@@ -44,6 +44,7 @@ export default defineConfig({
         'lib/channel-git.ts': { lines: 90, functions: 90, branches: 80 },
         'lib/curation-service.ts': { lines: 90, functions: 90, branches: 80 },
         'lib/curation-review-service.ts': { lines: 90, functions: 90, branches: 80 },
+        'lib/context-export.ts': { lines: 90, functions: 90, branches: 80 },
       },
     },
   },

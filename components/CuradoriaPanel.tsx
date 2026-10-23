@@ -109,6 +109,8 @@ export function CuradoriaPanel({ zetelId }: { zetelId: string }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ content: string; hash: string; bytes: number } | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -179,6 +181,36 @@ export function CuradoriaPanel({ zetelId }: { zetelId: string }) {
     }
   }
 
+  /** Sem `confirm`: gera e mostra a prévia. Com `confirm`: publica exatamente a prévia vista (hash). */
+  async function publish(confirm: boolean) {
+    setPublishing(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/zetels/${zetelId}/context/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(confirm && preview ? { confirm: true, hash: preview.hash } : {}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? 'Falha ao publicar o contexto.');
+        if (res.status === 409 && confirm) setPreview(null);
+        return;
+      }
+      if (confirm) {
+        setPreview(null);
+        setMessage('Contexto publicado no canal.');
+      } else {
+        setPreview({ content: data.preview, hash: data.hash, bytes: data.bytes });
+      }
+    } catch {
+      setError('Erro de rede ao publicar o contexto.');
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   const curable = reports.filter((r) => r.status === 'imported' || r.status === 'curation_failed').length;
   const visible = reports.filter((r) => r.candidates.length > 0 || r.status !== 'curated');
 
@@ -189,7 +221,26 @@ export function CuradoriaPanel({ zetelId }: { zetelId: string }) {
           data-testid="curation-run">
           {running ? 'Curando…' : `Curar relatórios${curable > 0 ? ` (${curable})` : ''}`}
         </button>
+        <button type="button" className="xbtn" onClick={() => void publish(false)} disabled={publishing}
+          data-testid="context-preview">
+          {publishing && !preview ? 'Gerando…' : 'Publicar contexto'}
+        </button>
       </div>
+      {preview && (
+        <div className="sugg-card concept curation-card" data-testid="context-preview-card">
+          <div className="sugg-top">
+            <span className="sugg-badge">Prévia do CONTEXTO.md · {(preview.bytes / 1024).toFixed(1)} KB</span>
+          </div>
+          <pre className="sugg-body context-preview">{preview.content}</pre>
+          <div className="sugg-actions">
+            <button type="button" className="xbtn primary" disabled={publishing} data-testid="context-publish-confirm"
+              onClick={() => void publish(true)}>
+              {publishing ? 'Publicando…' : 'Confirmar publicação'}
+            </button>
+            <button type="button" className="xbtn ghost" disabled={publishing} onClick={() => setPreview(null)}>Cancelar</button>
+          </div>
+        </div>
+      )}
       {error && <p className="feedback err">{error}</p>}
       {message && <p className="feedback ok">{message}</p>}
       {loading && <p className="feedback">Carregando…</p>}

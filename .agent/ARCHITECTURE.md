@@ -158,6 +158,20 @@ Fonte completa: `.agent/specs/SPEC-018-chatgpt-curator/SPEC.md`.
 - Contexto (D10): `CONTEXTO.md` renderizado sem LLM, só com conteúdo
   confirmado, ≤ 200 KB. Commit local automático restrito a `contexto/`; push
   apenas pelo botão "Publicar contexto", com prévia.
+  `lib/context-export.ts`: allowlist de origens (`conceitos/`, quatro pastas
+  de notas, `passo-a-passo/`, `questoes/` e a lista de relatórios vigentes);
+  memória global, materiais, chat e candidatos pendentes nunca entram; symlink
+  não é seguido; sem data de geração (mesma entrada → mesmo arquivo).
+  `POST /api/zetels/[id]/context/publish`: `{}` só devolve a prévia com
+  `hash` (nada vai ao clone); `{ confirm: true, hash }` recusa (409) se o
+  conteúdo mudou e chama `publishContext`: `fetch`; canal à frente = `behind`
+  (nada escrito nem commitado); grava o arquivo; commit só de
+  `contexto/<slug>/CONTEXTO.md` (índice do Igor intocado, GPG desligado);
+  push ao upstream só se todo arquivo dos commits locais for
+  `contexto/<slug>/CONTEXTO.md` (senão `unsafe`). Ordem dos itens por code
+  unit (independente de locale). O commit fica na confirmação, e
+  não na prévia, para não deixar o clone divergente (sync é só fast-forward).
+  Operações no clone são serializadas (`exclusive`).
 - Voz/chat (D11): chat, TTS/STT, barge-in e Live ficam atrás de flag, com
   código mantido; deprecação em spec própria (SPEC-019).
 - Git (D12, RNF1, RNF6): só `execFile` com argumentos fixos, sem shell,

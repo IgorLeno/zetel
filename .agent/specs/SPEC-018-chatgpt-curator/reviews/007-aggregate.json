@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "spec_id": "SPEC-018-chatgpt-curator",
+  "task_id": "007",
+  "fixed_point": "ff7b6d7306bd22857e50629e8bb4f3daef673fa0c9e51500fdf29f14aca24818",
+  "generated_at": "2026-10-23T04:14:41.849Z",
+  "reviews_requested": 1,
+  "axes": [
+    "engineering-quality"
+  ],
+  "report_paths": [
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/007-engineering-quality.md"
+  ],
+  "report_hashes": {
+    ".agent/specs/SPEC-018-chatgpt-curator/reviews/007-engineering-quality.md": "b9507e26b87d70f88a25bf963ccaa62dddf1eca0abd66fa55a8a870ca35be649"
+  },
+  "reviewers": [
+    "claude-subagent-code-reviewer"
+  ],
+  "review_run_ids": [
+    "review-quality-spec018-007-r2"
+  ],
+  "package_ids": [
+    "pkg_da038adb148b2a198fd331ac"
+  ],
+  "findings_by_severity": {
+    "BLOCKING": 0,
+    "MAJOR": 2,
+    "MINOR": 2,
+    "NIT": 2
+  },
+  "findings_by_status": {
+    "OPEN": 2,
+    "RESOLVED": 4,
+    "NOT_APPLICABLE": 0
+  },
+  "findings": [
+    {
+      "axis": "engineering-quality",
+      "id": "F001",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "title": "Prévia gravava CONTEXTO.md no clone e o deixava sujo ao cancelar",
+      "evidence": "A rota agora responde à prévia ({}) só com renderContext e hash, sem tocar o clone. publishContext recebe o callback writeFile, chamado depois de fetch e rev-list HEAD..@{upstream} == 0 e imediatamente antes de commitContext. Os testes 'canal à frente: nada é escrito nem commitado' e 'rota: prévia sem push...' afirmam git status --porcelain vazio.",
+      "recommendation": "Nenhuma ação.",
+      "location": {
+        "file": "lib/channel-git.ts",
+        "line": 227,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F002",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "Ordenação dependia de locale/ICU e podia mudar o hash entre máquinas",
+      "evidence": "readItems ordena com comparação por code unit (a.name < b.name ? -1 : ...). readdirSync(...).sort() usa a ordenação padrão por code unit do JS. A query SQL ordena por channel_path.",
+      "recommendation": "Nenhuma ação.",
+      "location": {
+        "file": "lib/context-export.ts",
+        "line": 483,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F003",
+      "severity": "MAJOR",
+      "status": "RESOLVED",
+      "title": "Guard 'unsafe' aceitava qualquer arquivo sob contexto/",
+      "evidence": "Cada caminho listado por git log --name-only em @{upstream}..HEAD precisa casar com CONTEXT_PATH_RE (contexto/<slug>/CONTEXTO.md); o push é bloqueado se algum não casar ou se a lista vier vazia. O teste 'commit manual sob contexto/ que não é CONTEXTO.md também bloqueia' cobre contexto/<slug>/rascunho.txt.",
+      "recommendation": "Nenhuma ação.",
+      "location": {
+        "file": "lib/channel-git.ts",
+        "line": 239,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F004",
+      "severity": "MINOR",
+      "status": "RESOLVED",
+      "title": "Relatórios omitidos pelo teto de 200 KB não eram contados",
+      "evidence": "No loop de relatórios, cada linha que não cabe incrementa 'omitted'. O teste 'relatórios também contam na omissão pelo teto' usa 8000 relatórios e afirma tamanho <= 200 KB e a presença da linha de omissão.",
+      "recommendation": "Nenhuma ação.",
+      "location": {
+        "file": "lib/context-export.ts",
+        "line": 534,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F005",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Se o commit falhar depois de writeFile, CONTEXTO.md fica modificado no clone",
+      "evidence": "publishContext chama writeFile() e depois commitContext. Se git add, diff ou commit devolver 'error', o arquivo gravado permanece sujo na árvore. É uma janela estreita (falha do git local) e o arquivo está sob contexto/, então o Igor vê o estado e a próxima publicação o reconcilia. O comentário do código descreve só o caso 'behind'.",
+      "recommendation": "Opcional: documentar o comportamento ou restaurar o arquivo (git restore) no caminho de erro. Não bloqueia.",
+      "location": {
+        "file": "lib/channel-git.ts",
+        "line": 228,
+        "not_applicable_reason": null
+      }
+    },
+    {
+      "axis": "engineering-quality",
+      "id": "F006",
+      "severity": "NIT",
+      "status": "OPEN",
+      "title": "Omissão pelo teto não é só 'do fim de cada seção'",
+      "evidence": "append() devolve false só para o chunk que não cabe; itens menores seguintes ainda entram. O resultado continua determinístico e a contagem está correta, mas o docstring de renderContext ('omitindo itens do fim de cada seção') não descreve isso com exatidão.",
+      "recommendation": "Ajustar o comentário, ou parar de anexar a seção no primeiro item omitido.",
+      "location": {
+        "file": "lib/context-export.ts",
+        "line": 509,
+        "not_applicable_reason": null
+      }
+    }
+  ],
+  "blocking_findings": 0,
+  "result": "PASS"
+}

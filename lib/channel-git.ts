@@ -93,14 +93,21 @@ function hasOwnGitDir(channelDir: string): boolean {
  * - rede, autenticação, branch sem upstream, timeout → `error` genérico.
  */
 export function syncChannel(channelDir: string): Promise<ChannelSyncResult> {
-  // Um sync por vez no processo: dois cliques concorrentes não disputam o
-  // index.lock (que o git reportaria como falha de merge).
-  const run = queue.then(() => syncOnce(channelDir));
-  queue = run.catch(() => undefined);
-  return run;
+  return exclusive(() => syncOnce(channelDir));
 }
 
 let queue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Uma operação no clone por vez no processo (sync, commit e push do
+ * contexto): duas chamadas concorrentes não disputam o index.lock, que o git
+ * reportaria como falha de merge ou commit.
+ */
+export function exclusive<T>(fn: () => Promise<T>): Promise<T> {
+  const run = queue.then(fn);
+  queue = run.catch(() => undefined);
+  return run;
+}
 
 async function syncOnce(channelDir: string): Promise<ChannelSyncResult> {
   if (!hasOwnGitDir(channelDir)) return { status: 'not_a_repo', fetched: 0 };
@@ -128,4 +135,96 @@ async function syncOnce(channelDir: string): Promise<ChannelSyncResult> {
   if (!merge.ok) return { status: merge.exitCode === null ? 'error' : 'diverged', fetched: 0 };
 
   return { status: 'ok', fetched: behind };
+}
+
+// ------------------------------------------------------------ contexto (RF8)
+
+type ContextCommitStatus = 'committed' | 'unchanged' | 'error';
+
+/**
+ * Commit local de `relPath` (sempre `contexto/<slug>/CONTEXTO.md`). O commit
+ * leva só esse caminho, mesmo que o Igor tenha outras alterações no índice.
+ * Assinatura GPG desligada: sem TTY ela travaria ou falharia.
+ */
+async function commitContext(channelDir: string, relPath: string): Promise<ContextCommitStatus> {
+  const add = await git(channelDir, ['add', '--', relPath]);
+  if (!add.ok) return 'error';
+  const diff = await git(channelDir, ['diff', '--cached', '--quiet', '--', relPath]);
+  if (diff.ok) return 'unchanged';
+  if (diff.exitCode !== 1) return 'error';
+  const commit = await git(channelDir, [
+    '-c', 'commit.gpgsign=false',
+    'commit', '--quiet', '--no-verify', '-m', 'zetel: atualiza contexto', '--', relPath,
+  ]);
+  return commit.ok ? 'committed' : 'error';
+}
+
+export type ContextPublishStatus =
+  | 'ok'
+  | 'not_a_repo'
+  | 'nothing_to_push'
+  | 'behind'
+  | 'unsafe'
+  | 'rejected'
+  | 'error';
+
+const CONTEXT_PATH_RE = /^contexto\/[a-z0-9]+(?:-[a-z0-9]+)*\/CONTEXTO\.md$/;
+
+/**
+ * "Publicar contexto" (D10): `fetch` do upstream; se o canal estiver à frente
+ * → `behind` (buscar do canal antes), sem escrever nem commitar. Senão,
+ * `writeFile()` grava o arquivo, commit local de `relPath` e push dos commits
+ * locais — e só se TODOS tocarem apenas `contexto/<slug>/CONTEXTO.md`. Outro commit local do Igor (ex.: algo em `inbox/`) bloqueia
+ * como `unsafe`: o Zetel nunca publica o que não gerou.
+ *
+ * O commit acontece aqui, e não na prévia, para que um commit local não
+ * publicado não deixe o clone divergente do canal (o sync é só fast-forward).
+ * Resta a janela entre commit e push: se o remoto avançar nela, o push é
+ * `rejected` e o commit fica local, para o Igor resolver com o git.
+ */
+export async function publishContext(
+  channelDir: string,
+  relPath: string,
+  writeFile: () => void,
+): Promise<ContextPublishStatus> {
+  if (!hasOwnGitDir(channelDir)) return 'not_a_repo';
+  if (!CONTEXT_PATH_RE.test(relPath)) return 'error';
+
+  const branch = await git(channelDir, ['symbolic-ref', '--quiet', '--short', 'HEAD']);
+  if (!branch.ok) return 'error';
+  const name = branch.stdout.trim();
+  const remote = await git(channelDir, ['config', '--get', `branch.${name}.remote`]);
+  const merge = await git(channelDir, ['config', '--get', `branch.${name}.merge`]);
+  if (!remote.ok || !merge.ok) return 'error';
+  const remoteName = remote.stdout.trim();
+  const mergeRef = merge.stdout.trim();
+  // Viram argumentos do git: nada que pareça opção, caminho ou refspec composta.
+  if (!/^[A-Za-z0-9_][A-Za-z0-9._-]*$/.test(remoteName)) return 'error';
+  if (!/^refs\/heads\/[A-Za-z0-9._/-]+$/.test(mergeRef)) return 'error';
+
+  const fetch = await git(channelDir, ['fetch', '--quiet', '--no-recurse-submodules', remoteName]);
+  if (!fetch.ok) return 'error';
+  const behind = await git(channelDir, ['rev-list', '--count', 'HEAD..@{upstream}']);
+  if (!behind.ok) return 'error';
+  if (Number.parseInt(behind.stdout.trim(), 10) > 0) return 'behind';
+
+  // Só agora o arquivo vai ao clone: recusa anterior não deixa a árvore suja.
+  writeFile();
+  const commit = await commitContext(channelDir, relPath);
+  if (commit === 'error') return 'error';
+
+  const ahead = await git(channelDir, ['rev-list', '--count', '@{upstream}..HEAD']);
+  if (!ahead.ok) return 'error';
+  if (Number.parseInt(ahead.stdout.trim(), 10) === 0) return 'nothing_to_push';
+
+  const files = await git(channelDir, ['log', '--format=', '--name-only', '--no-renames', '@{upstream}..HEAD']);
+  if (!files.ok) return 'error';
+  const touched = files.stdout.split('\n').map((line) => line.trim()).filter(Boolean);
+  // Só arquivos que o Zetel gera (`contexto/<slug>/CONTEXTO.md`); qualquer outro bloqueia.
+  if (touched.length === 0 || touched.some((path) => !CONTEXT_PATH_RE.test(path))) return 'unsafe';
+
+  const push = await git(channelDir, ['push', '--quiet', '--no-recurse-submodules', remoteName, `HEAD:${mergeRef}`]);
+  // Exit 1 = recusado pelo remoto (avançou, branch protegida); 128/sem exit = rede, acesso, timeout.
+  if (!push.ok) return push.exitCode === 1 ? 'rejected' : 'error';
+  return 'ok';
 }
