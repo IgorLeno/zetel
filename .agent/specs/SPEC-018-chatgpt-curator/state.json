@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 80,
+  "revision": 82,
   "spec": {
     "id": "SPEC-018-chatgpt-curator",
     "kind": "full",
@@ -107,7 +107,7 @@
     {
       "id": "008",
       "title": "Fluxo integrado, E2E nao-live e validacao humana",
-      "status": "DONE",
+      "status": "SESSION_CLOSED",
       "blocked_by": [
         "007"
       ],
@@ -122,7 +122,7 @@
     "id": "task-008-20261023",
     "agent": "claude-code",
     "task_id": "008",
-    "status": "DONE",
+    "status": "SESSION_CLOSED",
     "started_at": "2026-10-23T04:15:02.275Z",
     "execution_profile": "STANDARD",
     "profile_justification": "E2E nao-live do ciclo, fixtures e ajustes pequenos; sem mudanca de banco, seguranca ou state machine.",
@@ -181,7 +181,10 @@
     "reviewing_at": "2026-10-23T04:26:36.089Z",
     "done_at": "2026-10-23T04:28:12.094Z",
     "active_task_cleared": true,
-    "external_checks": "pending-not-waited"
+    "external_checks": "pending-not-waited",
+    "closed_at": "2026-10-23T04:29:50.948Z",
+    "delivery_commit": "11ea76ccbd4b79a089fed58b3e7ab70b962f6653",
+    "handoff": ".agent/specs/SPEC-018-chatgpt-curator/handoffs/008-integration-validation-11ea76c.md"
   },
   "approval": {
     "spec": true,
