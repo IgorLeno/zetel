@@ -10,6 +10,7 @@ import {
   isTtsVoice,
   matchTonePreset,
   ttsDefaultVoiceFor,
+  ttsEndpointOf,
   ttsModelEntry,
   ttsModelSupportsInstructions,
   ttsProviderOf,
@@ -19,6 +20,8 @@ import {
 import * as openaiVoice from '@/lib/openai-voice';
 
 const GEMINI = 'google/gemini-3.8-flash-tts';
+const GEMINI_LITE = 'google/gemini-3.8-flash-lite-tts';
+const GPT_AUDIO_MINI = 'openai/gpt-audio-mini';
 const GEMINI_VOICES = [
   'Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir', 'Leda', 'Orus', 'Aoede', 'Callirrhoe', 'Autonoe',
   'Enceladus', 'Iapetus', 'Umbriel', 'Algieba', 'Despina', 'Erinome', 'Algenib', 'Rasalgethi',
@@ -56,7 +59,6 @@ describe('opções de voz TTS', () => {
     expect(ttsVoicesFor(GEMINI)).toEqual(GEMINI_VOICES);
     expect(ttsDefaultVoiceFor(GEMINI)).toBe('Kore');
     expect(isTtsModel(GEMINI)).toBe(true);
-    expect(isTtsModel('google/gemini-3.8-flash-lite-tts')).toBe(false);
     expect(ttsProviderOf(GEMINI)).toBe('openrouter');
     expect(ttsModelSupportsInstructions(GEMINI)).toBe(false);
     for (const voice of GEMINI_VOICES) {
@@ -66,6 +68,49 @@ describe('opções de voz TTS', () => {
     }
     expect(ttsVoiceSupportedBy(GEMINI, 'marin')).toBe(false);
     expect(ttsVoiceSupportedBy(GEMINI, 'kore')).toBe(false);
+  });
+
+  it('cataloga os modelos do OpenRouter na ordem da aba Voz', () => {
+    expect(TTS_MODELS.filter((m) => m.provider === 'openrouter').map((m) => m.id)).toEqual([
+      GPT_AUDIO_MINI,
+      GEMINI_LITE,
+      GEMINI,
+    ]);
+  });
+
+  it('Gemini 3.8 Flash Lite TTS: mesmas 30 vozes, sem tom, via /audio/speech', () => {
+    expect(ttsModelEntry(GEMINI_LITE)).toMatchObject({
+      provider: 'openrouter',
+      endpoint: 'speech',
+      supportsInstructions: false,
+      defaultVoice: 'Kore',
+    });
+    expect(ttsVoicesFor(GEMINI_LITE)).toEqual(GEMINI_VOICES);
+    expect(ttsVoiceSupportedBy(GEMINI_LITE, 'marin')).toBe(false);
+  });
+
+  it('GPT Audio Mini: chat com saída de áudio, aceita tom, 9 vozes OpenAI', () => {
+    expect(ttsModelEntry(GPT_AUDIO_MINI)).toMatchObject({
+      provider: 'openrouter',
+      endpoint: 'chat-audio',
+      supportsInstructions: true,
+      defaultVoice: 'marin',
+    });
+    expect(ttsVoicesFor(GPT_AUDIO_MINI)).toEqual([
+      'alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'marin', 'cedar',
+    ]);
+    expect(ttsEndpointOf(GPT_AUDIO_MINI)).toBe('chat-audio');
+    expect(ttsModelSupportsInstructions(GPT_AUDIO_MINI)).toBe(true);
+    for (const voice of ['fable', 'nova', 'onyx', 'verse', 'Kore']) {
+      expect(ttsVoiceSupportedBy(GPT_AUDIO_MINI, voice)).toBe(false);
+    }
+  });
+
+  it('todo modelo tem voz padrão entre as suas vozes; fora do catálogo vale speech', () => {
+    for (const m of TTS_MODELS) expect(m.voices).toContain(m.defaultVoice);
+    expect(ttsEndpointOf(GEMINI)).toBe('speech');
+    expect(ttsEndpointOf('gpt-4o-mini-tts')).toBe('speech');
+    expect(ttsEndpointOf('custom-tts-model')).toBe('speech');
   });
 
   it('modelos OpenAI mantêm vozes e tom; fora do catálogo vale a regra antiga da OpenAI', () => {

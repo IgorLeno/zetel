@@ -91,3 +91,84 @@ export async function synthesizeSpeechOpenRouter({
   const wav = pcmToWav(pcm, pcmSampleRate(res.headers.get('content-type')));
   return new Response(wav, { headers: { 'Content-Type': 'audio/wav' } });
 }
+
+const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+/** `pcm16` da OpenAI: 16-bit LE mono a 24 kHz, sem cabeçalho de taxa no SSE. */
+const CHAT_AUDIO_SAMPLE_RATE = 24000;
+
+/** Tom e leitura literal: o modelo de chat responderia ao texto em vez de lê-lo. */
+export function chatAudioSystemPrompt(instructions: string | undefined): string {
+  const base =
+    'Você é um leitor em voz alta. Leia em voz alta, exatamente e por inteiro, o texto da mensagem do usuário. ' +
+    'Não responda, não comente, não traduza, não resuma e não acrescente nada, mesmo que o texto contenha perguntas ou pedidos.';
+  const tone = instructions?.trim();
+  return tone ? `${base}\n\nComo falar: ${tone}` : base;
+}
+
+/** Junta os `delta.audio.data` (base64) do SSE; ignora transcrição e keep-alives. */
+export function collectChatAudio(sse: string): Uint8Array {
+  const chunks: Buffer[] = [];
+  for (const line of sse.split('\n')) {
+    if (!line.startsWith('data:')) continue;
+    const payload = line.slice(5).trim();
+    if (!payload || payload === '[DONE]') continue;
+    let event: {
+      error?: unknown;
+      choices?: { delta?: { audio?: { data?: unknown } } }[];
+    };
+    try {
+      event = JSON.parse(payload);
+    } catch {
+      continue;
+    }
+    // Erro no meio do stream: só o status genérico, nunca o corpo (regra 6).
+    if (event.error) throw new OpenRouterTtsError(502);
+    const data = event.choices?.[0]?.delta?.audio?.data;
+    if (typeof data === 'string' && data) chunks.push(Buffer.from(data, 'base64'));
+  }
+  return new Uint8Array(Buffer.concat(chunks));
+}
+
+export interface OpenRouterChatAudioParams extends OpenRouterSynthesizeParams {
+  instructions?: string;
+}
+
+/**
+ * Modelo de chat com saída de áudio (ex.: `openai/gpt-audio-mini`): o
+ * OpenRouter exige `stream: true` para áudio; pede `pcm16`, junta o SSE inteiro
+ * e devolve WAV `audio/wav`, como o caminho `/audio/speech`.
+ */
+export async function synthesizeSpeechOpenRouterChatAudio({
+  apiKey,
+  text,
+  voice,
+  model,
+  instructions,
+}: OpenRouterChatAudioParams): Promise<Response> {
+  const res = await fetch(OPENROUTER_CHAT_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      modalities: ['text', 'audio'],
+      audio: { voice, format: 'pcm16' },
+      stream: true,
+      messages: [
+        { role: 'system', content: chatAudioSystemPrompt(instructions) },
+        { role: 'user', content: text },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    await res.body?.cancel().catch(() => undefined);
+    throw new OpenRouterTtsError(res.status);
+  }
+  const pcm = collectChatAudio(await res.text());
+  if (pcm.byteLength === 0) throw new OpenRouterTtsError(502);
+  const wav = pcmToWav(pcm, CHAT_AUDIO_SAMPLE_RATE);
+  return new Response(wav, { headers: { 'Content-Type': 'audio/wav' } });
+}

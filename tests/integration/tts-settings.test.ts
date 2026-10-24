@@ -116,12 +116,24 @@ describe('configuração de voz TTS', () => {
 
     expect((await PUT(put({ tts_voice: 'cedar' }))).status).toBe(400);
     expect((await PUT(put({ tts_model: 'gpt-4o-mini-tts', tts_voice: 'Kore' }))).status).toBe(400);
-    expect((await PUT(put({ tts_model: 'google/gemini-3.8-flash-lite-tts', tts_voice: 'Kore' }))).status).toBe(400);
+    expect((await PUT(put({ tts_model: 'google/gemini-9-tts', tts_voice: 'Kore' }))).status).toBe(400);
     expect((await PUT(put({ tts_model: 'gpt-4o-mini-tts', tts_voice: 'cedar' }))).status).toBe(200);
     expect(await (await GET()).json()).toMatchObject({
       tts_model: 'gpt-4o-mini-tts',
       tts_voice: 'cedar',
       tts_instructions: 'Tom meu.',
     });
+  });
+
+  it('aceita Gemini Flash Lite e GPT Audio Mini com as vozes de cada um', async () => {
+    const { PUT, GET } = await import('@/app/api/settings/route');
+    const lite = 'google/gemini-3.8-flash-lite-tts';
+    const mini = 'openai/gpt-audio-mini';
+    expect((await PUT(put({ tts_model: lite, tts_voice: 'Puck' }))).status).toBe(200);
+    expect(await (await GET()).json()).toMatchObject({ tts_model: lite, tts_voice: 'Puck' });
+    expect((await PUT(put({ tts_model: mini, tts_voice: 'Puck' }))).status).toBe(400);
+    expect((await PUT(put({ tts_model: mini, tts_voice: 'nova' }))).status).toBe(400);
+    expect((await PUT(put({ tts_model: mini, tts_voice: 'coral' }))).status).toBe(200);
+    expect(await (await GET()).json()).toMatchObject({ tts_model: mini, tts_voice: 'coral' });
   });
 });

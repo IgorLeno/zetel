@@ -82,7 +82,15 @@ Interfaces e dados). Em divergência, a SPEC prevalece.
   `instructions`, chave via
   `resolveOpenRouterCredential()`; tom ignorado sem erro e nunca apagado na
   troca de modelo; sem chave do provedor efetivo → 503 `tts_unavailable`; logs
-  só `chars`, `provider`, `model` e status (SPEC-013).
+  só `chars`, `provider`, `model` e status (SPEC-013). Desde 2026-10-24 o
+  catálogo tem `endpoint` (`speech` | `chat-audio`) e inclui
+  `google/gemini-3.8-flash-lite-tts` (`speech`, mesmas 30 vozes, sem tom) e
+  `openai/gpt-audio-mini` (`chat-audio`: fora do `/audio/speech` do
+  OpenRouter; `POST /api/v1/chat/completions` com `modalities: ["text",
+  "audio"]`, `audio: { voice, format: "pcm16" }`, `stream: true` obrigatório;
+  o tom vai na mensagem de sistema com ordem de leitura literal; o SSE é
+  juntado e embrulhado em WAV 24 kHz; 9 vozes OpenAI). A aba Voz agrupa
+  modelos por provedor e lista só as vozes do modelo selecionado.
 - Live (SPEC-016, D1–D11): modo separado por botão no chat, com Gemini Live
   (`gemini-3.8-live`, constantes em `lib/live-options.ts`); fora dele,
   Whisper + TTS seguem iguais. Chave Gemini só no servidor

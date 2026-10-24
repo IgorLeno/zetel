@@ -2,7 +2,11 @@
  * Opções de voz TTS (SPEC-005 D3; SPEC-013 D1–D3): módulo puro, seguro para o
  * cliente. Catálogo estático e curado por provedor: vozes OpenAI conferidas na
  * doc oficial em 2026-10-03 (a API não expõe endpoint de vozes); vozes do
- * Gemini conferidas no catálogo público do OpenRouter em 2026-10-16.
+ * Gemini conferidas no catálogo público do OpenRouter em 2026-10-16; o Gemini
+ * 3.8 Flash Lite TTS lista as mesmas 30 vozes (`/api/v1/models`, 2026-10-24).
+ * GPT Audio Mini não está no `/audio/speech` do OpenRouter, só no chat com
+ * saída de áudio, e o catálogo não expõe vozes: usa as vozes de chat-áudio do
+ * SDK oficial da OpenAI (2026-10-24), sem smoke live.
  */
 
 export const DEFAULT_TTS_MODEL = 'gpt-4o-mini-tts';
@@ -42,7 +46,16 @@ export const TTS_VOICES = [
 const OPENAI_VOICES: readonly string[] = TTS_VOICES.map((v) => v.id);
 const OPENAI_LEGACY_VOICES: readonly string[] = TTS_VOICES.filter((v) => v.legacy).map((v) => v.id);
 
-/** Vozes do Gemini 3.8 Flash TTS; ids diferenciam maiúsculas (D2, D9). */
+/**
+ * Vozes do `audio.voice` em chat completions: interseção do tipo e do
+ * comentário de `ChatCompletionAudioParam` no `openai-node` (as duas listas
+ * divergem em fable, nova, onyx e verse; ficam fora até prova contrária).
+ */
+export const GPT_AUDIO_VOICES = [
+  'alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'marin', 'cedar',
+] as const;
+
+/** Vozes do Gemini 3.8 Flash (Lite) TTS; ids diferenciam maiúsculas (D2, D9). */
 export const GEMINI_TTS_VOICES = [
   'Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir', 'Leda', 'Orus', 'Aoede', 'Callirrhoe', 'Autonoe',
   'Enceladus', 'Iapetus', 'Umbriel', 'Algieba', 'Despina', 'Erinome', 'Algenib', 'Rasalgethi',
@@ -50,9 +63,16 @@ export const GEMINI_TTS_VOICES = [
   'Vindemiatrix', 'Sadachbia', 'Sadaltager', 'Sulafat',
 ] as const;
 
+/**
+ * `speech`: `POST /audio/speech` (OpenAI ou OpenRouter). `chat-audio`: modelo
+ * de chat com saída de áudio, chamado por `/chat/completions` no OpenRouter.
+ */
+export type TtsEndpoint = 'speech' | 'chat-audio';
+
 export interface TtsModelEntry {
   id: string;
   provider: TtsProvider;
+  endpoint: TtsEndpoint;
   label: string;
   supportsInstructions: boolean;
   voices: readonly string[];
@@ -64,6 +84,7 @@ export const TTS_MODELS: readonly TtsModelEntry[] = [
   {
     id: 'gpt-4o-mini-tts',
     provider: 'openai',
+    endpoint: 'speech',
     label: 'gpt-4o-mini-tts — natural, aceita tom',
     supportsInstructions: true,
     voices: OPENAI_VOICES,
@@ -72,6 +93,7 @@ export const TTS_MODELS: readonly TtsModelEntry[] = [
   {
     id: 'tts-1',
     provider: 'openai',
+    endpoint: 'speech',
     label: 'tts-1 — rápido, ignora o tom',
     supportsInstructions: false,
     voices: OPENAI_LEGACY_VOICES,
@@ -80,15 +102,36 @@ export const TTS_MODELS: readonly TtsModelEntry[] = [
   {
     id: 'tts-1-hd',
     provider: 'openai',
+    endpoint: 'speech',
     label: 'tts-1-hd — mais qualidade, ignora o tom',
     supportsInstructions: false,
     voices: OPENAI_LEGACY_VOICES,
     defaultVoice: 'alloy',
   },
   {
+    id: 'openai/gpt-audio-mini',
+    provider: 'openrouter',
+    endpoint: 'chat-audio',
+    label: 'GPT Audio Mini — natural, aceita tom',
+    // O tom vai como mensagem de sistema do chat com saída de áudio.
+    supportsInstructions: true,
+    voices: GPT_AUDIO_VOICES,
+    defaultVoice: DEFAULT_TTS_VOICE,
+  },
+  {
+    id: 'google/gemini-3.8-flash-lite-tts',
+    provider: 'openrouter',
+    endpoint: 'speech',
+    label: 'Gemini 3.8 Flash Lite TTS — mais barato, ignora o tom',
+    supportsInstructions: false,
+    voices: GEMINI_TTS_VOICES,
+    defaultVoice: 'Kore',
+  },
+  {
     id: 'google/gemini-3.8-flash-tts',
     provider: 'openrouter',
-    label: 'Gemini 3.8 Flash TTS — ignora o tom',
+    endpoint: 'speech',
+    label: 'Gemini 3.8 Flash TTS — mais expressivo, ignora o tom',
     // A página e a API do OpenRouter não expõem instruções (D3).
     supportsInstructions: false,
     voices: GEMINI_TTS_VOICES,
@@ -111,6 +154,11 @@ export function isTtsVoice(voice: string): boolean {
 /** Fora do catálogo = OpenAI (settings legados da SPEC-005). */
 export function ttsProviderOf(model: string): TtsProvider {
   return ttsModelEntry(model)?.provider ?? 'openai';
+}
+
+/** Fora do catálogo = `speech` (OpenAI legado). */
+export function ttsEndpointOf(model: string): TtsEndpoint {
+  return ttsModelEntry(model)?.endpoint ?? 'speech';
 }
 
 /** Catálogo primeiro; fora dele, `tts-1*` não aceita `instructions` (SPEC-004 D3). */

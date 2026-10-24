@@ -209,6 +209,73 @@ describe('POST /api/voice/tts com modelo do OpenRouter', () => {
   });
 });
 
+const GPT_AUDIO_MINI = 'openai/gpt-audio-mini';
+const GEMINI_LITE = 'google/gemini-3.8-flash-lite-tts';
+
+function audioSse(...pcmChunks: Uint8Array[]): Response {
+  const lines = pcmChunks.map(
+    (c) => `data: ${JSON.stringify({ choices: [{ delta: { audio: { data: Buffer.from(c).toString('base64') } } }] })}`,
+  );
+  return new Response(`${lines.join('\n\n')}\n\ndata: [DONE]\n\n`, {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+}
+
+describe('POST /api/voice/tts com os modelos novos do OpenRouter', () => {
+  beforeEach(() => {
+    openRouterKey.value = 'sk-or-test';
+  });
+
+  it('Flash Lite vai ao /audio/speech como o Flash', async () => {
+    const res = await POST(ttsRequest({ text: 'Olá.', model: GEMINI_LITE, voice: 'Leda' }));
+    expect(res.status).toBe(200);
+    expect(fetchMock.mock.calls[0][0]).toBe(OPENROUTER_TTS_URL);
+    expect(await sentPayload()).toEqual({ model: GEMINI_LITE, input: 'Olá.', voice: 'Leda', response_format: 'pcm' });
+  });
+
+  it('GPT Audio Mini vai ao chat com áudio, leva o tom e responde WAV', async () => {
+    fetchMock.mockResolvedValue(audioSse(new Uint8Array([1, 2]), new Uint8Array([3, 4])));
+    settings.set('tts_model', GPT_AUDIO_MINI);
+    settings.set('tts_voice', 'coral');
+    settings.set('tts_instructions', 'Tom salvo.');
+    const res = await POST(ttsRequest({ text: 'Olá.' }));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('audio/wav');
+    expect(fetchMock.mock.calls[0][0]).toBe('https://openrouter.ai/api/v1/chat/completions');
+    const payload = await sentPayload();
+    expect(payload).toMatchObject({
+      model: GPT_AUDIO_MINI,
+      modalities: ['text', 'audio'],
+      audio: { voice: 'coral', format: 'pcm16' },
+      stream: true,
+    });
+    const messages = payload.messages as { role: string; content: string }[];
+    expect(messages[0].role).toBe('system');
+    expect(messages[0].content).toContain('Tom salvo.');
+    expect(messages[1]).toEqual({ role: 'user', content: 'Olá.' });
+    const wav = new Uint8Array(await res.arrayBuffer());
+    expect(Array.from(wav.subarray(44))).toEqual([1, 2, 3, 4]);
+  });
+
+  it('GPT Audio Mini rejeita voz de outro modelo', async () => {
+    expect((await POST(ttsRequest({ text: 'Olá.', model: GPT_AUDIO_MINI, voice: 'Kore' }))).status).toBe(400);
+    expect((await POST(ttsRequest({ text: 'Olá.', model: GPT_AUDIO_MINI, voice: 'nova' }))).status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('GPT Audio Mini sem áudio no stream vira 502 genérico', async () => {
+    fetchMock.mockResolvedValue(audioSse());
+    const res = await POST(ttsRequest({ text: 'Olá.', model: GPT_AUDIO_MINI, voice: 'marin' }));
+    expect(res.status).toBe(502);
+    expect(logger.error).toHaveBeenCalledWith('voice tts failed', {
+      provider: 'openrouter',
+      model: GPT_AUDIO_MINI,
+      status: 502,
+    });
+  });
+});
+
 describe('ttsModelSupportsInstructions', () => {
   it('distingue a família tts-1 dos modelos gpt-4o-*-tts', () => {
     expect(ttsModelSupportsInstructions('tts-1')).toBe(false);

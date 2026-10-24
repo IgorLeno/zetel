@@ -7,11 +7,15 @@ import {
   DEFAULT_TTS_VOICE,
   MAX_TTS_INSTRUCTIONS_CHARS,
   TTS_MODELS,
+  TTS_PROVIDERS,
   TTS_TONE_PRESETS,
-  TTS_VOICES,
   matchTonePreset,
+  ttsDefaultVoiceFor,
   ttsModelSupportsInstructions,
+  ttsProviderOf,
   ttsVoiceSupportedBy,
+  ttsVoicesFor,
+  type TtsProvider,
 } from '@/lib/tts-options';
 import { createSamplePlayer } from '@/lib/sample-player';
 
@@ -20,20 +24,23 @@ type Feedback = { kind: 'ok' | 'err'; text: string } | null;
 type VoiceSettings = { tts_model: string; tts_voice: string; tts_instructions: string };
 
 const CUSTOM_TONE = 'personalizado';
+const PROVIDER_LABELS: Record<TtsProvider, string> = { openai: 'OpenAI', openrouter: 'OpenRouter' };
 const SAMPLE_TEXT =
   'Oi! Vamos revisar juntos? Me conta o que você já entendeu do capítulo e a gente aprofunda daí.';
 
-async function readError(res: Response, fallback: string): Promise<string> {
+async function readError(res: Response, fallback: string, provider?: TtsProvider): Promise<string> {
   try {
     const data = (await res.json()) as { error?: unknown };
     if (typeof data.error === 'string' && data.error.trim()) {
-      return data.error === 'tts_unavailable' ? 'Chave OpenAI não configurada.' : data.error;
+      return data.error === 'tts_unavailable'
+        ? `Chave ${PROVIDER_LABELS[provider ?? 'openai']} não configurada.`
+        : data.error;
     }
   } catch { /* corpo não-JSON */ }
   return `${fallback} (${res.status}).`;
 }
 
-/** Aba Voz (SPEC-005): modelo, voz e tom da parceira por seleção validada. */
+/** Aba Voz (SPEC-005, SPEC-013): modelo por provedor, voz do modelo e tom. */
 export function VozPanel() {
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -70,6 +77,9 @@ export function VozPanel() {
   useEffect(() => () => playerRef.current?.stop(), []);
 
   const toneSupported = ttsModelSupportsInstructions(model);
+  const provider = ttsProviderOf(model);
+  const voices = ttsVoicesFor(model);
+  const defaultVoice = ttsDefaultVoiceFor(model);
   const voiceOk = ttsVoiceSupportedBy(model, voice);
   const trimmed = instructions.trim();
   const tooLong = trimmed.length > MAX_TTS_INSTRUCTIONS_CHARS;
@@ -79,7 +89,14 @@ export function VozPanel() {
 
   function onModelChange(next: string) {
     setModel(next);
-    setFeedback(null);
+    // Voz inexistente no novo modelo: troca pela padrão dele e avisa (SPEC-013 D8).
+    if (ttsVoiceSupportedBy(next, voice)) {
+      setFeedback(null);
+    } else {
+      const fallback = ttsDefaultVoiceFor(next);
+      setVoice(fallback);
+      setFeedback({ kind: 'ok', text: `A voz ${voice} não existe neste modelo; selecionada ${fallback}.` });
+    }
   }
 
   function onPresetChange(id: string) {
@@ -109,7 +126,7 @@ export function VozPanel() {
       if (result.kind === 'http-error') {
         setFeedback({
           kind: 'err',
-          text: await readError(result.response, 'Falha ao gerar amostra'),
+          text: await readError(result.response, 'Falha ao gerar amostra', provider),
         });
       } else if (result.kind === 'play-error') {
         setFeedback({ kind: 'err', text: 'Não foi possível tocar a amostra.' });
@@ -162,29 +179,32 @@ export function VozPanel() {
       <div className="field">
         <label className="field-label" htmlFor="tts-model">Modelo</label>
         <select id="tts-model" value={model} onChange={(e) => onModelChange(e.target.value)}>
-          {TTS_MODELS.map((m) => (
-            <option key={m.id} value={m.id}>{m.label}</option>
+          {TTS_PROVIDERS.map((p) => (
+            <optgroup key={p} label={PROVIDER_LABELS[p]}>
+              {TTS_MODELS.filter((m) => m.provider === p).map((m) => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <p className="field-hint">
-          O gpt-4o-mini-tts soa mais natural e segue o tom abaixo; tts-1 e tts-1-hd ignoram o tom.
+          gpt-4o-mini-tts e GPT Audio Mini seguem o tom abaixo; tts-1, tts-1-hd e os Gemini o
+          ignoram. Modelos OpenRouter usam a chave OpenRouter.
         </p>
       </div>
 
       <div className="field">
         <label className="field-label" htmlFor="tts-voice">Voz</label>
         <select id="tts-voice" value={voice} onChange={(e) => setVoice(e.target.value)}>
-          {TTS_VOICES.map((v) => {
-            const supported = ttsVoiceSupportedBy(model, v.id);
-            return (
-              <option key={v.id} value={v.id} disabled={!supported}>
-                {v.id}
-                {v.id === DEFAULT_TTS_VOICE ? ' (padrão)' : ''}
-                {supported ? '' : ' — só gpt-4o-mini-tts'}
-              </option>
-            );
-          })}
+          {!voiceOk && <option value={voice} disabled>{voice} — indisponível</option>}
+          {voices.map((v) => (
+            <option key={v} value={v}>
+              {v}
+              {v === defaultVoice ? ' (padrão)' : ''}
+            </option>
+          ))}
         </select>
+        <p className="field-hint">{voices.length} vozes disponíveis neste modelo.</p>
         {!voiceOk && (
           <p className="feedback err">A voz {voice} não existe no {model}. Escolha outra voz.</p>
         )}
@@ -231,7 +251,8 @@ export function VozPanel() {
           </button>
         </div>
         <p className="field-hint">
-          A amostra usa a seleção atual sem salvar; cada clique é uma chamada curta à OpenAI.
+          A amostra usa a seleção atual sem salvar; cada clique é uma chamada curta ao provedor
+          ({PROVIDER_LABELS[provider]}).
         </p>
         {feedback && <p className={`feedback ${feedback.kind}`}>{feedback.text}</p>}
       </div>

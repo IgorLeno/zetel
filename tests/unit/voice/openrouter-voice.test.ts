@@ -9,9 +9,20 @@ vi.mock('@/lib/config', () => ({
   }),
 }));
 
-const { hasOpenRouterVoiceKey, pcmSampleRate, pcmToWav, readOpenRouterVoiceKey, synthesizeSpeechOpenRouter } = await import(
-  '@/lib/openrouter-voice'
-);
+const {
+  chatAudioSystemPrompt,
+  collectChatAudio,
+  hasOpenRouterVoiceKey,
+  pcmSampleRate,
+  pcmToWav,
+  readOpenRouterVoiceKey,
+  synthesizeSpeechOpenRouter,
+  synthesizeSpeechOpenRouterChatAudio,
+} = await import('@/lib/openrouter-voice');
+
+const sseLine = (event: unknown) => `data: ${JSON.stringify(event)}`;
+const audioDelta = (bytes: number[]) =>
+  sseLine({ choices: [{ delta: { audio: { data: Buffer.from(bytes).toString('base64') } } }] });
 
 const fetchMock = vi.fn();
 
@@ -102,5 +113,48 @@ describe('openrouter-voice', () => {
     expect((err as Error & { status?: number }).status).toBe(429);
     expect((err as Error).message).toBe('OpenRouter TTS: 429');
     expect((err as Error).message).not.toMatch(/detalhe|sk-or|Olá/);
+  });
+
+  it('collectChatAudio junta só os deltas de áudio e ignora transcrição, comentários e [DONE]', () => {
+    const sse = [
+      ': OPENROUTER PROCESSING',
+      sseLine({ choices: [{ delta: { role: 'assistant' } }] }),
+      audioDelta([1, 2]),
+      sseLine({ choices: [{ delta: { audio: { transcript: 'Olá' } } }] }),
+      audioDelta([3]),
+      'data: {quebrado',
+      'data: [DONE]',
+    ].join('\n\n');
+    expect(Array.from(collectChatAudio(sse))).toEqual([1, 2, 3]);
+  });
+
+  it('collectChatAudio: erro no meio do stream lança só status genérico', () => {
+    const sse = [audioDelta([1]), sseLine({ error: { message: 'detalhe sigiloso' } })].join('\n');
+    const err = (() => {
+      try {
+        collectChatAudio(sse);
+      } catch (e) {
+        return e;
+      }
+    })();
+    expect((err as Error).message).toBe('OpenRouter TTS: 502');
+  });
+
+  it('chatAudioSystemPrompt pede leitura literal e anexa o tom só quando há', () => {
+    expect(chatAudioSystemPrompt(undefined)).toMatch(/exatamente/);
+    expect(chatAudioSystemPrompt(undefined)).not.toMatch(/Como falar/);
+    expect(chatAudioSystemPrompt('  Calmo.  ')).toMatch(/Como falar: Calmo\.$/);
+  });
+
+  it('chat com áudio: erro HTTP lança só o status', async () => {
+    fetchMock.mockResolvedValue(Response.json({ error: { message: 'sk-or-test' } }, { status: 400 }));
+    const err = await synthesizeSpeechOpenRouterChatAudio({
+      apiKey: 'sk-or-test',
+      text: 'Olá.',
+      voice: 'marin',
+      model: 'openai/gpt-audio-mini',
+    }).catch((e: unknown) => e);
+    expect((err as Error & { status?: number }).status).toBe(400);
+    expect((err as Error).message).not.toMatch(/sk-or/);
   });
 });

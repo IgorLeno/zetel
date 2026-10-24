@@ -7,11 +7,16 @@ import {
   readVoiceKey,
   synthesizeSpeech,
 } from '@/lib/openai-voice';
-import { readOpenRouterVoiceKey, synthesizeSpeechOpenRouter } from '@/lib/openrouter-voice';
+import {
+  readOpenRouterVoiceKey,
+  synthesizeSpeechOpenRouter,
+  synthesizeSpeechOpenRouterChatAudio,
+} from '@/lib/openrouter-voice';
 import { getSetting } from '@/lib/settings';
 import {
   isTtsModel,
   isTtsVoice,
+  ttsEndpointOf,
   ttsModelSupportsInstructions,
   ttsProviderOf,
   ttsVoiceSupportedBy,
@@ -109,9 +114,11 @@ export async function POST(request: Request) {
 
   try {
     const upstream =
-      provider === 'openrouter'
-        ? await synthesizeSpeechOpenRouter({ apiKey, text, voice, model })
-        : await synthesizeSpeech({ apiKey, text, voice, model, instructions });
+      provider === 'openai'
+        ? await synthesizeSpeech({ apiKey, text, voice, model, instructions })
+        : ttsEndpointOf(model) === 'chat-audio'
+          ? await synthesizeSpeechOpenRouterChatAudio({ apiKey, text, voice, model, instructions })
+          : await synthesizeSpeechOpenRouter({ apiKey, text, voice, model });
     return new Response(upstream.body, {
       headers: {
         'Content-Type': provider === 'openrouter' ? 'audio/wav' : 'audio/mpeg',
