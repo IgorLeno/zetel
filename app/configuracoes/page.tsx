@@ -16,6 +16,7 @@ export const metadata: Metadata = { title: 'Configurações' };
 
 export default function ConfiguracoesPage() {
   const vaultPath = getSetting('vault_path') ?? '';
+  const channelDir = getSetting('channel_dir') ?? '';
   const credentialSource = resolveOpenRouterCredential().source;
   const model = getSetting('default_model') ?? getOpenRouterModel();
   const studyGuideModel = getSetting('study_guide_model') ?? '';
@@ -51,6 +52,7 @@ export default function ConfiguracoesPage() {
         </header>
           <ConfiguracoesTabs
             initialVaultPath={vaultPath}
+            initialChannelDir={channelDir}
             credentialSource={credentialSource}
             initialModel={model}
             initialStudyGuideModel={studyGuideModel}

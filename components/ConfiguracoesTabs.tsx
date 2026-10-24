@@ -9,6 +9,7 @@ type Tab = 'geral' | 'voz' | 'lixeira';
 
 export function ConfiguracoesTabs({
   initialVaultPath,
+  initialChannelDir,
   credentialSource,
   initialModel,
   initialStudyGuideModel,
@@ -27,6 +28,7 @@ export function ConfiguracoesTabs({
   initialMemoryModelHistory,
 }: {
   initialVaultPath: string;
+  initialChannelDir: string;
   credentialSource: 'config' | 'environment' | null;
   initialModel: string;
   initialStudyGuideModel: string;
@@ -75,6 +77,7 @@ export function ConfiguracoesTabs({
       {tab === 'geral' ? (
         <ConfiguracoesForm
           initialVaultPath={initialVaultPath}
+          initialChannelDir={initialChannelDir}
           credentialSource={credentialSource}
           initialModel={initialModel}
           initialStudyGuideModel={initialStudyGuideModel}

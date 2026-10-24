@@ -2,6 +2,8 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // tsconfig usa jsx: preserve (Next compila); testes que renderizam componentes precisam do runtime automático.
+  esbuild: { jsx: 'automatic' },
   resolve: {
     alias: {
       '@': resolve(__dirname, '.'),

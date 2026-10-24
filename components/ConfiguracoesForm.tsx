@@ -62,6 +62,7 @@ type SettingsResponse = {
   note_model_history?: unknown;
   memory_model_history?: unknown;
   history?: unknown;
+  channel_dir?: unknown;
   error?: string;
 };
 
@@ -242,6 +243,7 @@ function ModelField({
 
 export function ConfiguracoesForm({
   initialVaultPath,
+  initialChannelDir,
   credentialSource,
   initialModel,
   initialStudyGuideModel,
@@ -260,6 +262,7 @@ export function ConfiguracoesForm({
   initialMemoryModelHistory,
 }: {
   initialVaultPath: string;
+  initialChannelDir: string;
   credentialSource: 'config' | 'environment' | null;
   initialModel: string;
   initialStudyGuideModel: string;
@@ -281,6 +284,11 @@ export function ConfiguracoesForm({
   const [vaultPath, setVaultPath] = useState(initialVaultPath);
   const [vaultFeedback, setVaultFeedback] = useState<Feedback>(null);
   const [savingVault, setSavingVault] = useState(false);
+
+  // ── Canal do ChatGPT (SPEC-018 RF2) ──
+  const [channelDir, setChannelDir] = useState(initialChannelDir);
+  const [channelDirFeedback, setChannelDirFeedback] = useState<Feedback>(null);
+  const [savingChannelDir, setSavingChannelDir] = useState(false);
 
   // ── Chave ──
   const [apiKey, setApiKey] = useState('');
@@ -428,6 +436,18 @@ export function ConfiguracoesForm({
     } finally {
       setSavingVault(false);
     }
+  }
+
+  // Vazio desliga o canal; a rota valida e devolve o caminho real gravado.
+  async function saveChannelDirField(value: string) {
+    const trimmed = value.trim();
+    await persistSetting(
+      { channel_dir: trimmed },
+      setSavingChannelDir,
+      setChannelDirFeedback,
+      trimmed ? 'Canal salvo.' : 'Canal removido.',
+      (data) => setChannelDir(typeof data.channel_dir === 'string' ? data.channel_dir : ''),
+    );
   }
 
   async function saveKey() {
@@ -736,6 +756,46 @@ export function ConfiguracoesForm({
           existir.
         </p>
         {vaultFeedback && <p className={`feedback ${vaultFeedback.kind}`}>{vaultFeedback.text}</p>}
+      </div>
+
+      {/* ── Canal do ChatGPT ── */}
+      <div className="field" id="canal">
+        <label className="field-label" htmlFor="channel-dir">
+          Canal do ChatGPT
+        </label>
+        <div className="field-row">
+          <input
+            id="channel-dir"
+            className="input"
+            type="text"
+            placeholder="/home/voce/zetel-canal"
+            value={channelDir}
+            onChange={(e) => setChannelDir(e.target.value)}
+          />
+          <button
+            className="btn primary"
+            onClick={() => saveChannelDirField(channelDir)}
+            disabled={savingChannelDir}
+            type="button"
+          >
+            {savingChannelDir ? 'Salvando…' : 'Salvar'}
+          </button>
+          <button
+            className="btn"
+            onClick={() => saveChannelDirField('')}
+            disabled={savingChannelDir}
+            type="button"
+          >
+            Limpar
+          </button>
+        </div>
+        <p className="field-hint">
+          Clone local do repositório GitHub privado (o canal) por onde chegam os relatórios do ChatGPT.
+          Caminho absoluto de um diretório existente, separado do vault. Vazio desliga o canal.
+        </p>
+        {channelDirFeedback && (
+          <p className={`feedback ${channelDirFeedback.kind}`}>{channelDirFeedback.text}</p>
+        )}
       </div>
 
       {/* ── OpenRouter ── */}
