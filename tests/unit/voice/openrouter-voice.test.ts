@@ -18,11 +18,19 @@ const {
   readOpenRouterVoiceKey,
   synthesizeSpeechOpenRouter,
   synthesizeSpeechOpenRouterChatAudio,
+  transcriptMatchesText,
 } = await import('@/lib/openrouter-voice');
 
 const sseLine = (event: unknown) => `data: ${JSON.stringify(event)}`;
 const audioDelta = (bytes: number[]) =>
   sseLine({ choices: [{ delta: { audio: { data: Buffer.from(bytes).toString('base64') } } }] });
+
+const transcriptDelta = (transcript: string) =>
+  sseLine({ choices: [{ delta: { audio: { transcript } } }] });
+const sseResponse = (...lines: string[]) =>
+  new Response([...lines, 'data: [DONE]'].join('\n\n'), {
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
 
 const fetchMock = vi.fn();
 
@@ -115,17 +123,20 @@ describe('openrouter-voice', () => {
     expect((err as Error).message).not.toMatch(/detalhe|sk-or|Olá/);
   });
 
-  it('collectChatAudio junta só os deltas de áudio e ignora transcrição, comentários e [DONE]', () => {
+  it('collectChatAudio junta áudio e transcrição; ignora comentários e [DONE]', () => {
     const sse = [
       ': OPENROUTER PROCESSING',
       sseLine({ choices: [{ delta: { role: 'assistant' } }] }),
       audioDelta([1, 2]),
-      sseLine({ choices: [{ delta: { audio: { transcript: 'Olá' } } }] }),
+      transcriptDelta('Olá'),
       audioDelta([3]),
+      transcriptDelta(', Igor.'),
       'data: {quebrado',
       'data: [DONE]',
     ].join('\n\n');
-    expect(Array.from(collectChatAudio(sse))).toEqual([1, 2, 3]);
+    const { pcm, transcript } = collectChatAudio(sse);
+    expect(Array.from(pcm)).toEqual([1, 2, 3]);
+    expect(transcript).toBe('Olá, Igor.');
   });
 
   it('collectChatAudio: erro no meio do stream lança só status genérico', () => {
@@ -144,6 +155,70 @@ describe('openrouter-voice', () => {
     expect(chatAudioSystemPrompt(undefined)).toMatch(/exatamente/);
     expect(chatAudioSystemPrompt(undefined)).not.toMatch(/Como falar/);
     expect(chatAudioSystemPrompt('  Calmo.  ')).toMatch(/Como falar: Calmo\.$/);
+  });
+
+  it('transcriptMatchesText aceita leitura literal e rejeita resposta à frase', () => {
+    expect(transcriptMatchesText('Oi, Igor! 😊', 'Oi, Igor!')).toBe(true);
+    expect(transcriptMatchesText('Ótimo — é isso.', 'otimo, e isso')).toBe(true);
+    expect(transcriptMatchesText('Por onde começamos?', '')).toBe(true);
+    expect(
+      transcriptMatchesText('Oi, Igor! 😊', 'Oi, Igor! Tudo bem? Como posso te ajudar hoje?'),
+    ).toBe(false);
+    expect(
+      transcriptMatchesText('Por onde começamos?', 'Vamos começar pelo primeiro capítulo, que tal?'),
+    ).toBe(false);
+  });
+
+  it('chat com áudio: few-shot de leitura e WAV quando a transcrição bate', async () => {
+    fetchMock.mockResolvedValue(sseResponse(audioDelta([1, 2]), transcriptDelta('Oi, Igor!')));
+    const res = await synthesizeSpeechOpenRouterChatAudio({
+      apiKey: 'sk-or-test',
+      text: 'Oi, Igor!',
+      voice: 'marin',
+      model: 'openai/gpt-audio-mini',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.messages.map((m: { role: string }) => m.role)).toEqual([
+      'system',
+      'user',
+      'assistant',
+      'user',
+    ]);
+    expect(body.messages[1].content).toBe(body.messages[2].content);
+    expect(body.messages[3].content).toBe('Oi, Igor!');
+    expect(res.headers.get('Content-Type')).toBe('audio/wav');
+    expect(new Uint8Array(await res.arrayBuffer()).byteLength).toBe(44 + 2);
+  });
+
+  it('chat com áudio: fala divergente tenta de novo e usa a leitura correta', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        sseResponse(audioDelta([9, 9, 9]), transcriptDelta('Oi! Tudo bem? Como posso te ajudar hoje?')),
+      )
+      .mockResolvedValueOnce(sseResponse(audioDelta([1, 2]), transcriptDelta('Oi, Igor!')));
+    const res = await synthesizeSpeechOpenRouterChatAudio({
+      apiKey: 'sk-or-test',
+      text: 'Oi, Igor!',
+      voice: 'marin',
+      model: 'openai/gpt-audio-mini',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(Array.from(new Uint8Array(await res.arrayBuffer()).slice(44))).toEqual([1, 2]);
+  });
+
+  it('chat com áudio: divergência persistente lança 502 em vez de tocar a resposta', async () => {
+    fetchMock.mockImplementation(async () =>
+      sseResponse(audioDelta([9]), transcriptDelta('Vamos começar pelo primeiro capítulo, que tal?')),
+    );
+    const err = await synthesizeSpeechOpenRouterChatAudio({
+      apiKey: 'sk-or-test',
+      text: 'Por onde começamos?',
+      voice: 'marin',
+      model: 'openai/gpt-audio-mini',
+    }).catch((e: unknown) => e);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect((err as Error & { status?: number }).status).toBe(502);
   });
 
   it('chat com áudio: erro HTTP lança só o status', async () => {

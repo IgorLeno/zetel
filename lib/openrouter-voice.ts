@@ -106,16 +106,17 @@ export function chatAudioSystemPrompt(instructions: string | undefined): string 
   return tone ? `${base}\n\nComo falar: ${tone}` : base;
 }
 
-/** Junta os `delta.audio.data` (base64) do SSE; ignora transcrição e keep-alives. */
-export function collectChatAudio(sse: string): Uint8Array {
+/** Junta os `delta.audio.data` (base64) e a transcrição do SSE; ignora keep-alives. */
+export function collectChatAudio(sse: string): { pcm: Uint8Array; transcript: string } {
   const chunks: Buffer[] = [];
+  let transcript = '';
   for (const line of sse.split('\n')) {
     if (!line.startsWith('data:')) continue;
     const payload = line.slice(5).trim();
     if (!payload || payload === '[DONE]') continue;
     let event: {
       error?: unknown;
-      choices?: { delta?: { audio?: { data?: unknown } } }[];
+      choices?: { delta?: { audio?: { data?: unknown; transcript?: unknown } } }[];
     };
     try {
       event = JSON.parse(payload);
@@ -124,20 +125,52 @@ export function collectChatAudio(sse: string): Uint8Array {
     }
     // Erro no meio do stream: só o status genérico, nunca o corpo (regra 6).
     if (event.error) throw new OpenRouterTtsError(502);
-    const data = event.choices?.[0]?.delta?.audio?.data;
-    if (typeof data === 'string' && data) chunks.push(Buffer.from(data, 'base64'));
+    const audio = event.choices?.[0]?.delta?.audio;
+    if (typeof audio?.data === 'string' && audio.data) chunks.push(Buffer.from(audio.data, 'base64'));
+    if (typeof audio?.transcript === 'string') transcript += audio.transcript;
   }
-  return new Uint8Array(Buffer.concat(chunks));
+  return { pcm: new Uint8Array(Buffer.concat(chunks)), transcript };
+}
+
+function speechWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/**
+ * O modelo de chat às vezes responde à frase em vez de lê-la ("Oi!" vira uma
+ * saudação nova). Aceita a fala se quase toda palavra transcrita está no texto;
+ * a folga cobre número lido por extenso. Sem transcrição não há como checar.
+ */
+export function transcriptMatchesText(text: string, transcript: string): boolean {
+  const spoken = speechWords(transcript);
+  if (spoken.length === 0) return true;
+  const expected = speechWords(text);
+  const known = new Set(expected);
+  const extra = spoken.filter((word) => !known.has(word)).length;
+  return extra <= Math.max(2, Math.ceil(expected.length * 0.25));
 }
 
 export interface OpenRouterChatAudioParams extends OpenRouterSynthesizeParams {
   instructions?: string;
 }
 
+/** Exemplo de leitura literal: frase que convida resposta é só repetida. */
+const CHAT_AUDIO_EXAMPLE = 'Oi! Tudo bem com você? Por onde começamos?';
+
+/** Uma nova tentativa quando a fala diverge do texto; depois, 502 (texto segue no chat, D41). */
+const CHAT_AUDIO_ATTEMPTS = 2;
+
 /**
  * Modelo de chat com saída de áudio (ex.: `openai/gpt-audio-mini`): o
  * OpenRouter exige `stream: true` para áudio; pede `pcm16`, junta o SSE inteiro
- * e devolve WAV `audio/wav`, como o caminho `/audio/speech`.
+ * e devolve WAV `audio/wav`, como o caminho `/audio/speech`. A transcrição do
+ * próprio stream confirma que o texto foi lido, não respondido.
  */
 export async function synthesizeSpeechOpenRouterChatAudio({
   apiKey,
@@ -146,29 +179,35 @@ export async function synthesizeSpeechOpenRouterChatAudio({
   model,
   instructions,
 }: OpenRouterChatAudioParams): Promise<Response> {
-  const res = await fetch(OPENROUTER_CHAT_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      modalities: ['text', 'audio'],
-      audio: { voice, format: 'pcm16' },
-      stream: true,
-      messages: [
-        { role: 'system', content: chatAudioSystemPrompt(instructions) },
-        { role: 'user', content: text },
-      ],
-    }),
-  });
-  if (!res.ok) {
-    await res.body?.cancel().catch(() => undefined);
-    throw new OpenRouterTtsError(res.status);
+  for (let attempt = 1; attempt <= CHAT_AUDIO_ATTEMPTS; attempt++) {
+    const res = await fetch(OPENROUTER_CHAT_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        modalities: ['text', 'audio'],
+        audio: { voice, format: 'pcm16' },
+        stream: true,
+        messages: [
+          { role: 'system', content: chatAudioSystemPrompt(instructions) },
+          { role: 'user', content: CHAT_AUDIO_EXAMPLE },
+          { role: 'assistant', content: CHAT_AUDIO_EXAMPLE },
+          { role: 'user', content: text },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      throw new OpenRouterTtsError(res.status);
+    }
+    const { pcm, transcript } = collectChatAudio(await res.text());
+    if (pcm.byteLength === 0) throw new OpenRouterTtsError(502);
+    if (!transcriptMatchesText(text, transcript)) continue;
+    const wav = pcmToWav(pcm, CHAT_AUDIO_SAMPLE_RATE);
+    return new Response(wav, { headers: { 'Content-Type': 'audio/wav' } });
   }
-  const pcm = collectChatAudio(await res.text());
-  if (pcm.byteLength === 0) throw new OpenRouterTtsError(502);
-  const wav = pcmToWav(pcm, CHAT_AUDIO_SAMPLE_RATE);
-  return new Response(wav, { headers: { 'Content-Type': 'audio/wav' } });
+  throw new OpenRouterTtsError(502);
 }

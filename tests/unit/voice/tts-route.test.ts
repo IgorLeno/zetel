@@ -253,7 +253,7 @@ describe('POST /api/voice/tts com os modelos novos do OpenRouter', () => {
     const messages = payload.messages as { role: string; content: string }[];
     expect(messages[0].role).toBe('system');
     expect(messages[0].content).toContain('Tom salvo.');
-    expect(messages[1]).toEqual({ role: 'user', content: 'Olá.' });
+    expect(messages.at(-1)).toEqual({ role: 'user', content: 'Olá.' });
     const wav = new Uint8Array(await res.arrayBuffer());
     expect(Array.from(wav.subarray(44))).toEqual([1, 2, 3, 4]);
   });
