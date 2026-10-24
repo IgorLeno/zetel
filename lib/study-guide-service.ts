@@ -1451,8 +1451,7 @@ function guideNavScript(): string {
       var id = a.getAttribute('data-nav-target');
       var target = id ? document.getElementById(id) : null;
       if (target) {
-        target.scrollIntoView({ block:'start' });
-        setActiveNav(id);
+        jumpToNav(id, target);
         var loc = target.hasAttribute('data-guide-block-id')
           ? target
           : target.querySelector('[data-guide-block-id]');
@@ -1460,16 +1459,37 @@ function guideNavScript(): string {
       }
     });
   });
+  // Seções aninhadas (secoes ⊃ secao-N): vale a mais interna sob a linha de foco,
+  // que é a última em ordem de documento. Depois de um salto pelos botões ou pelo
+  // índice, a seção escolhida fica fixada até o usuário rolar por conta própria,
+  // para a rolagem suave não reescrever o contador no meio do caminho.
+  var pinnedNav = '';
+  function unpinNav(){ pinnedNav = ''; }
+  ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function(type){
+    window.addEventListener(type, unpinNav, { passive:true, capture:true });
+  });
+  function jumpToNav(id, target){
+    target.scrollIntoView({ block:'start' });
+    setActiveNav(id);
+    pinnedNav = id;
+  }
   function updateActiveFromViewport(){
+    if (pinnedNav || !navSections.length) return;
+    var doc = document.documentElement;
+    if (window.innerHeight + window.scrollY >= doc.scrollHeight - 2) {
+      setActiveNav(navSections[navSections.length - 1].getAttribute('data-nav-section'));
+      return;
+    }
     var focusLine = window.innerHeight * 0.35;
+    var hit = null;
     var fallback = null;
     var fallbackDistance = Infinity;
     for (var n = 0; n < navSections.length; n += 1) {
       var el = navSections[n];
       var r = el.getBoundingClientRect();
       if (r.top <= focusLine && r.bottom >= focusLine) {
-        setActiveNav(el.getAttribute('data-nav-section'));
-        return;
+        hit = el;
+        continue;
       }
       if (r.bottom > 0 && r.top < window.innerHeight) {
         var distance = Math.abs(r.top - focusLine);
@@ -1479,7 +1499,8 @@ function guideNavScript(): string {
         }
       }
     }
-    if (fallback) setActiveNav(fallback.getAttribute('data-nav-section'));
+    var chosen = hit || fallback;
+    if (chosen) setActiveNav(chosen.getAttribute('data-nav-section'));
   }
   if (blocks.length && 'IntersectionObserver' in window) {
     var io = new IntersectionObserver(function(entries){
@@ -1538,8 +1559,7 @@ function guideNavScript(): string {
     guideBtnPrev.addEventListener('click', function(){
       var idx = activeNavIdx - 1;
       if (idx >= 0 && navSections[idx]) {
-        navSections[idx].scrollIntoView({ block:'start' });
-        setActiveNav(navSections[idx].getAttribute('data-nav-section'));
+        jumpToNav(navSections[idx].getAttribute('data-nav-section'), navSections[idx]);
         var loc = navSections[idx].querySelector('[data-guide-block-id]') || navSections[idx];
         post(loc);
         closeGuideToc();
@@ -1550,8 +1570,7 @@ function guideNavScript(): string {
     guideBtnNext.addEventListener('click', function(){
       var idx = activeNavIdx + 1;
       if (idx < navSections.length && navSections[idx]) {
-        navSections[idx].scrollIntoView({ block:'start' });
-        setActiveNav(navSections[idx].getAttribute('data-nav-section'));
+        jumpToNav(navSections[idx].getAttribute('data-nav-section'), navSections[idx]);
         var loc = navSections[idx].querySelector('[data-guide-block-id]') || navSections[idx];
         post(loc);
         closeGuideToc();

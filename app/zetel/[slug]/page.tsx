@@ -5,7 +5,6 @@ import { getZetelBySlug } from '@/lib/zetel-service';
 import { ChevronLeftIcon } from '@/components/icons/ChevronLeftIcon';
 import { ZetelWorkspace } from '@/components/ZetelWorkspace';
 import { ReadingProgress } from '@/components/ReadingProgress';
-import { StudyDrawerButton } from '@/components/ZetelWorkspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +62,6 @@ export default async function ZetelDetailPage({
         <span className="doc-title">{zetel.displayName}</span>
         <ReadingProgress />
         <div className="topbar-spacer" />
-        {hasSources && <StudyDrawerButton />}
       </header>
       <div className="page-body page-body--zetel">
         <ZetelWorkspace

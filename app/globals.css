@@ -1010,6 +1010,24 @@ svg { stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round
 .partner-switch .partner-orb { animation: none; }
 .partner-switch-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .partner-switch svg { width: 14px; height: 14px; color: var(--text-3); flex: none; }
+.chat-drawer-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--pill);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  color: var(--text-2);
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: transform var(--t-fast), box-shadow var(--t-fast), color var(--t-fast);
+}
+.chat-drawer-btn svg { width: 17px; height: 17px; }
+.chat-drawer-btn:hover, .chat-drawer-btn.on { color: var(--text); transform: translateY(-1px); box-shadow: var(--shadow-lg); }
 .chat-session-name {
   min-width: 0;
   max-width: 260px;
@@ -1521,6 +1539,8 @@ svg { stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round
   .chat-messages { padding: 8px 10px 20px; }
   .composer { padding: 0 10px 4px; }
   .chat-session-name { display: none; }
+  .chat-drawer-btn { padding: 0; width: 40px; justify-content: center; }
+  .chat-drawer-btn span { display: none; }
   .material-reopen { padding: 0; width: 40px; justify-content: center; }
   .material-reopen span { display: none; }
   .study-shell:not(.study-shell--material) .chat-panel-header { padding-right: 60px; }

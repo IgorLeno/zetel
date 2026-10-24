@@ -22,6 +22,7 @@ import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
 import { useBargeIn } from '@/hooks/useBargeIn';
 import { shouldArmBargeIn } from '@/lib/barge-in';
 import { readUiPref, writeUiPref, VOICE_PREFS } from '@/lib/ui-prefs';
+import { StudyDrawerButton } from './StudyDrawerButton';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
 type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'stopped' | 'error';
@@ -1279,6 +1280,7 @@ export function ChatPanel({
           <span className="partner-switch-name">{partnerName}</span>
           <svg viewBox="0 0 16 16" aria-hidden><path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
+        <StudyDrawerButton />
         {currentSession && (
           <span className="chat-session-name" title={currentSession.title}>{currentSession.title}</span>
         )}

@@ -10,20 +10,9 @@ import { NotasPanel } from './NotasPanel';
 import { CuradoriaPanel } from './CuradoriaPanel';
 import { PdfStudyView } from './PdfStudyView';
 import { PartnerSheet } from './PartnerSheet';
+import { isDrawerView, type DrawerView } from './StudyDrawerButton';
 
 type ReadingView = 'tecnico' | 'guia-estudo';
-export type DrawerView =
-  | 'arquivos'
-  | 'notas-rapidas'
-  | 'notas-literatura'
-  | 'notas-elaboradas'
-  | 'notas-do-usuario'
-  | 'curadoria'
-  | 'artefatos';
-
-const DRAWER_VIEWS: readonly DrawerView[] = [
-  'arquivos', 'notas-rapidas', 'notas-literatura', 'notas-elaboradas', 'notas-do-usuario', 'curadoria', 'artefatos',
-];
 
 const NOTE_TABS: { view: DrawerView; label: string; tipo: 'rapida' | 'literatura' | 'elaborada' | 'minha-nota' }[] = [
   { view: 'notas-rapidas', label: 'Rápidas', tipo: 'rapida' },
@@ -31,10 +20,6 @@ const NOTE_TABS: { view: DrawerView; label: string; tipo: 'rapida' | 'literatura
   { view: 'notas-elaboradas', label: 'Elaboradas', tipo: 'elaborada' },
   { view: 'notas-do-usuario', label: 'Minhas', tipo: 'minha-nota' },
 ];
-
-function isDrawerView(value: string | null): value is DrawerView {
-  return value !== null && (DRAWER_VIEWS as readonly string[]).includes(value);
-}
 
 function WorkspaceView({
   zetelId,
@@ -144,29 +129,6 @@ export function ZetelWorkspace(props: {
   return (
     <Suspense fallback={null}>
       <WorkspaceView {...props} />
-    </Suspense>
-  );
-}
-
-/** Botão da barra do Zetel que abre a gaveta de fontes e notas. */
-function DrawerButtonInner() {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const params = new URLSearchParams(searchParams.toString());
-  const open = isDrawerView(params.get('painel'));
-  params.set('painel', 'arquivos');
-  return (
-    <Link href={`${pathname}?${params.toString()}`} scroll={false} className={`topbar-btn${open ? ' on' : ''}`}>
-      <svg viewBox="0 0 16 16" aria-hidden><path d="M3 4h10M3 8h10M3 12h6" strokeLinecap="round" /></svg>
-      <span>Fontes & notas</span>
-    </Link>
-  );
-}
-
-export function StudyDrawerButton() {
-  return (
-    <Suspense fallback={null}>
-      <DrawerButtonInner />
     </Suspense>
   );
 }
