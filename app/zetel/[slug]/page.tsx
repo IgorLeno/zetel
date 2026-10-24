@@ -5,6 +5,7 @@ import { getZetelBySlug } from '@/lib/zetel-service';
 import { ChevronLeftIcon } from '@/components/icons/ChevronLeftIcon';
 import { ZetelWorkspace } from '@/components/ZetelWorkspace';
 import { ReadingProgress } from '@/components/ReadingProgress';
+import { StudyDrawerButton } from '@/components/StudyDrawerButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,10 +63,13 @@ export default async function ZetelDetailPage({
         <span className="doc-title">{zetel.displayName}</span>
         <ReadingProgress />
         <div className="topbar-spacer" />
+        {/* Sem fontes não há conversa (onde o botão vive): a Curadoria segue acessível pela barra. */}
+        {!hasSources && <StudyDrawerButton />}
       </header>
       <div className="page-body page-body--zetel">
         <ZetelWorkspace
           zetelId={zetel.id}
+          slug={zetel.slug}
           hasSources={hasSources}
           originalPdfId={firstPdf?.id ?? null}
           readingStale={zetel.readingStale}

@@ -119,8 +119,14 @@ ao calor trocado.
 
 ## No Zetel, depois de enviar o relatório
 
-1. Abra o Zetel → "Fontes & notas" → Fontes: **Buscar do canal** (só se o
-   relatório foi enviado pelo GitHub) e **Importar relatórios**.
+1. O centro da tela do Zetel mostra o cartão **Estudar com o ChatGPT**:
+   **Copiar instrução** (passo 2 de "Como usar", já com o slug), **Abrir
+   ChatGPT** e **Copiar abertura** (passo 5). Depois de "Abrir ChatGPT", o
+   Zetel fica **Ouvindo o canal…**: com a aba do Zetel visível, busca do canal
+   e importa a cada minuto; quando um relatório chega, aparece **Relatório
+   recebido** com o atalho **Revisar na Curadoria**. Sem o cartão, o caminho
+   manual continua: "Fontes & notas" → Fontes → **Buscar do canal** e
+   **Importar relatórios**.
 2. Aba **Curadoria**: **Curar relatórios** pede à IA candidatos (nota,
    conceito, passo a passo, questão) citando trechos do relatório.
 3. Em cada candidato: edite se quiser e **Confirmar**, ou **Rejeitar**. Só o

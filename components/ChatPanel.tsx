@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ChatMessage, CitedSource } from '@/types/chat-message';
 import type { StudySession } from '@/types/study-session';
@@ -22,7 +22,6 @@ import { useTtsQueue, extractSentences } from '@/hooks/useTtsQueue';
 import { useBargeIn } from '@/hooks/useBargeIn';
 import { shouldArmBargeIn } from '@/lib/barge-in';
 import { readUiPref, writeUiPref, VOICE_PREFS } from '@/lib/ui-prefs';
-import { StudyDrawerButton } from './StudyDrawerButton';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
 type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'stopped' | 'error';
@@ -145,6 +144,7 @@ export function ChatPanel({
   createSessionIfEmpty = false,
   active = true,
   onPartnerColorChange,
+  headerActions,
 }: {
   zetelId: string;
   currentReadingMode: ReadingMode;
@@ -168,6 +168,8 @@ export function ChatPanel({
   active?: boolean;
   /** Cor do parceiro atual, para o resto da tela de estudo acompanhar. */
   onPartnerColorChange?: (color: PartnerColor | null) => void;
+  /** Ações ao lado do seletor de parceiro (ex.: Fontes & notas). */
+  headerActions?: ReactNode;
 }) {
   const router = useRouter();
   // Ref: o fluxo de voz chama sendMessage por closures antigas; a página enviada
@@ -1280,7 +1282,7 @@ export function ChatPanel({
           <span className="partner-switch-name">{partnerName}</span>
           <svg viewBox="0 0 16 16" aria-hidden><path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
-        <StudyDrawerButton />
+        {headerActions}
         {currentSession && (
           <span className="chat-session-name" title={currentSession.title}>{currentSession.title}</span>
         )}
