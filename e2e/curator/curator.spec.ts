@@ -5,9 +5,9 @@ import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 
 /**
- * Ciclo do curador sem rede (SPEC-018 tarefa 008): relatório chega ao canal
- * (repositório bare local) → "Buscar do canal" → "Importar relatórios" →
- * curadoria (OpenRouter mockado no servidor) → confirmar → "Publicar
+ * Ciclo do curador sem rede (SPEC-018 tarefa 008): cartão "Estudar com o
+ * ChatGPT" → "Abrir ChatGPT" liga a escuta → relatório chega ao canal
+ * (repositório bare local) → "Relatório recebido" → curadoria (OpenRouter mockado no servidor) → confirmar → "Publicar
  * contexto" → CONTEXTO.md no remoto.
  */
 const ROOT = process.env.ZETEL_E2E_CURATOR_ROOT!;
@@ -75,7 +75,7 @@ test.afterAll(() => {
   if (ROOT.startsWith(join(tmpdir(), 'zetel-e2e-curator-'))) rmSync(ROOT, { recursive: true, force: true });
 });
 
-test('relatório do canal → curadoria → vault → CONTEXTO.md no canal', async ({ page, request }) => {
+test('relatório do canal → curadoria → vault → CONTEXTO.md no canal', async ({ page, context, request }) => {
   test.setTimeout(240_000);
 
   expect((await request.post('/api/vault', { data: { path: VAULT } })).ok()).toBe(true);
@@ -83,6 +83,37 @@ test('relatório do canal → curadoria → vault → CONTEXTO.md no canal', asy
   expect(created.status()).toBe(201);
   const { zetel } = (await created.json()) as { zetel: { id: string; slug: string } };
   expect((await request.put('/api/settings', { data: { channel_dir: CHANNEL } })).ok()).toBe(true);
+
+  // "Abrir ChatGPT" não sai para a rede: registra a chamada a window.open.
+  await page.addInitScript(() => {
+    const opened: unknown[][] = [];
+    (window as unknown as { __opened: unknown[][] }).__opened = opened;
+    window.open = ((...args: unknown[]) => {
+      opened.push(args);
+      return null;
+    }) as typeof window.open;
+  });
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  // Relógio controlado: a escuta verifica o canal a cada 60 s.
+  await page.clock.install();
+
+  await page.goto(`/zetel/${zetel.slug}`);
+  const card = page.getByTestId('chatgpt-study-card');
+  await expect(card.getByRole('heading', { name: 'Estudar com o ChatGPT' })).toBeVisible({ timeout: 60_000 });
+  await card.getByRole('button', { name: 'Copiar instrução' }).click();
+  await expect(card.getByText('Instrução copiada.')).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(`\`zetel: ${zetel.slug}\``);
+  await card.getByRole('button', { name: 'Copiar abertura' }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(`contexto/${zetel.slug}/CONTEXTO.md`);
+
+  await card.getByRole('button', { name: 'Abrir ChatGPT' }).click();
+  expect(await page.evaluate(() => (window as unknown as { __opened: unknown[][] }).__opened))
+    .toEqual([['https://chatgpt.com/', '_blank', 'noopener,noreferrer']]);
+  const listening = card.getByTestId('chatgpt-listening');
+  await expect(listening).toContainText('Ouvindo o canal…');
+  // Primeira verificação: canal sem relatório.
+  await expect(listening).toContainText('Última verificação', { timeout: 60_000 });
+  await expect(card.getByTestId('chatgpt-report-received')).toHaveCount(0);
 
   // O relatório chega ao canal (no uso real: upload do Igor no GitHub).
   const inbox = join(WRITER, 'inbox', zetel.slug);
@@ -92,13 +123,12 @@ test('relatório do canal → curadoria → vault → CONTEXTO.md no canal', asy
   git(WRITER, 'commit', '-q', '-m', 'relatório');
   git(WRITER, 'push', '-q', 'origin', 'main');
 
-  await page.goto(`/zetel/${zetel.slug}`);
-  await page.getByRole('button', { name: 'Buscar do canal' }).click();
-  await expect(page.getByText('Canal atualizado (1 commit novo)')).toBeVisible({ timeout: 60_000 });
-  await page.getByRole('button', { name: 'Importar relatórios' }).click();
-  await expect(page.getByText('1 relatório importado')).toBeVisible({ timeout: 30_000 });
-
-  await page.goto(`/zetel/${zetel.slug}?painel=curadoria`);
+  await page.clock.fastForward('01:00');
+  const received = card.getByTestId('chatgpt-report-received');
+  await expect(received).toContainText('Relatório recebido', { timeout: 60_000 });
+  await expect(received).toContainText('Um relatório novo chegou');
+  await received.getByRole('link', { name: 'Revisar na Curadoria' }).click();
+  await expect(page).toHaveURL(/painel=curadoria/);
   const panel = page.getByTestId('curadoria-panel');
   await expect(panel).toBeVisible({ timeout: 60_000 });
   await panel.getByTestId('curation-run').click();

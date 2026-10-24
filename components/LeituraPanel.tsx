@@ -5,8 +5,11 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { PartnerColor } from '@/lib/partner-identity';
 import { ChatPanel } from './ChatPanel';
+import { ChatGptStudyCard } from './ChatGptStudyCard';
+import { StudyDrawerButton } from './StudyDrawerButton';
 import { StudyShell } from './StudyShell';
 import { originalReadingQuery } from '@/lib/reading-links';
+import { BUILD_STEP_LABEL, buildStepUrl, planBuildSteps, type BuildStep } from '@/lib/reading-build-plan';
 
 type ReadingMode = 'tecnico' | 'guia-estudo';
 
@@ -54,6 +57,7 @@ interface ArtifactsInfo {
 
 export function LeituraPanel({
   zetelId,
+  slug,
   readingStale,
   lastBuiltAt,
   selectedMode,
@@ -61,6 +65,7 @@ export function LeituraPanel({
   originalPdfId = null,
 }: {
   zetelId: string;
+  slug: string;
   readingStale: boolean;
   lastBuiltAt: string | null;
   selectedMode: ReadingMode;
@@ -74,7 +79,11 @@ export function LeituraPanel({
   const [partnerColor, setPartnerColor] = useState<PartnerColor | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [building, setBuilding] = useState(false);
-  const [buildingMode, setBuildingMode] = useState<ReadingMode | null>(null);
+  const [buildStep, setBuildStep] = useState<BuildStep | null>(null);
+  // Centro da tela: o estudo pelo ChatGPT (padrão) ou o chat interno antigo.
+  const [centerView, setCenterView] = useState<'chatgpt' | 'interno'>('chatgpt');
+  // O chat interno só monta quando pedido e depois fica montado (streams sobrevivem à troca).
+  const [internalChatMounted, setInternalChatMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<ArtifactsInfo | null>(null);
   const [currentReadingMode, setCurrentReadingMode] = useState<ReadingMode>('tecnico');
@@ -194,28 +203,39 @@ export function LeituraPanel({
     return () => obs.disconnect();
   }, [postCurrentTheme]);
 
+  /** Um clique faz a sequência inteira: processar fontes → documento → guia (o que faltar). */
   async function onBuild() {
-    const mode = selectedMode;
+    const steps = planBuildSteps({ mode: selectedMode, readingStale, tecnicoBuilt });
     setBuilding(true);
-    setBuildingMode(mode);
     setError(null);
+    let changed = false;
     try {
-      const qs = mode === 'guia-estudo' ? '?mode=guia-estudo' : '';
-      const res = await fetch(`/api/zetels/${zetelId}/build${qs}`, { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? 'Falha ao construir a leitura.');
-        return;
+      for (const step of steps) {
+        setBuildStep(step);
+        const res = await fetch(buildStepUrl(zetelId, step), { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error ?? (step === 'process' ? 'Falha ao processar as fontes.' : 'Falha ao construir a leitura.'));
+          return;
+        }
+        changed = true;
       }
-      await loadArtifacts();
-      router.refresh();
-      setReloadNonce(Date.now());
     } catch {
       setError('Erro de rede ao construir a leitura.');
     } finally {
+      if (changed) {
+        await loadArtifacts();
+        router.refresh();
+        setReloadNonce(Date.now());
+      }
       setBuilding(false);
-      setBuildingMode(null);
+      setBuildStep(null);
     }
+  }
+
+  function openInternalChat() {
+    setInternalChatMounted(true);
+    setCenterView('interno');
   }
 
   const modeLabel = selectedMode === 'guia-estudo' ? 'Guia de estudo' : 'Documento técnico';
@@ -249,9 +269,7 @@ export function LeituraPanel({
         reader={building ? (
           <div className="empty-state leitura-empty">
             <span className="material-spinner" aria-hidden />
-            <p>{buildingMode === 'guia-estudo'
-              ? 'Preparando seu guia de estudo… isso pode levar até um minuto.'
-              : 'Montando o documento de leitura…'}</p>
+            <p>{BUILD_STEP_LABEL[buildStep ?? 'tecnico']}</p>
           </div>
         ) : viewArtifact === null ? (
           <div className="empty-state leitura-empty">
@@ -277,7 +295,13 @@ export function LeituraPanel({
             onLoad={postCurrentTheme}
           />
         )}
-        chat={<ChatPanel
+        chat={<>
+          <div style={{ display: centerView === 'chatgpt' ? 'contents' : 'none' }}>
+            <ChatGptStudyCard zetelId={zetelId} slug={slug} onUseInternalChat={openInternalChat} />
+          </div>
+          {internalChatMounted && (
+            <div style={{ display: centerView === 'interno' ? 'contents' : 'none' }}>
+              <ChatPanel
                 zetelId={zetelId}
                 active={chatActive}
                 currentReadingMode={currentReadingMode}
@@ -288,7 +312,16 @@ export function LeituraPanel({
                 currentGuideBlockIndex={currentGuideBlockIndex}
                 currentGuideBlockTotal={currentGuideBlockTotal}
                 onPartnerColorChange={setPartnerColor}
-              />}
+                headerActions={<>
+                  <StudyDrawerButton className="topbar-btn chat-drawer-btn" />
+                  <button type="button" className="chat-back-chatgpt" onClick={() => setCenterView('chatgpt')}>
+                    Estudar com o ChatGPT
+                  </button>
+                </>}
+              />
+            </div>
+          )}
+        </>}
       />
     </div>
   );

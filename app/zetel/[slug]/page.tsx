@@ -63,11 +63,13 @@ export default async function ZetelDetailPage({
         <span className="doc-title">{zetel.displayName}</span>
         <ReadingProgress />
         <div className="topbar-spacer" />
-        {hasSources && <StudyDrawerButton />}
+        {/* Sempre visível: a Curadoria dos relatórios do ChatGPT vive na gaveta, com ou sem fontes. */}
+        <StudyDrawerButton />
       </header>
       <div className="page-body page-body--zetel">
         <ZetelWorkspace
           zetelId={zetel.id}
+          slug={zetel.slug}
           hasSources={hasSources}
           originalPdfId={firstPdf?.id ?? null}
           readingStale={zetel.readingStale}

@@ -10,20 +10,13 @@ import { NotasPanel } from './NotasPanel';
 import { CuradoriaPanel } from './CuradoriaPanel';
 import { PdfStudyView } from './PdfStudyView';
 import { PartnerSheet } from './PartnerSheet';
+import { ChatGptStudyCard } from './ChatGptStudyCard';
+import { isDrawerView, type DrawerView } from '@/lib/study-drawer';
+
+export type { DrawerView } from '@/lib/study-drawer';
+export { StudyDrawerButton } from './StudyDrawerButton';
 
 type ReadingView = 'tecnico' | 'guia-estudo';
-export type DrawerView =
-  | 'arquivos'
-  | 'notas-rapidas'
-  | 'notas-literatura'
-  | 'notas-elaboradas'
-  | 'notas-do-usuario'
-  | 'curadoria'
-  | 'artefatos';
-
-const DRAWER_VIEWS: readonly DrawerView[] = [
-  'arquivos', 'notas-rapidas', 'notas-literatura', 'notas-elaboradas', 'notas-do-usuario', 'curadoria', 'artefatos',
-];
 
 const NOTE_TABS: { view: DrawerView; label: string; tipo: 'rapida' | 'literatura' | 'elaborada' | 'minha-nota' }[] = [
   { view: 'notas-rapidas', label: 'Rápidas', tipo: 'rapida' },
@@ -32,18 +25,16 @@ const NOTE_TABS: { view: DrawerView; label: string; tipo: 'rapida' | 'literatura
   { view: 'notas-do-usuario', label: 'Minhas', tipo: 'minha-nota' },
 ];
 
-function isDrawerView(value: string | null): value is DrawerView {
-  return value !== null && (DRAWER_VIEWS as readonly string[]).includes(value);
-}
-
 function WorkspaceView({
   zetelId,
+  slug,
   hasSources,
   readingStale,
   lastBuiltAt,
   originalPdfId,
 }: {
   zetelId: string;
+  slug: string;
   hasSources: boolean;
   readingStale: boolean;
   lastBuiltAt: string | null;
@@ -72,15 +63,47 @@ function WorkspaceView({
 
   const closeDrawer = useCallback(() => router.replace(drawerHref(null), { scroll: false }), [drawerHref, router]);
 
+  const noteTab = NOTE_TABS.find((tab) => tab.view === drawer);
+  const drawerSheet = drawer && (
+    <PartnerSheet title="Fontes, notas e artefatos" subtitle="Tudo deste estudo, sem sair da conversa." onClose={closeDrawer} wide>
+      <nav className="drawer-tabs" aria-label="Seções do estudo">
+        <Link replace scroll={false} href={drawerHref('arquivos')} className={drawer === 'arquivos' ? 'on' : ''}>Fontes</Link>
+        <Link replace scroll={false} href={drawerHref(noteTab ? noteTab.view : 'notas-rapidas')} className={noteTab ? 'on' : ''}>Notas</Link>
+        <Link replace scroll={false} href={drawerHref('curadoria')} className={drawer === 'curadoria' ? 'on' : ''}>Curadoria</Link>
+        <Link replace scroll={false} href={drawerHref('artefatos')} className={drawer === 'artefatos' ? 'on' : ''}>Artefatos</Link>
+      </nav>
+      {noteTab && (
+        <nav className="drawer-subtabs" aria-label="Tipos de nota">
+          {NOTE_TABS.map((tab) => (
+            <Link key={tab.view} replace scroll={false} href={drawerHref(tab.view)} className={tab.view === drawer ? 'on' : ''}>
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
+      )}
+      <div className="drawer-content">
+        {drawer === 'arquivos' && <ArquivosPanel zetelId={zetelId} />}
+        {noteTab && (
+          <div data-testid={`${noteTab.view}-panel`}>
+            <NotasPanel key={noteTab.tipo} zetelId={zetelId} tipo={noteTab.tipo} />
+          </div>
+        )}
+        {drawer === 'curadoria' && <CuradoriaPanel zetelId={zetelId} />}
+        {drawer === 'artefatos' && <ArtefatosPanel zetelId={zetelId} />}
+      </div>
+    </PartnerSheet>
+  );
+
   if (!hasSources) {
+    // Sem fontes não há chat interno nem leitura: o estudo pelo ChatGPT vem primeiro.
     return (
-      <div className="zetel-workspace">
+      <div className="zetel-workspace zetel-workspace--onboarding">
+        <ChatGptStudyCard zetelId={zetelId} slug={slug} showDrawerButton={false} />
         <ArquivosPanel zetelId={zetelId} onboarding />
+        {drawerSheet}
       </div>
     );
   }
-
-  const noteTab = NOTE_TABS.find((tab) => tab.view === drawer);
 
   return (
     <div className="zetel-workspace">
@@ -88,6 +111,7 @@ function WorkspaceView({
       <div style={{ display: view === 'pdf' ? 'none' : 'contents' }}>
         <LeituraPanel
           zetelId={zetelId}
+          slug={slug}
           readingStale={readingStale}
           lastBuiltAt={lastBuiltAt}
           originalPdfId={originalPdfId}
@@ -101,41 +125,14 @@ function WorkspaceView({
         <p className="feedback err">Nenhum PDF selecionado. Abra um PDF em Fontes & notas.</p>
       ))}
 
-      {drawer && (
-        <PartnerSheet title="Fontes, notas e artefatos" subtitle="Tudo deste estudo, sem sair da conversa." onClose={closeDrawer} wide>
-          <nav className="drawer-tabs" aria-label="Seções do estudo">
-            <Link replace scroll={false} href={drawerHref('arquivos')} className={drawer === 'arquivos' ? 'on' : ''}>Fontes</Link>
-            <Link replace scroll={false} href={drawerHref(noteTab ? noteTab.view : 'notas-rapidas')} className={noteTab ? 'on' : ''}>Notas</Link>
-            <Link replace scroll={false} href={drawerHref('curadoria')} className={drawer === 'curadoria' ? 'on' : ''}>Curadoria</Link>
-            <Link replace scroll={false} href={drawerHref('artefatos')} className={drawer === 'artefatos' ? 'on' : ''}>Artefatos</Link>
-          </nav>
-          {noteTab && (
-            <nav className="drawer-subtabs" aria-label="Tipos de nota">
-              {NOTE_TABS.map((tab) => (
-                <Link key={tab.view} replace scroll={false} href={drawerHref(tab.view)} className={tab.view === drawer ? 'on' : ''}>
-                  {tab.label}
-                </Link>
-              ))}
-            </nav>
-          )}
-          <div className="drawer-content">
-            {drawer === 'arquivos' && <ArquivosPanel zetelId={zetelId} />}
-            {noteTab && (
-              <div data-testid={`${noteTab.view}-panel`}>
-                <NotasPanel key={noteTab.tipo} zetelId={zetelId} tipo={noteTab.tipo} />
-              </div>
-            )}
-            {drawer === 'curadoria' && <CuradoriaPanel zetelId={zetelId} />}
-            {drawer === 'artefatos' && <ArtefatosPanel zetelId={zetelId} />}
-          </div>
-        </PartnerSheet>
-      )}
+      {drawerSheet}
     </div>
   );
 }
 
 export function ZetelWorkspace(props: {
   zetelId: string;
+  slug: string;
   hasSources: boolean;
   readingStale: boolean;
   lastBuiltAt: string | null;
@@ -144,29 +141,6 @@ export function ZetelWorkspace(props: {
   return (
     <Suspense fallback={null}>
       <WorkspaceView {...props} />
-    </Suspense>
-  );
-}
-
-/** Botão da barra do Zetel que abre a gaveta de fontes e notas. */
-function DrawerButtonInner() {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const params = new URLSearchParams(searchParams.toString());
-  const open = isDrawerView(params.get('painel'));
-  params.set('painel', 'arquivos');
-  return (
-    <Link href={`${pathname}?${params.toString()}`} scroll={false} className={`topbar-btn${open ? ' on' : ''}`}>
-      <svg viewBox="0 0 16 16" aria-hidden><path d="M3 4h10M3 8h10M3 12h6" strokeLinecap="round" /></svg>
-      <span>Fontes & notas</span>
-    </Link>
-  );
-}
-
-export function StudyDrawerButton() {
-  return (
-    <Suspense fallback={null}>
-      <DrawerButtonInner />
     </Suspense>
   );
 }
