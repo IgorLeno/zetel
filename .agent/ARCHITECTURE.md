@@ -35,8 +35,8 @@
 ## Conversational Learning V1 (SPEC-001)
 
 Contratos aprovados em
-[SPEC.md](specs/SPEC-001-conversational-learning-v1/SPEC.md) (D1–D13) e
-[PLAN.md](specs/SPEC-001-conversational-learning-v1/PLAN.md) (Arquitetura,
+[SPEC.md](specs/_archive/SPEC-001-conversational-learning-v1/SPEC.md) (D1–D13) e
+[PLAN.md](specs/_archive/SPEC-001-conversational-learning-v1/PLAN.md) (Arquitetura,
 Interfaces e dados). Em divergência, a SPEC prevalece.
 
 - PDF (D1–D2): `pdfjs-dist` extrai no servidor e renderiza no cliente, sem OCR.

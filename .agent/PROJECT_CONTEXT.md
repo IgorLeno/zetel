@@ -5,10 +5,10 @@
 Zetel é um parceiro de estudos textual, local-first e PT-BR. Usa um vault
 Obsidian como fonte durável de Markdown e SQLite como estado operacional. O MVP
 textual e os Módulos 9–14 estão concluídos; o Módulo 14 entregou redesign e modo
-mãos-livres. O próximo objetivo de produto é o PRD v5 — Conversational
-Learning V1: aprendizagem conversacional voice-first sobre materiais do Zetel
-(PDF de primeira classe, sessões, perfis de tutor e conceitos com
-proveniência). A direção anterior ("prompts editáveis em runtime + modo
+mãos-livres. O PRD v5 — Conversational Learning V1 (aprendizagem
+conversacional voice-first; SPEC-001) entregou PDF, sessões e perfis de tutor e
+foi arquivado em `.agent/specs/_archive/` após a mudança de rumo abaixo. A
+direção anterior ("prompts editáveis em runtime + modo
 internet") foi substituída em 2026-09-26 e permanece candidata a versões
 posteriores.
 

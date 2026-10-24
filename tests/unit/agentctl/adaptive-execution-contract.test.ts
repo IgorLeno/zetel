@@ -67,7 +67,7 @@ describe("adaptive execution documentation", () => {
     "AGENTS.md",
     "CLAUDE.md",
     ".agent/QUALITY.md",
-    ".agent/specs/SPEC-000-agent-workflow-pilot/SPEC.md",
+    ".agent/specs/_archive/SPEC-000-agent-workflow-pilot/SPEC.md",
     ".agent/PROJECT_CONTEXT.md",
   ])("keeps the complete live E2E guard in %s", (path) => {
     expectLiveE2EGuard(read(path));
@@ -120,7 +120,7 @@ describe("adaptive execution documentation", () => {
 
   it("rechains task 003 to 002C and makes gates profile-aware", () => {
     const task = read(
-      ".agent/specs/SPEC-000-agent-workflow-pilot/tasks/003-task-lifecycle-gates.md",
+      ".agent/specs/_archive/SPEC-000-agent-workflow-pilot/tasks/003-task-lifecycle-gates.md",
     );
     expect(task).toMatch(/blocked_by:\s*\["002C"\]/);
     expect(task).toMatch(/task validate[\s\S]*execution_profile/i);

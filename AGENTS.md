@@ -1,10 +1,11 @@
 # AGENTS.md — Zetel
 
 Zetel é um parceiro de estudos local-first em Next.js, com vault Obsidian e
-SQLite como estado operacional. O Módulo 14 está concluído; o próximo objetivo
-de produto é o PRD v5 — Conversational Learning V1 (`prd-v5.md`, visão em
-`docs/PRODUCT_VISION.md`, spec `SPEC-001-conversational-learning-v1`). A antiga
-direção "prompts editáveis + modo internet" foi substituída em 2026-09-26.
+SQLite como estado operacional. Desde 2026-10-21 o Zetel é o curador do estudo
+feito no ChatGPT (emenda no topo de `docs/PRODUCT_VISION.md`, spec
+`SPEC-018-chatgpt-curator`); chat/voz/Live ficam atrás de flag (SPEC-019). Specs
+fora dessa linha, incluindo a `SPEC-001-conversational-learning-v1` do PRD v5,
+estão em `.agent/specs/_archive/`.
 
 ## Fontes de verdade
 
